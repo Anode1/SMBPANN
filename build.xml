@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- =================================================================== -->
+<!-- This file is an ANT (http://jakarta.apache.org/ant/) build script.  -->
+<!--                                                                     -->
+<!-- NOTE: all directories are relative to the project root directory    -->
+<!-- and this file should be in that directory too                       -->
+<!--                                                                     -->
+<!-- version $Id: build.xml,v 1.7 2009/12/24 01:37:12 vgavrilov Exp $      -->
+<!-- =================================================================== -->
+
+<project basedir="." default="jar" name="smbpann">
+
+	<property name="build" value="classes" />
+	<property name="jar" value="${ant.project.name}.jar" />
+
+	<property name="release_num" value="0.01" />
+
+	<property name="javadoc.dir" value="doc/javadoc" />
+	<property name="javadoc.header" value="${ant.project.name}" />
+	<property name="javadoc.windowtitle" value="${ant.project.name} ver ${release_num} API Documentation" />
+	<property name="javadoc.packages" value="org.*" />
+
+	<target name="init">
+		<tstamp />
+	</target>
+
+	<path id="lib_classpath">
+		<fileset dir="lib">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<path id="run.classpath">
+		<pathelement location="." />
+		<pathelement location="${build}" />
+		<path refid="lib_classpath" />
+	</path>
+
+	<target name="jar" depends="clean">
+		<mkdir dir="${build}" />
+		
+		<replaceregexp byline="true">
+			<regexp pattern='public static final String releaseVersionString .*$'/>
+			<substitution expression='public static final String releaseVersionString = \"ver ${release_num}\";'/>
+			<fileset dir="src/org/smbpann">
+				<include name="Constants.java"/>
+			</fileset>
+		</replaceregexp>		
+
+		<javac destdir="${build}" optimize="true" 
+			debug="true" 
+			source="1.6" 
+			target="1.6" 
+			deprecation="false">
+			<src path="src" />
+
+			<classpath refid="lib_classpath" />
+		</javac>
+
+		<jar jarfile="${jar}">
+			<fileset dir="${build}">
+				<patternset>
+					<include name="**/*.class" />
+				</patternset>
+			</fileset>
+		</jar>
+	</target>
+	
+	<target name="clean" depends="init">
+		<delete dir="${build}/org" includeEmptyDirs="true" failonerror="false" />
+		<delete file="${jar}" failonerror="false" />
+	</target>
+
+	<target name="run" depends="init">
+		<java classname="org.ais.transform" failonerror="true" fork="true">
+			<classpath refid="run.classpath" />
+		</java>
+	</target>
+
+
+	<target name="release" depends="jar">
+
+		<!-- win32 version, with JRE -->
+		<delete file="${ant.project.name}-${release_num}-with-jre-win32.zip" failonerror="false" />
+		<zip zipfile="${ant.project.name}-${release_num}-with-jre-win32.zip">
+			<zipfileset dir="." prefix="${ant.project.name}">
+				<include name="${jar}" />
+				<include name="run.sh" />
+				<include name="run.bat" />
+				<include name="data/**" />
+				<include name="README.*" />
+				<include name="COPYING" />
+				<include name="jre/**" />
+			
+			</zipfileset>
+		</zip>
+
+		<delete file="${ant.project.name}-${release_num}.zip" failonerror="false" />
+		<zip zipfile="${ant.project.name}-${release_num}.zip">
+			<zipfileset dir="." prefix="${ant.project.name}">
+				<include name="${jar}" />
+				<include name="run.sh" />
+				<include name="run.bat" />
+				<include name="data/**" />
+				<include name="README.*" />
+				<include name="COPYING" />
+			</zipfileset>
+		</zip>
+
+	    <delete file="${ant.project.name}-${release_num}.tar.gz" failonerror="false"/> 
+		<tar tarfile="${ant.project.name}-${release_num}.tar">
+		   	<tarfileset dir="." prefix="${ant.project.name}">
+				<include name="${jar}" />
+				<include name="run.sh" />
+				<include name="run.bat" />
+				<include name="data/**" />
+				<include name="README.*" />
+				<include name="COPYING" />
+		   	</tarfileset> 
+		</tar>
+		<gzip zipfile="${ant.project.name}-${release_num}.tar.gz" src="${ant.project.name}-${release_num}.tar" />
+		<delete file="${ant.project.name}-${release_num}.tar"/>  
+	
+		<!-- everything including src (without JRE) -->
+		<delete file="${ant.project.name}-${release_num}-all.zip" failonerror="false" />
+		<zip zipfile="${ant.project.name}-${release_num}-all.zip">
+			<zipfileset dir="." prefix="${ant.project.name}">
+				<exclude name="*.zip" />
+				<exclude name="*.tgz" />
+				<exclude name="*.tar.gz" />
+				<exclude name="*.tar" />
+				<exclude name="jre/**" />
+				<exclude name="${javadoc.dir}/**" />
+				<exclude name="${build}/**" />
+			</zipfileset>
+		</zip>
+	</target>
+
+
+	<target name="javadoc" depends="init" description="javadoc">
+		<delete dir="${javadoc.dir}" />
+		<mkdir dir="${javadoc.dir}" />
+		<javadoc destdir="${javadoc.dir}" packagenames="${javadoc.packages}" header="${javadoc.header}" windowtitle="${javadoc.windowtitle}" doctitle="${javadoc.windowtitle}" version="true">
+			<classpath refid="run.classpath" />
+			<bottom> <![CDATA[<i>Copyright &#169; 2009</i>]]> </bottom>
+			<sourcepath> <pathelement location="${src}" /> </sourcepath>
+			<group title="${ant.project.name} classes" packages="${packages}" />
+		</javadoc>
+</target>
+
+
+<target name="help">
+	<echo> 
+###############################################################
+Ant script help 
+###############################################################
+
+------------  Arguments supported: ---------------
+
+help          - Print this help screen
+jar           - Compile and jar all the classes
+clean         - Remove classfiles and newly generated jars
+run           - Another way (alternative to batch file) to run the application
+release       - Build zip with binaries (release or snapshot)
+zipall        - Build zip with sources (release or snapshot)
+tar           - package everything as source distribution into tar
+tgz           - gzipped tar (see above)
+	</echo>
+</target>
+
+
+</project>
