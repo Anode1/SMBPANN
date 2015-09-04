@@ -15,7 +15,7 @@ It is suggested to keep frameworks at bay (for performance, simplicity, debuggin
 
 No external dependencies, no Maven (since no frameworks - no need in it). Plain single ant build file. Target distribution is in plain jar file. It must be easy to run the neural network from command line (from scripts).
 
-Plugins. Neural Network is a general purpose processor, so inputs may be sound tracks as well as images, 
+Plugins. Neural Network is a general purpose processor, so inputs might be some sound tracks as well as images, 
 or even DNA sequences. It must be an extremely easy way to add a new plugin to read an input from any source: from files, from a database or from any other data sources. Clean API well documented must exists for easy integrating the NN.
 
 Parameters such as bias range or initial noise level etc - all will be put in one place for simplicity.
