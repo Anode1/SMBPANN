@@ -21,3 +21,6 @@ or even DNA sequences. It must be an extremely easy way to add a new plugin to r
 Parameters such as bias range or initial noise level etc - all will be put in one place for simplicity.
 
 SIMLICITY, KISS principle, unit tests covering everything - this is what I'm thinking all the time. If a business logic requires 1 bit of entropy, 1 "if" while a framework generates 2 bits for the sake of technology - this is a bad technology: the overall complexity of the system should not be much bigger than the complexity of the business requirements (a valid exception - logging levels in log4j been expressed in a plain set of parameters in one separate file).
+
+Backprop Feed-Forward Neural Networks Tutorial (old but still valid, nothing changed since then), but you can get the same information on Wikipedia nowadays, I'm putting it here - just for my reference (and sorry for that): 
+https://drive.google.com/file/d/0B9Ee4Kn3OEaRTF91Y0dBQ29ldlU/view
