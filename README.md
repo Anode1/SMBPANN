@@ -3,7 +3,7 @@ Self-Modifying Backpropagation (Feed Forward) Neural Network
 
 The goal.
 Rather than implementing function
-PREDICTOR = FUNCTION (TrainingSet, TestingSet, Topology/NNArchitecture, Error, ActivationFunction, JitterLevel)
+PREDICTOR = FUNCTION (TrainingSet, TestingSet, Topology/NNArchitecture, Error, ActivationFunction, JitterLevel),
 we want:
 SELF_MODIFYING_PREDICTOR = FUNCTION (TrainingSet, TestingSet, Error)
 
