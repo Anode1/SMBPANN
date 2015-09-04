@@ -4,10 +4,11 @@ Self-Modifying Backpropagation (Feed Forward) Neural Network
 Language choice. Why java and not C++ and not ANSI C?
 1) According to a measurement 10 years ago, I program the same functionality 3+ times faster in Java than in ANSI C. 
 Also, I'm not an expert in CPP, so it will be even slower than in ANSI C.
-Note: if more developers will participate who write in C faster than in Java, then this item might be revised.
+Note: if more developers will participate who write in C faster than in Java, then this item might be revised;
 2) According to my brief tests (http://siberean.livejournal.com/2253.html), in-memory operations with already in-memory structures (preloaded) are not slower written, compiled and running in Java than in C, and the existence of efficient free algorithm libraries such as HashMaps (red-black trees) etc makes the task easier;
 3) Easier portability;
-4) More potential code participants if using Java comparing with niche ANSI C
+4) More potential code participants if using Java comparing with niche ANSI C.
+
 Anyway, having a succesfull Java prototype, written in 1/3 time, it is possible to rewrite (in case of success) in C.
 
 Frameworks, code style ideology.
