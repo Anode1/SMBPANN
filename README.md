@@ -1,6 +1,13 @@
 # SMBPANN
 Self-Modifying Backpropagation (Feed Forward) Neural Network 
 
+The goal.
+Rather than implementing function
+PREDICTOR = FUNCTION (TrainingSet, TestingSet, Topology/NNArchitecture, Error, ActivationFunction, JitterLevel)
+we want:
+SELF_MODIFYING_PREDICTOR = FUNCTION (TrainingSet, TestingSet, Error)
+
+
 Language choice. Why java and not C++ and not ANSI C?
 1) According to a measurement 10 years ago, I program the same functionality 3+ times faster in Java than in ANSI C. 
 Also, I'm not an expert in CPP, so it will be even slower than in ANSI C.
