@@ -8,7 +8,6 @@ Note: if more developers will participate who write in C faster than in Java, th
 2) According to my brief tests (http://siberean.livejournal.com/2253.html), in-memory operations with already in-memory structures (preloaded) are not slower written, compiled and running in Java than in C, and the existence of efficient free algorithm libraries such as HashMaps (red-black trees) etc makes the task easier;
 3) Easier portability;
 4) More potential code participants if using Java comparing with niche ANSI C.
-
 Anyway, having a succesfull Java prototype, written in 1/3 time, it is possible to rewrite (in case of success) in C.
 
 Frameworks, code style ideology.
