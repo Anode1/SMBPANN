@@ -10,6 +10,7 @@ structures (preloaded) are not slower written, compiled and running in Java than
 algorithm libraries such as HashMaps (red-black trees) etc makes the task easier
 3) Easier portability
 4) More potential code participants if using Java comparing with niche ANSI C
+Anyway, having a succesfull Java prototype, written in 1/3 time, it is possible to rewrite (in case of success) in C.
 
 Frameworks, code style ideology.
 It is suggested to keep frameworks at bay (for performance, simplicity, debugging reasons). No Spring, no Java8 annotations, 
