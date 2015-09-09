@@ -4,10 +4,10 @@ Self-Modifying Backpropagation (Feed Forward) Neural Network
 The goal.
 Rather than implementing function
 PREDICTOR = FUNCTION (TrainingSet, TestingSet, NN_Topology, Error, ActivationFunction, JitterLevel),
-where NN_Topology is the hardcoded architecture of the net (number of hidden layers, form and number of edges),
+where NN_Topology is the hardcoded architecture of the net (number of hidden layers, form and number of edges, numerical parameters),
 we want instead:
 SELF_MODIFYING_PREDICTOR = FUNCTION (TrainingSet, TestingSet, Error)
-returning other parameters back to the network as a feedback (according to the performance function)
+returning other parameters back to the network as a feedback (according to the performance function), i.e. we want hyper-parameterization of the ANN.
 
 Language choice. Why java and not C++ and not ANSI C?
 1) According to a measurement 10 years ago, I program the same functionality 3+ times faster in Java than in ANSI C. 
@@ -42,3 +42,4 @@ The first unit test should be probably the classical Perceptron anyway, for the 
 
 Some literature:
 http://arxiv.org/pdf/1206.5533v2.pdf
+http://yann.lecun.com/exdb/publis/pdf/bengio-lecun-07.pdf
