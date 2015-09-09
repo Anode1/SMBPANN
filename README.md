@@ -3,14 +3,17 @@ Self-Modifying Backpropagation (Feed Forward) Neural Network
 ===============================================================
 The goal.
 Rather than implementing function
+
 PREDICTOR = FUNCTION (TrainingSet, TestingSet, NN_Topology, Error, ActivationFunction, JitterLevel),
 where NN_Topology is the hardcoded architecture of the net (number of hidden layers, form and number of edges, numerical parameters),
 we want instead:
+
 SELF_MODIFYING_PREDICTOR = FUNCTION (TrainingSet, TestingSet, Error)
 returning other parameters back to the network as a feedback (according to the performance function), i.e. we want hyper-parameterization of the ANN.
 
 ===============================================================
 Some literature (not in the order of significance!):
+
 1) Discussion about Hyper-parameters and a lot of practical considerations: 
 http://yann.lecun.com/exdb/publis/pdf/bengio-lecun-07.pdf
 
