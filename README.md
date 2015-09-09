@@ -1,6 +1,6 @@
 # SMBPANN
 Self-Modifying Backpropagation (Feed Forward) Neural Network 
-
+===============================================================
 The goal.
 Rather than implementing function
 PREDICTOR = FUNCTION (TrainingSet, TestingSet, NN_Topology, Error, ActivationFunction, JitterLevel),
@@ -8,6 +8,19 @@ where NN_Topology is the hardcoded architecture of the net (number of hidden lay
 we want instead:
 SELF_MODIFYING_PREDICTOR = FUNCTION (TrainingSet, TestingSet, Error)
 returning other parameters back to the network as a feedback (according to the performance function), i.e. we want hyper-parameterization of the ANN.
+
+===============================================================
+Some literature (not in the order of significance!):
+1) Discussion about Hyper-parameters and a lot of practical considerations: 
+http://yann.lecun.com/exdb/publis/pdf/bengio-lecun-07.pdf
+
+2) Why Deep Learning and why not to experiment first with the shallow architectures (such as SVM), also useful discussions:
+http://arxiv.org/pdf/1206.5533v2.pdf
+
+3) Very basic introductory Backpropagation Feed-Forward Neural Networks Tutorial (old but still valid, nothing changed since then, except the performace of the machines), but you can get the same information on Wikipedia nowadays, I'm putting it here - just for my reference (and sorry for that): https://drive.google.com/file/d/0B9Ee4Kn3OEaRTF91Y0dBQ29ldlU/view
+
+===============================================================
+Some preliminary design considerations
 
 Language choice. Why java and not C++ and not ANSI C?
 1) According to a measurement 10 years ago, I program the same functionality 3+ times faster in Java than in ANSI C. 
@@ -30,9 +43,6 @@ Parameters such as bias range or initial noise level etc - all will be put in on
 
 SIMLICITY, KISS principle, unit tests covering everything - this is what I'm thinking all the time. If a business logic requires 1 bit of entropy, 1 "if" while a framework generates 2 bits for the sake of technology - this is a bad technology: the overall complexity of the system should not be much bigger than the complexity of the business requirements (a valid exception - logging levels in log4j been expressed in a plain set of parameters in one separate file).
 
-Backprop Feed-Forward Neural Networks Tutorial (old but still valid, nothing changed since then, except the performace of the machines), but you can get the same information on Wikipedia nowadays, I'm putting it here - just for my reference (and sorry for that): 
-https://drive.google.com/file/d/0B9Ee4Kn3OEaRTF91Y0dBQ29ldlU/view
-
 Respecting both algorithmical approach (starting programming from the processing function) and OO approach (starting from the domain objects), yin and yang of programming, for the sake of clarity, we'll start from the common (in the business domain of ANN) terminology, naming classes in familiar terms: Network, Layer, Neuron (better to separate it into: Node + Axons/Edges), ActivationPhase(), BackPropagationPhase().
 To keep the code maintainable - we keep class inheritance at bay, only when necessary, using aggregation instead (for dynamic properties - Network consists of an ArrayList of Layers, Layer consists of Nodes, Nodes contain ArrayLists of Edges or Axons, also containing Activation function and encapsulated activation, backpropagation convenience routine). This approach will make it easier to discuss and debug the processing. 
 
@@ -40,6 +50,3 @@ No need in GPU support. There are no matrix (in math terms) operations envisione
 
 The first unit test should be probably the classical Perceptron anyway, for the sake of tradition and as the very first running test.
 
-Some literature:
-http://arxiv.org/pdf/1206.5533v2.pdf
-http://yann.lecun.com/exdb/publis/pdf/bengio-lecun-07.pdf
