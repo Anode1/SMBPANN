@@ -39,3 +39,6 @@ To keep the code maintainable - we keep class inheritance at bay, only when nece
 No need in GPU support. There are no matrix (in math terms) operations envisioned for now: the neurons are linked with neigbours and calculations are to be done by chain rules, iterating, in sequential loops. No need in threading right now (the processing of a Network must be processed by the same process/thread anyway, according to the Chain Rule). But in future, the network dynamic optimizations ("garbage collector" for unused neurons) might run in a separate thread, but it is too early to discuss it for now. On the contrary, different Networks (instances with different topology/architecture running against the same data sets) might run in-parallel, so the Processor, processing the Network better to be a Thread - to benefit from parallel processing and future clastering.
 
 The first unit test should be probably the classical Perceptron anyway, for the sake of tradition and as the very first running test.
+
+Some literature:
+http://arxiv.org/pdf/1206.5533v2.pdf
