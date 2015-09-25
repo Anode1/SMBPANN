@@ -22,6 +22,8 @@ http://arxiv.org/pdf/1206.5533v2.pdf
 
 3) Very basic introductory Backpropagation Feed-Forward Neural Networks Tutorial (old but still valid, nothing changed since then, except the performace of the machines), but you can get the same information on Wikipedia nowadays, I'm putting it here - just for my reference (and sorry for that): https://drive.google.com/file/d/0B9Ee4Kn3OEaRTF91Y0dBQ29ldlU/view
 
+4) Very good tutorial: http://karpathy.github.io/neuralnets/
+
 ===============================================================
 Some preliminary design considerations
 
@@ -51,5 +53,5 @@ To keep the code maintainable - we keep class inheritance at bay, only when nece
 
 No need in GPU support. There are no matrix (in math terms) operations envisioned for now: the neurons are linked with neigbours and calculations are to be done by chain rules, iterating, in sequential loops. No need in threading right now (the processing of a Network must be processed by the same process/thread anyway, according to the Chain Rule). But in future, the network dynamic optimizations ("garbage collector" for unused neurons) might run in a separate thread, but it is too early to discuss it for now. On the contrary, different Networks (instances with different topology/architecture running against the same data sets) might run in-parallel, so the Processor, processing the Network better to be a Thread - to benefit from parallel processing and future clastering.
 
-The first unit test should be probably the classical Perceptron anyway, for the sake of tradition and as the very first running test.
+The first unit test should be probably the classical Perceptron anyway, for the sake of tradition and as the very first running test. Then as regression tests it's good to have the same circuits as in this tutorial (to get the same numbers): http://karpathy.github.io/neuralnets/
 
