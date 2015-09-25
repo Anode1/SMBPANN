@@ -22,7 +22,7 @@ public class Network {
 	private ArrayList output;
 	
 	//structure
-	private ArrayList layers;
+	private ArrayList<Layer> layers;
 	private double currentError;
 	private double goalError;
 	private boolean terminating;
@@ -42,7 +42,7 @@ public class Network {
 	/**
 	 * constructor for batch learning against predetermined inputs/outputs 
 	 */
-	public Network(ArrayList input, ArrayList output) throws Exception{
+	public Network(ArrayList<TestingSet> testingSet) throws Exception{
 		layers=new ArrayList();
 	}
 	

@@ -19,10 +19,68 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 
 public class FileUtil {
+	
+	
+	/**
+	 * Reads potential input file containing both inputs and outputs. This is for simple tests.
+	 * Real tests use files and mappings 
+	 */
+	public static ArrayList<TestingSet> read(String filePath) throws Exception{
+		
+		ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
+		BufferedReader reader=null;
+		try{
+			File file = new File(filePath);
+			if(!file.exists() || !file.canRead()){
+				throw new Exception("Cannot read file");
+			}
+
+			reader = new BufferedReader(new FileReader(file));
+			
+			String line;
+	        int counter=0;
+	        boolean simpleMapping=false;
+	        int matrixSize=0;
+	        while((line = reader.readLine()) != null){
+	           	counter++;
+	           	if(counter==1){
+	           		if(line.startsWith("input")){ //input1,input2,...,output
+	           			simpleMapping=true;
+	           			String[] fields = line.split(Constants.INPUT_DELIMITERS, -1);
+	           			matrixSize=fields.length;
+	           		}
+	           		continue;
+	           	}
+	            	
+	           	String[] fields = line.split(Constants.INPUT_DELIMITERS, -1);
+	           	//force the same number of elements in each line
+	           	
+	           	if(simpleMapping){
+		           	if(fields.length<matrixSize)
+		           		throw new Exception("Number of elements in array in line "+ counter + " is less than the size of the header in file "+filePath);
+	           		
+		           	TestingSet inputOutput=new TestingSet(fields);
+		           	testingSet.add(inputOutput);
+	           	}
+	           	else{ //mapping or other type of file. Treat it here
+	           			
+	           	}
+	            
+	        }//while lines
+	        
+	        return testingSet;
+		}
+		finally{
+			if(reader!=null)try{reader.close();}catch(Exception e){}
+		}
+	}
+	
+
 	
 	
 	protected static void processDir(String filesDir) throws Exception{
@@ -95,7 +153,6 @@ public class FileUtil {
 			if(reader!=null)try{reader.close();}catch(Exception e){}
 		}
 	}
-	
 	
     /**
      * Finds the first line starting with string, returning the whole line 

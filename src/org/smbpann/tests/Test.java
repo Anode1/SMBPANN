@@ -14,6 +14,8 @@
 */
 package org.smbpann.tests;
 
+import java.util.ArrayList;
+
 import org.smbpann.*;
 
 import junit.framework.TestCase;
@@ -32,24 +34,12 @@ public class Test extends TestCase{
     
     public void testPerceptron() throws Exception{
 
-    	/*
-    	String INPUT = "/ISROOT/aisconvert/GSE21478-GPL6987_series_matrix.txt";
-    	String RESULTFILE = "data/Behar_results.txt";   
+    	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
+    	testingSet.add(new TestingSet(new String[]{""}));
     	
-    	Main.main(new String[]{"-b", INPUT, "-o", RESULTFILE, "-s", "data/snips3.txt"});
-    	
-    	System.out.println(TestUtils.file2String(RESULTFILE));
-    	/*
-    	assertTrue(
-    		TestUtils.file2String(RESULTFILE).equals(
-        		"rs3094315	1	742429	AA" + Constants.NL +
-        		"rs12184325	1	743968	CC" + Constants.NL +
-        		"rs3131969	1	744045	GG" + Constants.NL +
-    			"rs12562034	1	758311	AG" + Constants.NL + 
-       			"rs2518996	1	782397	GG" + Constants.NL +
-    			"rs3934834	1	995669	CC" + Constants.NL +    			
-    			"")
-    	);*/
+		Network net=new Network(testingSet);
+		//net.process();
+		
     }
     
     

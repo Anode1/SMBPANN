@@ -19,7 +19,7 @@ public class Constants {
 	
 	public static final String releaseVersionString = "ver 0.01";
 	
-	
+	public static final String INPUT_DELIMITERS = ",\t ";
 	
 	//keys for passing data inside the program
 	public static final String INPUT_FILE_KEY 		= "input_file";

@@ -16,4 +16,17 @@ package org.smbpann;
 
 public class Output {
 
+	public Object output;
+	
+	public Output(Object output){
+		this.output=output;
+	}
+
+	
+	/**
+	 * For debugging purposes only
+	 */
+	public String toString(){
+		return output.toString();
+	}	
 }

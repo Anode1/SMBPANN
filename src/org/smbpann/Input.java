@@ -15,5 +15,24 @@
 package org.smbpann;
 
 public class Input {
-
+	
+	public Object[] inputs;
+	
+	public Input(Object[] inputs){
+		this.inputs=inputs;
+	}
+	
+	
+	/**
+	 * For debugging purposes only
+	 */
+	public String toString(){
+		StringBuffer sb = new StringBuffer();
+		for(int i=0; i<inputs.length; i++){
+			sb.append(inputs[i]);
+			if(i<inputs.length-1)
+				sb.append(",");
+		}
+		return sb.toString();
+	}
 }
