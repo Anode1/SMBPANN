@@ -16,6 +16,7 @@ package org.smbpann;
 
 public class Main{
 	
+	public static boolean trace, warning;
 
 	/**
 	 * non-GUI entry point (command-line)
@@ -26,8 +27,12 @@ public class Main{
 			long t0=System.currentTimeMillis();
 
 			new Config();
-			Processor processor=new Processor();
-			processor.process();
+			
+			/**
+			 * If we don't accept input/output - it is online learning
+			 */
+			Network net=new Network();
+			net.process();
 			
 			
 			System.out.println("Processed in " + (System.currentTimeMillis()-t0) + " ms.");
