@@ -16,10 +16,15 @@ package org.smbpann;
 
 public class Input {
 	
-	public Object[] inputs;
+	private Object[] inputs;
 	
 	public Input(Object[] inputs){
 		this.inputs=inputs;
+	}
+	
+	
+	public long getSize(){
+		return inputs.length;
 	}
 	
 	

@@ -19,8 +19,28 @@ package org.smbpann;
  */
 public class Processor {
 	
-	public void process() throws Exception{
-		
+	private boolean terminating;
+	
+
+	public void process(Network net) throws Exception{
+		try{
+			while(!terminating){
+				net.fire();
+				
+				//terminate if threshold reached
+				if(net.currentError < net.goalError){
+					break;
+				}
+			}
+		}
+		finally{
+			if(Main.trace) System.out.println("stopped");
+		}
 	}
 
+	
+	public void stop(){
+		terminating=true;
+	}	
+	
 }

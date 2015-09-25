@@ -26,23 +26,22 @@ import junit.framework.TestCase;
  */
 public class Test extends TestCase{
 
-	
-    public Test(String name){
-        super(name);
-    }
-
     
-    public void testPerceptron() throws Exception{
+    public void setUp() throws Exception{
+    	new Config();
+    }
+    
+    
+    public void testSipleCircuit() throws Exception{
 
     	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
-    	testingSet.add(new TestingSet(new String[]{""}));
+    	testingSet.add(new TestingSet(new String[]{"-2, 3"}, new String[] {""}));
     	
 		Network net=new Network(testingSet);
 		//net.process();
 		
     }
-    
-    
+  
  
 
 }

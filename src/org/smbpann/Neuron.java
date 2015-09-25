@@ -14,6 +14,44 @@
 */
 package org.smbpann;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+
 public class Neuron {
 
+	private double value;
+	private double bias;
+	private ArrayList<Edge> edges=new ArrayList<Edge>();
+	
+	public Neuron(){
+		
+	}
+	
+	
+	public void addEdge(Edge edge){
+		edges.add(edge);
+	}
+	
+	
+	public double getOutput(){
+		return value;
+	}
+	
+	
+	/**
+	 * For debugging purposes only
+	 */
+	public String toString(){
+		StringBuffer sb=new StringBuffer();
+    	Iterator<Edge> it = edges.iterator();
+        while (it.hasNext()) {
+        	Edge edge = it.next();
+        	sb.append(edge);
+        	if(it.hasNext())sb.append(",");
+        }
+        sb.append("\n");
+        sb.append("output="+Double.toString(value));
+		return sb.toString();
+	}	
+	
 }

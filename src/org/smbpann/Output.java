@@ -14,19 +14,31 @@
 */
 package org.smbpann;
 
+
 public class Output {
 
-	public Object output;
-	
-	public Output(Object output){
-		this.output=output;
+	private Object[] desiredOutput;
+
+	public Output(Object[] desiredOutput){
+		this.desiredOutput=desiredOutput;
 	}
 
+	
+	public long getSize(){
+		return desiredOutput.length;
+	}
+	
 	
 	/**
 	 * For debugging purposes only
 	 */
 	public String toString(){
-		return output.toString();
+		StringBuffer sb = new StringBuffer();
+		for(int i=0; i<desiredOutput.length; i++){
+			sb.append(desiredOutput[i]);
+			if(i<desiredOutput.length-1)
+				sb.append(",");
+		}
+		return sb.toString();
 	}	
 }

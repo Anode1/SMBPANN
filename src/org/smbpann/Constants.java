@@ -27,4 +27,6 @@ public class Constants {
 	public static final String OUTPUT_DIR_KEY		= "output_dir";
 	public static final String OUTPUT_ERROR_KEY 	= "error_file";	
 	public static final String THRESHOLD_KEY 	    = "threshold";
+	
+	public static final String STEP_PARAMETER_KEY 	    = "step";
 }

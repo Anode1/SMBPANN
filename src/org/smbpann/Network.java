@@ -22,10 +22,11 @@ public class Network {
 	private ArrayList output;
 	
 	//structure
-	private ArrayList<Layer> layers;
-	private double currentError;
-	private double goalError;
-	private boolean terminating;
+	private ArrayList<Layer> layers; //from input to output
+	
+	private double step;
+	public double currentError; //overall error
+	public double goalError; //final error goal
 
 	
 	public String name; //name of the network for identification (when running multiple) 
@@ -43,23 +44,25 @@ public class Network {
 	 * constructor for batch learning against predetermined inputs/outputs 
 	 */
 	public Network(ArrayList<TestingSet> testingSet) throws Exception{
+		
+		step=Parameters.getAsDouble(Constants.STEP_PARAMETER_KEY);
+		System.out.println(step);		
+		
 		layers=new ArrayList();
+		
+		//construct initial structure here due to some heuristics
+		
 	}
 	
 	
-	public void process() throws Exception{
-		try{
-			while(!terminating){
-				
-				//implement me! (iterations through the list of Neurons)
-				
-				feedForward();
-				backPropagate();
-			}
-		}
-		finally{
-			if(Main.trace) System.out.println("stopped");
-		}
+	/**
+	 * One iteration: feed-forward and back propagation 
+	 */
+	public void fire() throws Exception{
+		//implement me! (iterations through the list of Neurons)
+		
+		feedForward();
+		backPropagate();
 	}
 	
 	
@@ -73,13 +76,14 @@ public class Network {
 	}
 	
 	
+	public void setStep(double step){
+		this.step=step;
+	}
+	
 	public double getCurrentError(){
 		return currentError;
 	}
 	
 	
-	public void stop(){
-		terminating=true;
-	}
-	
+
 }

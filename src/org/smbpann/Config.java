@@ -17,19 +17,47 @@ package org.smbpann;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.Enumeration;
 import java.util.Properties;
 
 
 public class Config extends Parameters{
 
 	public static boolean isWindows;
-	private static String applicationRoot; 
+	private static String applicationRoot=System.getProperty("user.dir");
 
 
-	public Config(){
-		applicationRoot=System.getProperty("user.dir");
+	public Config() throws Exception{
+		this(applicationRoot);
 	}	
 
+	public Config(String appRoot) throws Exception{
+		applicationRoot = appRoot;
+
+    //read default config
+		
+		Parameters params=Parameters.getInstance();		
+		String pathToProps=getConfigDir() + File.separator + "system.properties";
+        params.load(new java.io.BufferedInputStream(new java.io.FileInputStream(pathToProps)));
+	
+ /*        
+	//LOGS:
+	    String path2log4jprop=getConfigDir() + File.separator + "log4j.properties";
+	    
+	    //System.out.println("Loading from "+path2log4jprop);
+	    
+	    PropertyConfigurator.configure(path2log4jprop);
+*/
+	    //print something into log on startup:
+	    /*
+	    if(log.isDebugEnabled())log.debug("------------------------------");
+	    if(applicationRoot!=null){
+	      if(log.isDebugEnabled())log.debug("applicationRoot used:"+applicationRoot);
+	    }
+	    */
+
+	}
+	
 
 	public void loadSystemProperties() throws Exception{
 
@@ -41,7 +69,6 @@ public class Config extends Parameters{
 			InputStream in = new java.io.BufferedInputStream(new java.io.FileInputStream(path2props));
 			//java.io.InputStream in=Config.class.getResourceAsStream("/system.properties");
 			props.load(in);
-			//    	System.out.println(logProps);
 			in.close();
 		}
 		catch(Exception e){

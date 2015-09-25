@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 
@@ -45,14 +46,25 @@ public class FileUtil {
 			String line;
 	        int counter=0;
 	        boolean simpleMapping=false;
-	        int matrixSize=0;
+	        int inputMatrixSize=0;
+	        int outputMatricSize=0;
+	        int overallSize=0;
 	        while((line = reader.readLine()) != null){
 	           	counter++;
 	           	if(counter==1){
 	           		if(line.startsWith("input")){ //input1,input2,...,output
 	           			simpleMapping=true;
 	           			String[] fields = line.split(Constants.INPUT_DELIMITERS, -1);
-	           			matrixSize=fields.length;
+	           			
+	           			for(int i=0; i<fields.length; i++){
+	           				if(fields[i].startsWith("output")){ //all before the first output are inputs
+	           					inputMatrixSize=i;
+	           					continue;
+	           				}
+	           			}
+	           			
+	           			overallSize=fields.length;
+	           			outputMatricSize=overallSize-inputMatrixSize;
 	           		}
 	           		continue;
 	           	}
@@ -61,10 +73,10 @@ public class FileUtil {
 	           	//force the same number of elements in each line
 	           	
 	           	if(simpleMapping){
-		           	if(fields.length<matrixSize)
+		           	if(fields.length<overallSize)
 		           		throw new Exception("Number of elements in array in line "+ counter + " is less than the size of the header in file "+filePath);
 	           		
-		           	TestingSet inputOutput=new TestingSet(fields);
+		           	TestingSet inputOutput=new TestingSet(Arrays.copyOfRange(fields, 0, inputMatrixSize), Arrays.copyOfRange(fields, inputMatrixSize, overallSize));
 		           	testingSet.add(inputOutput);
 	           	}
 	           	else{ //mapping or other type of file. Treat it here

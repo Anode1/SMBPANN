@@ -51,7 +51,8 @@
 		<javac destdir="${build}" optimize="true" 
 			debug="true" 
 			source="1.6" 
-			target="1.6" 
+			target="1.6"
+			includeantruntime="false"
 			deprecation="false">
 			<src path="src" />
 

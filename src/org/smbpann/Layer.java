@@ -14,6 +14,28 @@
 */
 package org.smbpann;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+
 public class Layer {
 
+	private ArrayList<Edge> edges=new ArrayList<Edge>();
+	
+	public void addEdge(Edge edge){
+		edges.add(edge);
+	}
+	
+	
+	/**
+	 * For debugging purposes only
+	 */
+	public String toString(){
+		StringBuffer sb=new StringBuffer();
+    	Iterator<Edge> it = edges.iterator();
+        while (it.hasNext()) {
+        	Edge edge = it.next();
+        	sb.append(edge);
+        }
+		return sb.toString();
+	}	
 }

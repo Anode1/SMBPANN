@@ -16,10 +16,11 @@ package org.smbpann.tests;
 
 import java.util.ArrayList;
 
+import junit.framework.TestCase;
+
+import org.smbpann.Config;
 import org.smbpann.Network;
 import org.smbpann.TestingSet;
-
-import junit.framework.TestCase;
 
 
 /**
@@ -31,19 +32,16 @@ import junit.framework.TestCase;
  */
 public class Tests extends TestCase{
 
-    public Tests(String name){
-        super(name);
-    }
-
-    public void setUp(){
-
+	
+	public void setUp() throws Exception{
+    	new Config();
     }
     
     
     public void testSipleCircuit() throws Exception{
 
     	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
-    	testingSet.add(new TestingSet(new String[]{""}));
+    	testingSet.add(new TestingSet(new String[]{""}, new String[] {""}));
     	
 		Network net=new Network(testingSet);
 		//net.process();
@@ -54,7 +52,7 @@ public class Tests extends TestCase{
     public void testPerceptron() throws Exception{
 
     	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
-    	testingSet.add(new TestingSet(new String[]{""}));
+    	testingSet.add(new TestingSet(new String[]{""}, new String[] {""}));
     	
 		Network net=new Network(testingSet);
 		//net.process();

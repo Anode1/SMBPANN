@@ -31,9 +31,9 @@ public class Main{
 			/**
 			 * If we don't accept input/output - it is online learning
 			 */
-			Network net=new Network();
-			net.process();
-			
+			Network network=new Network();
+			Processor processor=new Processor();
+			processor.process(network);
 			
 			System.out.println("Processed in " + (System.currentTimeMillis()-t0) + " ms.");
 		}
