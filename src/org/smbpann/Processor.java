@@ -24,7 +24,7 @@ public class Processor {
 	private boolean terminating;
 	
 
-	public void process(Network net, ArrayList<TestingSet> testingSet) throws Exception{
+	public void process(Network net, TestingSet testingSet) throws Exception{
 		try{
 			while(!terminating){
 				net.learnOnce(testingSet);

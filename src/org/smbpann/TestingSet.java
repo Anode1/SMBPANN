@@ -14,33 +14,32 @@
 */
 package org.smbpann;
 
-public class TestingSet {
+import java.util.ArrayList;
+import java.util.Iterator;
 
-	private Input input;
-	private Output output;
-	
-	
-	public TestingSet(Input input, Output output){
-		this.input=input;
-		this.output=output;
-	}
+/**
+ * Testing/Training set of individual examples (a vector)
+ */
+public class TestingSet extends ArrayList<TestingExample>{
+
 	
 	/**
-	 * Convenience constructor for simple string inputs used in simple tests
+	 * Returns Input size of the first element (all examples have the same size) 
 	 */
-	public TestingSet(String[] inputs, String[] outputs){
-		this.input=new Input(inputs);
-		this.output=new Output(outputs);
+	public long getInputSize() throws Exception{
+		if(this.size()==0) throw new Exception("There are no testing examples in the testing set");
+		TestingExample firstTest=this.get(0);
+		return firstTest.getInputSize();
 	}
+
 	
-	
-	public long getInputSize(){
-		return input.getSize();
-	}
-	
-	
-	public long getOutputSize(){
-		return output.getSize();
+	/**
+	 * Returns Output size of the first element (all examples have the same size) 
+	 */
+	public long getOutputSize() throws Exception{
+		if(this.size()==0) throw new Exception("There are no testing examples in the testing set");
+		TestingExample firstTest=this.get(0);
+		return firstTest.getOutputSize();
 	}
 	
 	
@@ -48,10 +47,12 @@ public class TestingSet {
 	 * For debugging purposes only
 	 */
 	public String toString(){
-		StringBuffer sb = new StringBuffer();
-		sb.append(input);
-		sb.append("==>");
-		sb.append(input);
+		StringBuffer sb = new StringBuffer("testing set:\n");
+    	Iterator<TestingExample> it = this.iterator();
+        while (it.hasNext()) {
+        	TestingExample test = it.next();
+        	sb.append(test);
+        }
 		return sb.toString();
 	}
 }

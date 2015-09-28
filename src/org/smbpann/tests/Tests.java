@@ -20,6 +20,7 @@ import junit.framework.TestCase;
 
 import org.smbpann.Config;
 import org.smbpann.Network;
+import org.smbpann.TestingExample;
 import org.smbpann.TestingSet;
 
 
@@ -40,8 +41,8 @@ public class Tests extends TestCase{
     
     public void testSipleCircuit() throws Exception{
 
-    	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
-    	testingSet.add(new TestingSet(new String[]{""}, new String[] {""}));
+    	TestingSet testingSet=new TestingSet();
+    	testingSet.add(new TestingExample(new String[]{""}, new String[] {""}));
     	
 		Network net=new Network();
 		//net.process();
@@ -51,8 +52,8 @@ public class Tests extends TestCase{
     
     public void testPerceptron() throws Exception{
 
-    	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
-    	testingSet.add(new TestingSet(new String[]{""}, new String[] {""}));
+    	TestingSet testingSet=new TestingSet();
+    	testingSet.add(new TestingExample(new String[]{""}, new String[] {""}));
     	
 		Network net=new Network();
 		//net.process();

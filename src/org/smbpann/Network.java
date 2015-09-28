@@ -15,11 +15,15 @@
 package org.smbpann;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+
 
 public class Network {
 	
 	private ArrayList input;
 	private ArrayList output;
+	private Hints hints=new Hints(); //way to pass heuristics to the network - when it is necessary (the proper function will get it when it needs, depending on the particular function)
+	
 	
 	//structure
 	private ArrayList<Layer> layers; //from input to output
@@ -32,18 +36,30 @@ public class Network {
 	public String name; //name of the network for identification (when running multiple) 
 	
 	public Network() throws Exception{
-		
+		step=hints.getAsDouble(Hints.STEP);
 	}
 	
 	
 	/**
 	 * One iteration: feed-forward and back propagation 
 	 */
-	public void learnOnce(ArrayList<TestingSet> testingSet) throws Exception{
-		step=Parameters.getAsDouble(Constants.STEP_PARAMETER_KEY);
-		System.out.println(step);		
+	public void learnOnce(TestingSet testingSet) throws Exception{
 		
-		layers=new ArrayList();
+		if(Main.trace) System.out.println(testingSet);
+		
+		//we should have at least one output (to read the results from), so we always mapping 
+		//at least one neuron in the output layer to the Output
+
+		//Also, we need Input and it is meant to be wired with Edges
+		
+		//layers=new ArrayList();
+		
+		//iterating through the testing set:
+    	Iterator<TestingExample> it = testingSet.iterator();
+        while (it.hasNext()) {
+        	TestingExample test = it.next();
+        	
+        }
 		
 		feedForward();
 		backPropagate();
@@ -64,10 +80,14 @@ public class Network {
 		this.step=step;
 	}
 	
+	
 	public double getCurrentError(){
 		return currentError;
 	}
 	
 	
+	public Hints getHints(){
+		return hints;
+	}
 
 }

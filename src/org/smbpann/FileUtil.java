@@ -31,9 +31,9 @@ public class FileUtil {
 	 * Reads potential input file containing both inputs and outputs. This is for simple tests.
 	 * Real tests use files and mappings 
 	 */
-	public static ArrayList<TestingSet> read(String filePath) throws Exception{
+	public static TestingSet read(String filePath) throws Exception{
 		
-		ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
+		TestingSet testingSet=new TestingSet();
 		BufferedReader reader=null;
 		try{
 			File file = new File(filePath);
@@ -76,7 +76,7 @@ public class FileUtil {
 		           	if(fields.length<overallSize)
 		           		throw new Exception("Number of elements in array in line "+ counter + " is less than the size of the header in file "+filePath);
 	           		
-		           	TestingSet inputOutput=new TestingSet(Arrays.copyOfRange(fields, 0, inputMatrixSize), Arrays.copyOfRange(fields, inputMatrixSize, overallSize));
+		           	TestingExample inputOutput=new TestingExample(Arrays.copyOfRange(fields, 0, inputMatrixSize), Arrays.copyOfRange(fields, inputMatrixSize, overallSize));
 		           	testingSet.add(inputOutput);
 	           	}
 	           	else{ //mapping or other type of file. Treat it here
