@@ -14,33 +14,23 @@
 */
 package org.smbpann;
 
-public class Main{
+public class Edge {
+
+	public double weight;
+	public double weightDiff; //last weight difference
+	public double dx; //error difference
 	
-	public static boolean trace, warning;
-
+	
+	public Edge(){
+		weight=Math.random();
+	}
+	
+	
 	/**
-	 * non-GUI entry point (command-line)
+	 * For debugging purposes only
 	 */
-    public static void main(String args[]) throws Exception{
-
-		try{ 
-			long t0=System.currentTimeMillis();
-
-			new Config();
-			
-			/**
-			 * If we don't accept input/output - it is online learning
-			 */
-			Network network=new Network();
-			Processor processor=new Processor();
-			processor.process(network, null); //online learning - not implemented yet
-			
-			System.out.println("Processed in " + (System.currentTimeMillis()-t0) + " ms.");
-		}
-		catch(Throwable e){
-			//log.error("", e);
-			e.printStackTrace();
-		}
- 	}
-    
+	public String toString(){
+		return "weight="+weight+", dx="+dx;
+	}
+	
 }

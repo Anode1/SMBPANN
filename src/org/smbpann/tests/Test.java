@@ -32,16 +32,37 @@ public class Test extends TestCase{
     }
     
     
-    public void testSipleCircuit() throws Exception{
+    public void testBooleanOR() throws Exception{
 
-    	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
-    	testingSet.add(new TestingSet(new String[]{"-2, 3"}, new String[] {""}));
+    	Network net=new Network();
     	
-		Network net=new Network(testingSet);
-		//net.process();
+    	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
+    	testingSet.add(new TestingSet(new String[]{"0, 0"}, new String[] {"0"}));
+    	testingSet.add(new TestingSet(new String[]{"1, 0"}, new String[] {"0"}));
+    	testingSet.add(new TestingSet(new String[]{"0, 1"}, new String[] {"0"}));
+    	testingSet.add(new TestingSet(new String[]{"1, 1"}, new String[] {"1"}));
+    	
+		net.learnOnce(testingSet); //one pass
 		
     }
   
+    
+    /**
+     * Percepton should not work
+     */
+    public void testBooleanXOR() throws Exception{
+
+    	Network net=new Network();
+    	
+    	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
+    	testingSet.add(new TestingSet(new String[]{"0, 0"}, new String[] {"0"}));
+    	testingSet.add(new TestingSet(new String[]{"1, 0"}, new String[] {"1"}));
+    	testingSet.add(new TestingSet(new String[]{"0, 1"}, new String[] {"1"}));
+    	testingSet.add(new TestingSet(new String[]{"1, 1"}, new String[] {"0"}));
+    	
+		net.learnOnce(testingSet);
+		
+    }
  
 
 }

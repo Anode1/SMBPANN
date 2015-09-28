@@ -31,26 +31,7 @@ public class Network {
 	
 	public String name; //name of the network for identification (when running multiple) 
 	
-	/**
-	 * online (dynamic) learning constructor
-	 */
 	public Network() throws Exception{
-		layers=new ArrayList();
-		throw new Exception("Not implmeneted yet!");
-	}
-	
-	
-	/**
-	 * constructor for batch learning against predetermined inputs/outputs 
-	 */
-	public Network(ArrayList<TestingSet> testingSet) throws Exception{
-		
-		step=Parameters.getAsDouble(Constants.STEP_PARAMETER_KEY);
-		System.out.println(step);		
-		
-		layers=new ArrayList();
-		
-		//construct initial structure here due to some heuristics
 		
 	}
 	
@@ -58,8 +39,11 @@ public class Network {
 	/**
 	 * One iteration: feed-forward and back propagation 
 	 */
-	public void fire() throws Exception{
-		//implement me! (iterations through the list of Neurons)
+	public void learnOnce(ArrayList<TestingSet> testingSet) throws Exception{
+		step=Parameters.getAsDouble(Constants.STEP_PARAMETER_KEY);
+		System.out.println(step);		
+		
+		layers=new ArrayList();
 		
 		feedForward();
 		backPropagate();

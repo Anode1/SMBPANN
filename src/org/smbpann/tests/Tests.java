@@ -43,7 +43,7 @@ public class Tests extends TestCase{
     	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
     	testingSet.add(new TestingSet(new String[]{""}, new String[] {""}));
     	
-		Network net=new Network(testingSet);
+		Network net=new Network();
 		//net.process();
 		
     }
@@ -54,7 +54,7 @@ public class Tests extends TestCase{
     	ArrayList<TestingSet> testingSet=new ArrayList<TestingSet>();
     	testingSet.add(new TestingSet(new String[]{""}, new String[] {""}));
     	
-		Network net=new Network(testingSet);
+		Network net=new Network();
 		//net.process();
 		
     }

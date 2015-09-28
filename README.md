@@ -22,7 +22,7 @@ http://arxiv.org/pdf/1206.5533v2.pdf
 
 3) A very basic introductory Back Propagation Feed-Forward Neural Networks Tutorial (old but still valid, nothing changed since then, except the performance of the machines), but you can get the same information on Wikipedia nowadays, I'm putting it here - just for my reference (and sorry for that): https://drive.google.com/file/d/0B9Ee4Kn3OEaRTF91Y0dBQ29ldlU/view
 
-4) A very good tutorial: http://karpathy.github.io/neuralnets/
+4) A good tutorial: http://karpathy.github.io/neuralnets/
 
 ===============================================================
 Some preliminary design considerations

@@ -14,6 +14,8 @@
 */
 package org.smbpann;
 
+import java.util.ArrayList;
+
 /**
  * Creates more than one Network 
  */
@@ -22,10 +24,10 @@ public class Processor {
 	private boolean terminating;
 	
 
-	public void process(Network net) throws Exception{
+	public void process(Network net, ArrayList<TestingSet> testingSet) throws Exception{
 		try{
 			while(!terminating){
-				net.fire();
+				net.learnOnce(testingSet);
 				
 				//terminate if threshold reached
 				if(net.currentError < net.goalError){
