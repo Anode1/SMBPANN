@@ -40,10 +40,10 @@ public class Test extends TestCase{
     	net.getHints().put(Hints.NUMBER_OF_HIDDEN_LAYERS, 0);
     	
     	TestingSet testingSet=new TestingSet();
-    	testingSet.add(new TestingExample(new String[]{"0, 0"}, new String[] {"0"}));
-    	testingSet.add(new TestingExample(new String[]{"1, 0"}, new String[] {"0"}));
-    	testingSet.add(new TestingExample(new String[]{"0, 1"}, new String[] {"0"}));
-    	testingSet.add(new TestingExample(new String[]{"1, 1"}, new String[] {"1"}));
+    	testingSet.add(new InputOutput(new String[]{"0, 0"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"1, 0"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"0, 1"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"1, 1"}, new String[] {"1"}));
     	
 		net.learnOnce(testingSet); //one pass
 		
@@ -58,10 +58,10 @@ public class Test extends TestCase{
     	Network net=new Network();
     	
     	TestingSet testingSet=new TestingSet();
-    	testingSet.add(new TestingExample(new String[]{"0, 0"}, new String[] {"0"}));
-    	testingSet.add(new TestingExample(new String[]{"1, 0"}, new String[] {"1"}));
-    	testingSet.add(new TestingExample(new String[]{"0, 1"}, new String[] {"1"}));
-    	testingSet.add(new TestingExample(new String[]{"1, 1"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"0, 0"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"1, 0"}, new String[] {"1"}));
+    	testingSet.add(new InputOutput(new String[]{"0, 1"}, new String[] {"1"}));
+    	testingSet.add(new InputOutput(new String[]{"1, 1"}, new String[] {"0"}));
     	
 		net.learnOnce(testingSet);
 		

@@ -1,0 +1,33 @@
+Design considerations
+===============================================================================
+
+Network structure.
+We don't have layers since some schemas assume crossing (short circuiting, 
+bypassing) some layers: we rather have a generic graph (of Neurons).
+Neurons have reference to all the edges connected to it: only input edges are 
+considered. The edges which are connected to the neuron's output - those are
+another neuron's edges, so we have this the most elementary structure (node
+of the graph, with at least one neuron, in case of perceptron):
+ 
+
+---\
+----[Neuron+] 
+---/
+ 
+Plus sign (+) denotes the output from the neuron, and it can be read from the 
+node's terminal (single number)
+
+
+Then, for complex networks, we connect such elementary structures together: 
+
+---\
+----[Neuron+]\ 
+---/         \
+--------------[Neuron+]
+-------------///
+-------------//        
+------------//
+
+
+
+

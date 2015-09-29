@@ -20,7 +20,7 @@ import java.util.Iterator;
 /**
  * Testing/Training set of individual examples (a vector)
  */
-public class TestingSet extends ArrayList<TestingExample>{
+public class TestingSet extends ArrayList<InputOutput>{
 
 	
 	/**
@@ -28,7 +28,7 @@ public class TestingSet extends ArrayList<TestingExample>{
 	 */
 	public long getInputSize() throws Exception{
 		if(this.size()==0) throw new Exception("There are no testing examples in the testing set");
-		TestingExample firstTest=this.get(0);
+		InputOutput firstTest=this.get(0);
 		return firstTest.getInputSize();
 	}
 
@@ -38,7 +38,7 @@ public class TestingSet extends ArrayList<TestingExample>{
 	 */
 	public long getOutputSize() throws Exception{
 		if(this.size()==0) throw new Exception("There are no testing examples in the testing set");
-		TestingExample firstTest=this.get(0);
+		InputOutput firstTest=this.get(0);
 		return firstTest.getOutputSize();
 	}
 	
@@ -48,9 +48,9 @@ public class TestingSet extends ArrayList<TestingExample>{
 	 */
 	public String toString(){
 		StringBuffer sb = new StringBuffer("testing set:\n");
-    	Iterator<TestingExample> it = this.iterator();
+    	Iterator<InputOutput> it = this.iterator();
         while (it.hasNext()) {
-        	TestingExample test = it.next();
+        	InputOutput test = it.next();
         	sb.append(test);
         }
 		return sb.toString();

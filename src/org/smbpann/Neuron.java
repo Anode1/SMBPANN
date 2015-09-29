@@ -23,6 +23,7 @@ public class Neuron {
 	private double bias;
 	private ArrayList<Edge> edges=new ArrayList<Edge>();
 	
+	
 	public Neuron(){
 		
 	}

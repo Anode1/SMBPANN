@@ -76,7 +76,7 @@ public class FileUtil {
 		           	if(fields.length<overallSize)
 		           		throw new Exception("Number of elements in array in line "+ counter + " is less than the size of the header in file "+filePath);
 	           		
-		           	TestingExample inputOutput=new TestingExample(Arrays.copyOfRange(fields, 0, inputMatrixSize), Arrays.copyOfRange(fields, inputMatrixSize, overallSize));
+		           	InputOutput inputOutput=new InputOutput(Arrays.copyOfRange(fields, 0, inputMatrixSize), Arrays.copyOfRange(fields, inputMatrixSize, overallSize));
 		           	testingSet.add(inputOutput);
 	           	}
 	           	else{ //mapping or other type of file. Treat it here

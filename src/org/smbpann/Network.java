@@ -47,17 +47,23 @@ public class Network {
 		
 		if(Main.trace) System.out.println(testingSet);
 		
-		//we should have at least one output (to read the results from), so we always mapping 
-		//at least one neuron in the output layer to the Output
+		//We build the network from the end (output) to the start (input): the number of outputs defines number of neurons
+		//in the last (at least one) layer, as in perceptron. Depending on the number of hidden layers - we connect neurons
+		//by edges until we connect the Input with all it's inputs to the 1st layer neurons
+		
+		//Connect output: we should have at least one output - to read the results from, so we always mapping. Number neurons=number of outputs 
+		long sizeOfOutput = testingSet.getOutputSize();
+		
 
-		//Also, we need Input and it is meant to be wired with Edges
+		//Also, we need Input and it is meant to be wired with Edges (of at least one neuron as in the perceptron case)
+		long sizeOfInput = testingSet.getInputSize();
 		
 		//layers=new ArrayList();
 		
 		//iterating through the testing set:
-    	Iterator<TestingExample> it = testingSet.iterator();
+    	Iterator<InputOutput> it = testingSet.iterator();
         while (it.hasNext()) {
-        	TestingExample test = it.next();
+        	InputOutput test = it.next();
         	
         }
 		

@@ -14,17 +14,27 @@
 */
 package org.smbpann;
 
-
-public class Output {
-
-	private Object[] desiredOutput;
-
-	public Output(Object[] desiredOutput){
-		this.desiredOutput=desiredOutput;
-	}
+/**
+ * Placeholder for one epoch training sample: input + output (it may be as complex as image, or multi-dimensional array in future)
+ */
+public class InputOutput {
+	
+	private Object[] inputs; //for now it is an array - will be changed later. This class will hide the implementation
+	private Object[] desiredOutput; //for now it is an array - will be changed later. This class will hide the implementation
 
 	
-	public long getSize(){
+	public InputOutput(Object[] inputs, Object[] desiredOutput){
+		this.inputs=inputs;
+		this.desiredOutput=desiredOutput;
+	}
+	
+	
+	public long getInputSize(){
+		return inputs.length;
+	}
+	
+	
+	public long getOutputSize(){
 		return desiredOutput.length;
 	}
 	
@@ -34,11 +44,18 @@ public class Output {
 	 */
 	public String toString(){
 		StringBuffer sb = new StringBuffer();
+		for(int i=0; i<inputs.length; i++){
+			sb.append(inputs[i]);
+			if(i<inputs.length-1)
+				sb.append(",");
+		}
+		sb.append(" ==> ");
 		for(int i=0; i<desiredOutput.length; i++){
 			sb.append(desiredOutput[i]);
 			if(i<desiredOutput.length-1)
 				sb.append(",");
-		}
+		}	
+		sb.append("\n");
 		return sb.toString();
-	}	
+	}
 }
