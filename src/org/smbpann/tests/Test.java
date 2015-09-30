@@ -30,22 +30,27 @@ public class Test extends TestCase{
     public void setUp() throws Exception{
     	new Config();
     	
-    	Main.trace=true;
+    	//Main.trace=true;
     }
     
     
-    public void testBooleanOR() throws Exception{
 
+    
+    
+    public void testBooleanOR() throws Exception{
+   	
     	Network net=new Network();
     	net.getHints().put(Hints.NUMBER_OF_HIDDEN_LAYERS, 0);
     	
     	TestingSet testingSet=new TestingSet();
-    	testingSet.add(new InputOutput(new String[]{"0, 0"}, new String[] {"0"}));
-    	testingSet.add(new InputOutput(new String[]{"1, 0"}, new String[] {"0"}));
-    	testingSet.add(new InputOutput(new String[]{"0, 1"}, new String[] {"0"}));
-    	testingSet.add(new InputOutput(new String[]{"1, 1"}, new String[] {"1"}));
+    	testingSet.add(new InputOutput(new String[]{"0", "0"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"1", "0"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"0", "1"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"1", "1"}, new String[] {"1"}));
     	
-		net.learnOnce(testingSet); //one pass
+		net.teach(testingSet); //one pass
+		
+    	System.out.println(net);
 		
     }
   
@@ -58,12 +63,12 @@ public class Test extends TestCase{
     	Network net=new Network();
     	
     	TestingSet testingSet=new TestingSet();
-    	testingSet.add(new InputOutput(new String[]{"0, 0"}, new String[] {"0"}));
-    	testingSet.add(new InputOutput(new String[]{"1, 0"}, new String[] {"1"}));
-    	testingSet.add(new InputOutput(new String[]{"0, 1"}, new String[] {"1"}));
-    	testingSet.add(new InputOutput(new String[]{"1, 1"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"0", "0"}, new String[] {"0"}));
+    	testingSet.add(new InputOutput(new String[]{"1", "0"}, new String[] {"1"}));
+    	testingSet.add(new InputOutput(new String[]{"0", "1"}, new String[] {"1"}));
+    	testingSet.add(new InputOutput(new String[]{"1", "1"}, new String[] {"0"}));
     	
-		net.learnOnce(testingSet);
+		net.teach(testingSet);
 		
     }
  

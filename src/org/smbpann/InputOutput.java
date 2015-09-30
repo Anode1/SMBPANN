@@ -15,7 +15,8 @@
 package org.smbpann;
 
 /**
- * Placeholder for one epoch training sample: input + output (it may be as complex as image, or multi-dimensional array in future)
+ * Placeholder for one epoch training sample: input + required output (it may be as complex as image, 
+ * or a multi-dimensional array in future)
  */
 public class InputOutput {
 	
@@ -29,12 +30,12 @@ public class InputOutput {
 	}
 	
 	
-	public long getInputSize(){
+	public int getInputSize(){
 		return inputs.length;
 	}
 	
 	
-	public long getOutputSize(){
+	public int getOutputSize(){
 		return desiredOutput.length;
 	}
 	

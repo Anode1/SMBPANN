@@ -22,11 +22,10 @@ import java.util.Iterator;
  */
 public class TestingSet extends ArrayList<InputOutput>{
 
-	
 	/**
 	 * Returns Input size of the first element (all examples have the same size) 
 	 */
-	public long getInputSize() throws Exception{
+	public int getInputSize() throws Exception{
 		if(this.size()==0) throw new Exception("There are no testing examples in the testing set");
 		InputOutput firstTest=this.get(0);
 		return firstTest.getInputSize();
@@ -36,7 +35,7 @@ public class TestingSet extends ArrayList<InputOutput>{
 	/**
 	 * Returns Output size of the first element (all examples have the same size) 
 	 */
-	public long getOutputSize() throws Exception{
+	public int getOutputSize() throws Exception{
 		if(this.size()==0) throw new Exception("There are no testing examples in the testing set");
 		InputOutput firstTest=this.get(0);
 		return firstTest.getOutputSize();

@@ -17,24 +17,21 @@ package org.smbpann;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class Layer {
+/**
+ * Grouping of Neurons where those in the same layers can be calculated in-parallel at the same time and independently (not connected to each other)  
+ */
+public class Layer extends ArrayList<Neuron>{
 
-	private ArrayList<Edge> edges=new ArrayList<Edge>();
-	
-	public void addEdge(Edge edge){
-		edges.add(edge);
-	}
-	
 	
 	/**
 	 * For debugging purposes only
 	 */
 	public String toString(){
 		StringBuffer sb=new StringBuffer();
-    	Iterator<Edge> it = edges.iterator();
+    	Iterator<Neuron> it = this.iterator();
         while (it.hasNext()) {
-        	Edge edge = it.next();
-        	sb.append(edge);
+        	Neuron neuron = it.next();
+        	sb.append(neuron); sb.append("\n");
         }
 		return sb.toString();
 	}	

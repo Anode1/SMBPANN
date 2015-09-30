@@ -17,12 +17,10 @@ package org.smbpann.tests;
 import java.util.ArrayList;
 
 
+
 import junit.framework.TestCase;
 
-import org.smbpann.Config;
-import org.smbpann.Network;
 import org.smbpann.*;
-import org.smbpann.TestingSet;
 
 
 /**
@@ -39,6 +37,22 @@ public class Tests extends TestCase{
     	new Config();
     }
     
+	
+    public void testInputOutput() throws Exception{
+    	
+    	InputOutput inputOutput=new InputOutput(new String[]{"0", "0", "0"}, new String[] {"0"});
+    	assertEquals(inputOutput.getInputSize(), 3);
+    	assertEquals(inputOutput.getOutputSize(), 1);
+
+    	inputOutput=new InputOutput(new String[]{"3"}, new String[] {});
+    	assertEquals(inputOutput.getInputSize(), 1);
+    	assertEquals(inputOutput.getOutputSize(),0 );    	
+    	
+    	inputOutput=new InputOutput(new String[]{}, new String[] {});
+    	assertEquals(inputOutput.getInputSize(), 0);
+    	assertEquals(inputOutput.getOutputSize(),0 );    	
+    }	
+	
     
     public void testSipleCircuit() throws Exception{
 

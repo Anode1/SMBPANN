@@ -27,7 +27,7 @@ public class Processor {
 	public void process(Network net, TestingSet testingSet) throws Exception{
 		try{
 			while(!terminating){
-				net.learnOnce(testingSet);
+				net.teach(testingSet);
 				
 				//terminate if threshold reached
 				if(net.currentError < net.goalError){

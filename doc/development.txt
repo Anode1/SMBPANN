@@ -2,17 +2,10 @@ Design considerations
 ===============================================================================
 
 Network structure.
-We don't have layers since some schemas assume crossing (short circuiting, 
-bypassing) some layers: we rather have a generic graph (of Neurons).
-Neurons have reference to all the edges connected to it: only input edges are 
-considered. The edges which are connected to the neuron's output - those are
-another neuron's edges, so we have this the most elementary structure (node
-of the graph, with at least one neuron, in case of perceptron):
- 
 
----\
-----[Neuron+] 
----/
+edge---\
+edge----[Neuron+] 
+edge---/
  
 Plus sign (+) denotes the output from the neuron, and it can be read from the 
 node's terminal (single number)
@@ -20,14 +13,23 @@ node's terminal (single number)
 
 Then, for complex networks, we connect such elementary structures together: 
 
----\
-----[Neuron+]\ 
----/         \
---------------[Neuron+]
--------------///
--------------//        
-------------//
+edge---\
+edge----[Neuron+]- 
+edge---/          \
+----------edge----[Neuron+]
+----------edge---///
+----------edge---//        
+----------edge--//
 
 
+Layers contain Neurons and used for ordering Neurons (not to use topological 
+sort of the graph each time), giving a natural ordering. Also, while we create
+Neurons sequentially, we know the order during the creation, so why bother 
+doing expensive graph sorting later? And anyway we'll need some index or list
+of pointers defining the order, so the Layers is natural order already. 
+Neurons in the same Layer can be invoked in-parallel - if there is any sense, 
+since they are not dependent on each other in one training epoch. But Neurons 
+in different Layers cannot be run in-parallel (the sequence of their run is 
+predetermined in both feed forward stage and back propagation stage.   
 
 

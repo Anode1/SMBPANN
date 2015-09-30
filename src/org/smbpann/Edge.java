@@ -14,23 +14,48 @@
 */
 package org.smbpann;
 
+/**
+ * Always points to some Node (Neurons), this is like pointer 
+ */
 public class Edge {
 
+	private Neuron neuron; //corresponding to this Edge Neuron
+	private String name; //for id purposes
+	
 	public double weight;
 	public double weightDiff; //last weight difference
 	public double dx; //error difference
 	
+
+	public Edge(Neuron neuron, String name){
+		this.neuron=neuron;
+		this.name=name;
+		weight=Math.random(); //initialize by random (0..1) for now (we might want to have some flexibility here in future)
+	}	
+
 	
-	public Edge(){
-		weight=Math.random();
+	/**
+	 * Get corresponding Neuron 
+	 */
+	public Neuron getNeuron(){
+		return neuron;
 	}
 	
+	
+	public String getName(){
+		return name;
+	}
+	
+	
+	public void setName(String name){
+		this.name=name;
+	}
 	
 	/**
 	 * For debugging purposes only
 	 */
 	public String toString(){
-		return "weight="+weight+", dx="+dx;
+		return "name:"+name+", weight:"+weight+", dx:"+dx;
 	}
 	
 }

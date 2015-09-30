@@ -14,28 +14,86 @@
 */
 package org.smbpann;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 
 public class Neuron {
 
+	private String name; //name of the neuron for easier identification
 	private double value;
 	private double bias;
-	private ArrayList<Edge> edges=new ArrayList<Edge>();
+	private ArrayList<Edge> incomingEdges=new ArrayList<Edge>(); //inputs
+	private ArrayList<Edge> outgoingEdges=new ArrayList<Edge>(); //outputs (although those are inputs for other nodes - we need ref here for forward feeding
 	
 	
 	public Neuron(){
-		
 	}
 	
 	
-	public void addEdge(Edge edge){
-		edges.add(edge);
+	public Neuron(String name){
+		this.name=name;
+	}
+
+	
+	public void printWithChildrenRecursively(StringBuffer out){ //TODO: change to PrintWriter to be able to dump big trees
+    	out.append("neuron:"+getName());
+    	out.append("\n");
+		Iterator<Edge> it = outgoingEdges.iterator();
+        while(it.hasNext()) {
+        	Edge edge = it.next();
+        	out.append(edge);
+        	out.append("\n");
+        	Neuron neuron = edge.getNeuron();
+        	out.append(neuron);
+        	out.append("\n");
+        	neuron.printWithChildrenRecursively(out);
+        }
 	}
 	
 	
-	public double getOutput(){
+	public ArrayList<Edge> getIncomingEdges(){
+		return incomingEdges;
+	}
+	
+	
+	public void addIncomingEdge(Edge edge){
+		incomingEdges.add(edge);
+	}
+	
+	
+	public void removeIncomingEdge(Edge edge){
+		incomingEdges.remove(edge);
+	}
+	
+	
+	public ArrayList<Edge> getOutgoingEdges(){
+		return outgoingEdges;
+	}
+	
+	
+	public void addOutgoingEdge(Edge edge){
+		outgoingEdges.add(edge);
+	}
+	
+
+	public void removeOutgoingEdge(Edge edge){
+		outgoingEdges.remove(edge);
+	}	
+	
+	
+	public double getOutputValue(){
 		return value;
+	}
+	
+	
+	public String getName(){
+		return name;
+	}
+	
+	
+	void setName(String name){
+		this.name=name;
 	}
 	
 	
@@ -44,14 +102,26 @@ public class Neuron {
 	 */
 	public String toString(){
 		StringBuffer sb=new StringBuffer();
-    	Iterator<Edge> it = edges.iterator();
+		sb.append("Node:"+name);
+        sb.append(", output="+Double.toString(value));
+		
+    	Iterator<Edge> it = incomingEdges.iterator();
+    	sb.append(", incoming: [");
         while (it.hasNext()) {
         	Edge edge = it.next();
-        	sb.append(edge);
+        	sb.append(edge.getName());
         	if(it.hasNext())sb.append(",");
         }
-        sb.append("\n");
-        sb.append("output="+Double.toString(value));
+        sb.append("]");
+        
+        it = outgoingEdges.iterator();
+        sb.append(", outgoing: [");
+        while (it.hasNext()) {
+        	Edge edge = it.next();
+        	sb.append(edge.getName());
+        	if(it.hasNext())sb.append(",");
+        }
+        sb.append("]");
 		return sb.toString();
 	}	
 	
