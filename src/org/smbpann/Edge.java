@@ -55,7 +55,7 @@ public class Edge {
 	 * For debugging purposes only
 	 */
 	public String toString(){
-		return "name:"+name+", weight:"+weight+", dx:"+dx;
+		return "edge:"+name+", weight:"+weight+", dx:"+dx;
 	}
 	
 }

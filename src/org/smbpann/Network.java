@@ -27,7 +27,6 @@ public class Network {
 	public double currentError; //overall error
 	public double goalError; //final error goal
 
-	private ArrayList<Edge> inputs; //reference to the input terminals (inputs is not a Layer: they are just Edges to a layer)
 	private ArrayList<Layer> layers; //main structure (list of Layers, each Layer is list of Neurons)
 	
 	
@@ -41,7 +40,6 @@ public class Network {
 	 */
 	private void createNetwork(TestingSet testingSet) throws Exception{
 		
-		inputs=new ArrayList<Edge>();
 		layers=new ArrayList<Layer>();
 		
 		//We build the network from the end (output) to the start (input): the number of outputs defines number of neurons
@@ -72,7 +70,7 @@ public class Network {
 		for(int i=0; i<numberOfHiddenLayers; i++){
 		
 			Layer hiddenLayer=new Layer();
-			layers.add(hiddenLayer);
+			layers.add(0, hiddenLayer); //push to the front - to have the list order from left to right
 			
 			//how many nodes in each layer (everything here will be rewritten: to have it dynamic: we just show the idea)
 			int numberOfNodesPerLayer=10;
@@ -85,23 +83,24 @@ public class Network {
 			
 		}
 		*/
-
-		//Connect all inputs
+		
+		
+		
+		//Finally connect all inputs with the last (previous) layer
 		int sizeOfInput = testingSet.getInputSize();
 
 		for(int i=0; i<sizeOfInput; i++){
 	    	Iterator<Neuron> it = previousLayer.iterator();
-	        while (it.hasNext()) {
+	        while(it.hasNext()) {
 	        	Neuron neuron = it.next();
 	        	String name=neuron.getName()+"."+i; //name consists of name of Neuron, this Edge points to and number (for now)
 	        	Edge edge=new Edge(neuron, name);
-				inputs.add(edge);
 				neuron.addIncomingEdge(edge);
 	        }
 		}
 		
 	}
-
+	
 	
 	//Dynamic procedures for insertion/deleting neurons online (removes from Layers etc)
 	
@@ -142,7 +141,14 @@ public class Network {
     	Iterator<InputOutput> it = testingSet.iterator();
         while (it.hasNext()) {
         	InputOutput test = it.next();
+        	
+        	//connect (copy) inputs (to the input edges)
+        	Object[] inputs = test.getInput();
 
+        	//connect (copy) outputs (to the output)
+        	Object[] outputs = test.getOutput();
+        	
+        	
     		feedForward();
     		backPropagate();
         }
@@ -181,6 +187,7 @@ public class Network {
 	public String toString(){
 		StringBuffer sb = new StringBuffer();
 		
+		//print layers (with left edges for each Neuron, so we'll get all the network printed)
     	Iterator<Layer> layerIt = layers.iterator();
         while(layerIt.hasNext()) {
         	Layer layer = layerIt.next();
@@ -191,9 +198,9 @@ public class Network {
         		Iterator<Edge> edgesIt = incomingEdges.iterator();
         		while(edgesIt.hasNext()){
         			Edge edge=edgesIt.next();
-        			sb.append(edge); sb.append("\n");
+        			sb.append(edge); sb.append("\n"); //print edges first
         		}
-        		sb.append(neuron); sb.append("\n");
+        		sb.append(neuron); sb.append("\n"); //print neuron after edges
         	}
         }
 		

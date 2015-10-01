@@ -30,6 +30,16 @@ public class InputOutput {
 	}
 	
 	
+	public Object[] getInput(){
+		return inputs;
+	}
+	
+	
+	public Object[] getOutput(){
+		return desiredOutput;
+	}
+	
+	
 	public int getInputSize(){
 		return inputs.length;
 	}

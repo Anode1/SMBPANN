@@ -35,7 +35,7 @@ public class Neuron {
 		this.name=name;
 	}
 
-	
+	/*
 	public void printWithChildrenRecursively(StringBuffer out){ //TODO: change to PrintWriter to be able to dump big trees
     	out.append("neuron:"+getName());
     	out.append("\n");
@@ -49,7 +49,7 @@ public class Neuron {
         	out.append("\n");
         	neuron.printWithChildrenRecursively(out);
         }
-	}
+	}*/
 	
 	
 	public ArrayList<Edge> getIncomingEdges(){
@@ -102,7 +102,7 @@ public class Neuron {
 	 */
 	public String toString(){
 		StringBuffer sb=new StringBuffer();
-		sb.append("Node:"+name);
+		sb.append("neuron:"+name);
         sb.append(", output="+Double.toString(value));
 		
     	Iterator<Edge> it = incomingEdges.iterator();
