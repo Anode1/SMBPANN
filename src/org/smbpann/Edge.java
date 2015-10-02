@@ -15,11 +15,12 @@
 package org.smbpann;
 
 /**
- * Always points to some Node (Neurons), this is like pointer 
+ * Always points to some Node (Neurons), this is like a pointer 
  */
 public class Edge {
 
-	private Neuron neuron; //corresponding to this Edge Neuron
+	private Neuron leftNeuron; //The Neuron at the left
+	private Neuron rightNeuron; //The Neuron at the right
 	private String name; //for id purposes
 	
 	public double weight;
@@ -27,18 +28,37 @@ public class Edge {
 	public double dx; //error difference
 	
 
-	public Edge(Neuron neuron, String name){
-		this.neuron=neuron;
+	public Edge(Neuron leftNeuron, Neuron rightNeuron, String name){
 		this.name=name;
+		
+		this.leftNeuron=leftNeuron;
+		leftNeuron.addOutgoingEdge(this);
+		
+		this.rightNeuron=rightNeuron;
+		rightNeuron.addIncomingEdge(this);
+		
 		weight=Math.random(); //initialize by random (0..1) for now (we might want to have some flexibility here in future)
 	}	
 
+	/*
+	public double getLeftData(){
+		//leftNeuron
+	}*/
+	
 	
 	/**
-	 * Get corresponding Neuron 
+	 * Get the Neuron at the left 
 	 */
-	public Neuron getNeuron(){
-		return neuron;
+	public Neuron getLeftNeuron(){
+		return leftNeuron;
+	}
+	
+	
+	/**
+	 * Get the Neuron at the right 
+	 */
+	public Neuron getRightNeuron(){
+		return rightNeuron;
 	}
 	
 	

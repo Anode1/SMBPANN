@@ -18,7 +18,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class Neuron {
+public class Neuron{
 
 	private String name; //name of the neuron for easier identification
 	private double value;
@@ -34,6 +34,25 @@ public class Neuron {
 	public Neuron(String name){
 		this.name=name;
 	}
+	
+	
+	public void feedForward() throws Exception{
+		ArrayList<Edge> incomingEdges = getIncomingEdges();
+		Iterator<Edge> edgesIt = incomingEdges.iterator();
+		while(edgesIt.hasNext()){
+			Edge edge=edgesIt.next();
+		}
+	}
+	
+	
+	public void backPropagate() throws Exception{
+		ArrayList<Edge> incomingEdges = getIncomingEdges();
+		Iterator<Edge> edgesIt = incomingEdges.iterator();
+		while(edgesIt.hasNext()){
+			Edge edge=edgesIt.next();
+		}
+	}
+	
 
 	/*
 	public void printWithChildrenRecursively(StringBuffer out){ //TODO: change to PrintWriter to be able to dump big trees
@@ -94,6 +113,11 @@ public class Neuron {
 	
 	void setName(String name){
 		this.name=name;
+	}
+	
+	
+	void setValue(double value){
+		this.value=value;
 	}
 	
 	

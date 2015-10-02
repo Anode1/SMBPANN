@@ -90,12 +90,15 @@ public class Network {
 		int sizeOfInput = testingSet.getInputSize();
 
 		for(int i=0; i<sizeOfInput; i++){
+
 	    	Iterator<Neuron> it = previousLayer.iterator();
 	        while(it.hasNext()) {
-	        	Neuron neuron = it.next();
-	        	String name=neuron.getName()+"."+i; //name consists of name of Neuron, this Edge points to and number (for now)
-	        	Edge edge=new Edge(neuron, name);
-				neuron.addIncomingEdge(edge);
+	        	Neuron rightNeuron = it.next();
+	        	
+	        	//left Neuron is Input Neuron: create not calculating Neuron for Input (it will not be included into a Layer)
+	        	Neuron leftNeuron = new Neuron("input "+i);
+
+	        	Edge edge=new Edge(leftNeuron, rightNeuron, i+"."+"["+rightNeuron.getName()+"]");
 	        }
 		}
 		
@@ -156,12 +159,27 @@ public class Network {
 	
 	
 	public void feedForward() throws Exception{
-		
+    	Iterator<Layer> layerIt = layers.iterator();
+        while(layerIt.hasNext()) {
+        	Layer layer = layerIt.next();
+        	Iterator<Neuron> neuronIt = layer.iterator();
+        	while(neuronIt.hasNext()){
+        		Neuron neuron=neuronIt.next();
+        		neuron.feedForward();
+        	}
+        }
 	}
 	
 	
 	public void backPropagate() throws Exception{
-		
+		for(int i=layers.size()-1; i>=0; i--){ //from right (last year) to left (to the input)
+        	Layer layer=layers.get(i);
+        	Iterator<Neuron> neuronIt = layer.iterator();
+        	while(neuronIt.hasNext()){
+        		Neuron neuron=neuronIt.next();
+        		neuron.backPropagate();
+        	}
+        }
 	}
 	
 	
@@ -186,7 +204,7 @@ public class Network {
 	 */
 	public String toString(){
 		StringBuffer sb = new StringBuffer();
-		
+	
 		//print layers (with left edges for each Neuron, so we'll get all the network printed)
     	Iterator<Layer> layerIt = layers.iterator();
         while(layerIt.hasNext()) {
