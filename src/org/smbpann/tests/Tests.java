@@ -40,15 +40,15 @@ public class Tests extends TestCase{
 	
     public void testInputOutput() throws Exception{
     	
-    	InputOutput inputOutput=new InputOutput(new String[]{"0", "0", "0"}, new String[] {"0"});
+    	SampleInputOutput inputOutput=new SampleInputOutput(new String[]{"0", "0", "0"}, new String[] {"0"});
     	assertEquals(inputOutput.getInputSize(), 3);
     	assertEquals(inputOutput.getOutputSize(), 1);
 
-    	inputOutput=new InputOutput(new String[]{"3"}, new String[] {});
+    	inputOutput=new SampleInputOutput(new String[]{"3"}, new String[] {});
     	assertEquals(inputOutput.getInputSize(), 1);
     	assertEquals(inputOutput.getOutputSize(),0 );    	
     	
-    	inputOutput=new InputOutput(new String[]{}, new String[] {});
+    	inputOutput=new SampleInputOutput(new String[]{}, new String[] {});
     	assertEquals(inputOutput.getInputSize(), 0);
     	assertEquals(inputOutput.getOutputSize(),0 );    	
     }	
@@ -57,7 +57,7 @@ public class Tests extends TestCase{
     public void testSipleCircuit() throws Exception{
 
     	TestingSet testingSet=new TestingSet();
-    	testingSet.add(new InputOutput(new String[]{""}, new String[] {""}));
+    	testingSet.add(new SampleInputOutput(new String[]{""}, new String[] {""}));
     	
 		Network net=new Network();
 		//net.process();
@@ -68,7 +68,7 @@ public class Tests extends TestCase{
     public void testPerceptron() throws Exception{
 
     	TestingSet testingSet=new TestingSet();
-    	testingSet.add(new InputOutput(new String[]{""}, new String[] {""}));
+    	testingSet.add(new SampleInputOutput(new String[]{""}, new String[] {""}));
     	
 		Network net=new Network();
 		//net.process();

@@ -14,14 +14,14 @@
 */
 package org.smbpann;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 
 public class Neuron{
 
 	private String name; //name of the neuron for easier identification
-	private double value;
+	private double value; //current value
+	private double desiredValue; //desired value (in output neurons)
 	private double bias;
 	private ArrayList<Edge> incomingEdges=new ArrayList<Edge>(); //inputs
 	private ArrayList<Edge> outgoingEdges=new ArrayList<Edge>(); //outputs (although those are inputs for other nodes - we need ref here for forward feeding
@@ -38,18 +38,37 @@ public class Neuron{
 	
 	public void feedForward() throws Exception{
 		ArrayList<Edge> incomingEdges = getIncomingEdges();
-		Iterator<Edge> edgesIt = incomingEdges.iterator();
-		while(edgesIt.hasNext()){
-			Edge edge=edgesIt.next();
+		int numberOfInputs=incomingEdges.size();
+		double sum=0;
+		Iterator<Edge> it = incomingEdges.iterator();
+		while(it.hasNext()){
+			Edge edge=it.next();
+			double input = edge.getLeftNeuron().getOutputValue();
+			sum += input * edge.weight;
 		}
+		value=Activation.activate(sum); //sigmoid currently but we can experiment with different activation functions (tansigmoid, softmax) there 
 	}
 	
 	
-	public void backPropagate() throws Exception{
+	public void backPropagate(boolean isLastLayer) throws Exception{
+		
+		//error:
+		//edge.dx = value * (1 - value) * sum; //derivative of sigmoid
+		
 		ArrayList<Edge> incomingEdges = getIncomingEdges();
-		Iterator<Edge> edgesIt = incomingEdges.iterator();
-		while(edgesIt.hasNext()){
-			Edge edge=edgesIt.next();
+		Iterator<Edge> it = incomingEdges.iterator();
+		while(it.hasNext()){
+			Edge edge=it.next();
+			
+			edge.weight+=Network.learningRate * edge.error * edge.getLeftNeuron().getOutputValue();
+			
+			if(isLastLayer){
+				
+			}
+			else{
+				
+			}
+			
 		}
 	}
 	
@@ -103,6 +122,16 @@ public class Neuron{
 	
 	public double getOutputValue(){
 		return value;
+	}
+	
+	
+	public double getDesiredValue(){
+		return value;
+	}
+	
+	
+	public void setDesiredValue(double desiredValue){
+		this.desiredValue=desiredValue;
 	}
 	
 	

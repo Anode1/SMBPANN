@@ -18,9 +18,22 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
- * Grouping of Neurons where those in the same layers can be calculated in-parallel at the same time and independently (not connected to each other)  
+ * Grouping of Neurons where those in the same layers can be calculated in-parallel independently, at the same time  
+ * (they are not dependent on each other)  
  */
-public class Layer extends ArrayList<Neuron>{
+public class Layer {
+
+	private ArrayList<Neuron> neurons;
+	
+	
+	public ArrayList<Neuron> getNeurons(){
+		return neurons;
+	}
+	
+	
+	public void setNeurons(ArrayList<Neuron> neurons){
+		this.neurons=neurons;
+	}
 
 	
 	/**
@@ -28,10 +41,12 @@ public class Layer extends ArrayList<Neuron>{
 	 */
 	public String toString(){
 		StringBuffer sb=new StringBuffer();
-    	Iterator<Neuron> it = this.iterator();
+    	Iterator<Neuron> it = neurons.iterator();
         while (it.hasNext()) {
         	Neuron neuron = it.next();
-        	sb.append(neuron); sb.append("\n");
+        	sb.append(neuron); 
+        	if(it.hasNext())
+        		sb.append(",");
         }
 		return sb.toString();
 	}	

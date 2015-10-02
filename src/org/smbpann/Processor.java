@@ -22,11 +22,16 @@ import java.util.ArrayList;
 public class Processor {
 	
 	private boolean terminating;
+	private long max_iterations;
 	
 
 	public void process(Network net, TestingSet testingSet) throws Exception{
+		
+		max_iterations=Parameters.getAsLong("max_iterations");
 		try{
-			while(!terminating){
+			long count=0;
+			
+			while(!terminating && ((count++)<max_iterations)){
 				net.teach(testingSet);
 				
 				//terminate if threshold reached

@@ -15,27 +15,27 @@
 package org.smbpann;
 
 /**
- * Placeholder for one epoch training sample: input + required output (it may be as complex as image, 
- * or a multi-dimensional array in future)
+ * Placeholder for training sample data: input + required output (it may be as complex as image, 
+ * or a multidimensional array in future, however any multidimensional arrays can be flattened to a one-dimensional one)
  */
-public class InputOutput {
+public class SampleInputOutput {
 	
-	private Object[] inputs; //for now it is an array - will be changed later. This class will hide the implementation
-	private Object[] desiredOutput; //for now it is an array - will be changed later. This class will hide the implementation
+	private String[] inputs; //for now it is an array - will be changed later. This class will hide the implementation
+	private String[] desiredOutput; //for now it is an array - will be changed later. This class will hide the implementation
 
 	
-	public InputOutput(Object[] inputs, Object[] desiredOutput){
+	public SampleInputOutput(String[] inputs, String[] desiredOutput){
 		this.inputs=inputs;
 		this.desiredOutput=desiredOutput;
 	}
 	
 	
-	public Object[] getInput(){
+	public String[] getInput(){
 		return inputs;
 	}
 	
 	
-	public Object[] getOutput(){
+	public String[] getOutput(){
 		return desiredOutput;
 	}
 	

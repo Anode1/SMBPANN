@@ -20,14 +20,14 @@ import java.util.Iterator;
 /**
  * Testing/Training set of individual examples (a vector)
  */
-public class TestingSet extends ArrayList<InputOutput>{
+public class TestingSet extends ArrayList<SampleInputOutput>{
 
 	/**
 	 * Returns Input size of the first element (all examples have the same size) 
 	 */
 	public int getInputSize() throws Exception{
 		if(this.size()==0) throw new Exception("There are no testing examples in the testing set");
-		InputOutput firstTest=this.get(0);
+		SampleInputOutput firstTest=this.get(0);
 		return firstTest.getInputSize();
 	}
 
@@ -37,7 +37,7 @@ public class TestingSet extends ArrayList<InputOutput>{
 	 */
 	public int getOutputSize() throws Exception{
 		if(this.size()==0) throw new Exception("There are no testing examples in the testing set");
-		InputOutput firstTest=this.get(0);
+		SampleInputOutput firstTest=this.get(0);
 		return firstTest.getOutputSize();
 	}
 	
@@ -47,9 +47,9 @@ public class TestingSet extends ArrayList<InputOutput>{
 	 */
 	public String toString(){
 		StringBuffer sb = new StringBuffer("testing set:\n");
-    	Iterator<InputOutput> it = this.iterator();
+    	Iterator<SampleInputOutput> it = this.iterator();
         while (it.hasNext()) {
-        	InputOutput test = it.next();
+        	SampleInputOutput test = it.next();
         	sb.append(test);
         }
 		return sb.toString();

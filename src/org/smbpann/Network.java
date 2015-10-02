@@ -23,15 +23,22 @@ public class Network {
 	public String name; //name of the network for identification (when running multiple)
 	private Hints hints=new Hints(); //way to pass heuristics to the network - when it is necessary (the proper function will get it when it needs, depending on the particular function)
 	
-	private double step;
-	public double currentError; //overall error
-	public double goalError; //final error goal
+	public static double learningRate;
+	public static double momentum;
+	public static double weigthDecay; 
+	public static double goalError; //final error goal
 
-	private ArrayList<Layer> layers; //main structure (list of Layers, each Layer is list of Neurons)
+	public double currentError; //overall error
+	
+	private ArrayList<Layer> layers; //main structure (list of Layers, each Layer is list of Neurons; input is not a layer)
+	private InputOutputTerminals inputOutputTerminals; //input/output terminals, for easy and fast data setting
 	
 	
 	public Network() throws Exception{
-		step=hints.getAsDouble(Hints.STEP);
+		learningRate=Parameters.getAsDouble("learning_rate");
+		momentum=Parameters.getAsDouble("momentum");
+		weigthDecay=Parameters.getAsDouble("weight_decay");	
+		goalError=Parameters.getAsDouble("error");
 	}
 	
 
@@ -40,28 +47,22 @@ public class Network {
 	 */
 	private void createNetwork(TestingSet testingSet) throws Exception{
 		
+		//create processing layers (which consist of hidden layers and at least one output layer) 
 		layers=new ArrayList<Layer>();
 		
-		//We build the network from the end (output) to the start (input): the number of outputs defines number of neurons
-		//in the last (at least one) layer, as in perceptron. Depending on the number of hidden layers - we connect neurons
-		//by edges until we connect the Input with all it's inputs to the 1st layer neurons
-
-		Layer outputLayer=new Layer(); //at least one layer exists - even in the perceptron case
+		inputOutputTerminals = new InputOutputTerminals(testingSet);
+		
+		//we create Layers from Output to Input backwards
+		
+		Layer outputLayer=new Layer();
+		outputLayer.setNeurons(inputOutputTerminals.getOutputNeurons()); //set reference to the same list of Neurons
 		layers.add(outputLayer);
 		
 		int nodeCounter=0; //we use numbers for naming neurons for id/debugging purposes for now
+
+		Layer previousLayer=outputLayer; //set output as previousLayer, later we'll have a dynamic variable policy here: how to choose Neurons to connect to
 		
-		//Connect output: we should have at least one output - to read the results from, so we always mapping. Number neurons=number of outputs 
-		int sizeOfOutput = testingSet.getOutputSize();
-		for(int i=0; i<sizeOfOutput; i++){
-			Neuron neuron=new Neuron(Integer.toString(nodeCounter++)); 
-			outputLayer.add(neuron);
-		}
-		
-		//for now let's use previousLayer, later we'll have a dynamic variable policy here: how to choose Neurons to connect to
-		Layer previousLayer=outputLayer;
-		
-		//decide how many hidden layers are necessary in the beginning. Use hints 
+		//decide how many hidden layers are necessary in the beginning. Use hints (?) 
 		
 		//TODO: implement hidden layers and interconnection here. In future we might experiment with trimming edges online
 		// . . .
@@ -84,24 +85,19 @@ public class Network {
 		}
 		*/
 		
+		//Finally connect all neurons of just created (previous) layer to all the Inputs
 		
-		
-		//Finally connect all inputs with the last (previous) layer
-		int sizeOfInput = testingSet.getInputSize();
+    	Iterator<Neuron> it = previousLayer.getNeurons().iterator();
+        while (it.hasNext()) {
+        	Neuron neuron = it.next();
+        	Iterator<Neuron> inputIt = inputOutputTerminals.getInputNeurons().iterator();
+        	while (inputIt.hasNext()) {
+        		Neuron inputNeuron = inputIt.next();
+        		Edge edge=new Edge(inputNeuron, neuron); //this connects itself with both passed Neurons
+        	}
+        }
 
-		for(int i=0; i<sizeOfInput; i++){
-
-	    	Iterator<Neuron> it = previousLayer.iterator();
-	        while(it.hasNext()) {
-	        	Neuron rightNeuron = it.next();
-	        	
-	        	//left Neuron is Input Neuron: create not calculating Neuron for Input (it will not be included into a Layer)
-	        	Neuron leftNeuron = new Neuron("input "+i);
-
-	        	Edge edge=new Edge(leftNeuron, rightNeuron, i+"."+"["+rightNeuron.getName()+"]");
-	        }
-		}
-		
+	
 	}
 	
 	
@@ -141,16 +137,10 @@ public class Network {
 		}
 		
 		//iterating through the testing set:
-    	Iterator<InputOutput> it = testingSet.iterator();
+    	Iterator<SampleInputOutput> it = testingSet.iterator();
         while (it.hasNext()) {
-        	InputOutput test = it.next();
-        	
-        	//connect (copy) inputs (to the input edges)
-        	Object[] inputs = test.getInput();
-
-        	//connect (copy) outputs (to the output)
-        	Object[] outputs = test.getOutput();
-        	
+        	SampleInputOutput sample = it.next();
+        	inputOutputTerminals.set(sample);        	
         	
     		feedForward();
     		backPropagate();
@@ -162,7 +152,7 @@ public class Network {
     	Iterator<Layer> layerIt = layers.iterator();
         while(layerIt.hasNext()) {
         	Layer layer = layerIt.next();
-        	Iterator<Neuron> neuronIt = layer.iterator();
+        	Iterator<Neuron> neuronIt = layer.getNeurons().iterator();
         	while(neuronIt.hasNext()){
         		Neuron neuron=neuronIt.next();
         		neuron.feedForward();
@@ -172,19 +162,16 @@ public class Network {
 	
 	
 	public void backPropagate() throws Exception{
-		for(int i=layers.size()-1; i>=0; i--){ //from right (last year) to left (to the input)
+		int lastLayerIndex = layers.size()-1;
+		for(int i=lastLayerIndex; i>=0; i--){ //from right (last year) to left (to the input)
+			boolean isLastLayer=(i==lastLayerIndex);
         	Layer layer=layers.get(i);
-        	Iterator<Neuron> neuronIt = layer.iterator();
+        	Iterator<Neuron> neuronIt = layer.getNeurons().iterator();
         	while(neuronIt.hasNext()){
         		Neuron neuron=neuronIt.next();
-        		neuron.backPropagate();
+        		neuron.backPropagate(isLastLayer);
         	}
         }
-	}
-	
-	
-	public void setStep(double step){
-		this.step=step;
 	}
 	
 	
@@ -204,12 +191,18 @@ public class Network {
 	 */
 	public String toString(){
 		StringBuffer sb = new StringBuffer();
-	
+		
+		Iterator<Neuron> it = inputOutputTerminals.getInputNeurons().iterator();
+		while(it.hasNext()) {
+			Neuron neuron=it.next();
+			neuron.getOutputValue();
+		}
+		
 		//print layers (with left edges for each Neuron, so we'll get all the network printed)
     	Iterator<Layer> layerIt = layers.iterator();
         while(layerIt.hasNext()) {
         	Layer layer = layerIt.next();
-        	Iterator<Neuron> neuronIt = layer.iterator();
+        	Iterator<Neuron> neuronIt = layer.getNeurons().iterator();
         	while(neuronIt.hasNext()){
         		Neuron neuron=neuronIt.next();
         		ArrayList<Edge> incomingEdges = neuron.getIncomingEdges();

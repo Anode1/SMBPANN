@@ -60,6 +60,23 @@ public class Parameters extends java.util.Properties{
 		}
 		return 0;
 	}
+	
+	
+	/**
+	 * Helper method. Gets a long integer by key. Returns 0 if no property exists or it is malformed
+	 */
+	public static long getAsLong(String key){
+
+		String i = Parameters.getString(key);
+
+		try{
+			return Long.parseLong(i);
+		}catch(NumberFormatException e){
+			System.err.println("Malformed long in properties for key="+key +":"+i);
+		}
+		return 0;
+	}
+	
 
 	/**
 	 * Helper method. Gets a double by key. Returns 0 if no property exists or it is malformed

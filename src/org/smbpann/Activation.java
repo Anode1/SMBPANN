@@ -5,7 +5,15 @@ package org.smbpann;
  * Non-linear activation functions (we likely need just one)
  */
 public class Activation {
+	
+	/**
+	 * Currently sigmoid, but dynamic change of function may be implemented here
+	 */
+	public static double activate(double x){
+		return sigmoid(x);
+	}
 
+	
 	// We should probably store cached tables (has to be measured yet)	
 	public static double sigmoid(double x){
 		//slope parameter not shown 

@@ -21,15 +21,14 @@ public class Edge {
 
 	private Neuron leftNeuron; //The Neuron at the left
 	private Neuron rightNeuron; //The Neuron at the right
-	private String name; //for id purposes
 	
 	public double weight;
 	public double weightDiff; //last weight difference
-	public double dx; //error difference
+	public double error; //current error
+	public double de; //error difference
 	
 
-	public Edge(Neuron leftNeuron, Neuron rightNeuron, String name){
-		this.name=name;
+	public Edge(Neuron leftNeuron, Neuron rightNeuron){
 		
 		this.leftNeuron=leftNeuron;
 		leftNeuron.addOutgoingEdge(this);
@@ -62,20 +61,19 @@ public class Edge {
 	}
 	
 	
+	/**
+	 * For Id purposes [leftNodeID,rightNodeID]
+	 */
 	public String getName(){
-		return name;
+		return "["+leftNeuron.getName()+"-"+rightNeuron.getName()+"]";
 	}
 	
-	
-	public void setName(String name){
-		this.name=name;
-	}
 	
 	/**
 	 * For debugging purposes only
 	 */
 	public String toString(){
-		return "edge:"+name+", weight:"+weight+", dx:"+dx;
+		return "edge:"+getName()+", weight:"+weight+", error: "+error+", de:"+de;
 	}
 	
 }

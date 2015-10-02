@@ -1,5 +1,6 @@
 /*
     This program is free software: you can redistribute it and/or modify
+
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
@@ -76,7 +77,7 @@ public class FileUtil {
 		           	if(fields.length<overallSize)
 		           		throw new Exception("Number of elements in array in line "+ counter + " is less than the size of the header in file "+filePath);
 	           		
-		           	InputOutput inputOutput=new InputOutput(Arrays.copyOfRange(fields, 0, inputMatrixSize), Arrays.copyOfRange(fields, inputMatrixSize, overallSize));
+		           	SampleInputOutput inputOutput=new SampleInputOutput(Arrays.copyOfRange(fields, 0, inputMatrixSize), Arrays.copyOfRange(fields, inputMatrixSize, overallSize));
 		           	testingSet.add(inputOutput);
 	           	}
 	           	else{ //mapping or other type of file. Treat it here
