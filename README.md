@@ -1,5 +1,12 @@
 # SMBPANN
 Self-Modifying Back Propagation (Feed Forward) Neural Network 
+
+(the project was started in early 2000s, after the author 
+graduated from university with specialization in Back Propagation
+Feed Forward neural networks, and the tensor implementation 
+of the delta rule was one of the subjects of the final work. 
+The project was abandoned after Tensor Flow appearence and author's
+lack of spare time for implementation)
 ===============================================================
 The goal:
 Rather than implementing function
