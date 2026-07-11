@@ -24,3 +24,15 @@ smb_real rng_uniform(Rng *r, smb_real lo, smb_real hi)
     smb_real u = (smb_real)(rng_u32(r) / 4294967296.0);
     return lo + u * (hi - lo);
 }
+
+smb_real rng_gaussian(Rng *r)
+{
+    /* Sum of 12 uniforms in [0,1) has mean 6 and variance 1, so subtracting 6
+     * gives an approximate N(0,1) without a libm call. */
+    double s = 0.0;
+    int    i;
+
+    for (i = 0; i < 12; i++)
+        s += (double)rng_uniform(r, 0.0f, 1.0f);
+    return (smb_real)(s - 6.0);
+}

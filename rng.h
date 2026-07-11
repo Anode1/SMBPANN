@@ -28,4 +28,8 @@ uint32_t rng_u32(Rng *r);
 /* Uniform real in [lo, hi). */
 smb_real rng_uniform(Rng *r, smb_real lo, smb_real hi);
 
+/* Approximately standard-normal N(0,1), via the central-limit sum of 12 uniforms
+ * (no libm dependency); adequate for self-adaptive mutation. */
+smb_real rng_gaussian(Rng *r);
+
 #endif /* SMB_RNG_H */

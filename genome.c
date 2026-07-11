@@ -1,8 +1,15 @@
 /* genome.c -- topology genome and its mutation operators. See genome.h. */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "genome.h"
+
+/* Self-adaptation constants: TAU is the log-normal step for the rate; the rate
+ * is clamped so it never vanishes or explodes. */
+#define GENOME_TAU       0.35
+#define GENOME_RATE_MIN  0.5
+#define GENOME_RATE_MAX  12.0
 
 /* uniform integer in [0, m) via the PRNG */
 static size_t below(Rng *rng, size_t m)
@@ -24,6 +31,28 @@ void genome_random(Genome *g, size_t ninput, size_t noutput,
         g->dim[1 + i] = 1 + below(rng, maxwidth);
     g->dim[1 + nhid] = noutput;
     g->n = nhid + 2;
+    g->rate = 1.0f;                          /* a caller may override the seed */
+}
+
+void genome_reproduce(Genome *child, const Genome *parent,
+                      size_t maxhid, size_t maxwidth, Rng *rng)
+{
+    long moves, k;
+
+    *child = *parent;
+    /* log-normal self-adaptation of the inherited rate, then clamp */
+    child->rate *= (smb_real)exp(GENOME_TAU * (double)rng_gaussian(rng));
+    if (child->rate < (smb_real)GENOME_RATE_MIN)
+        child->rate = (smb_real)GENOME_RATE_MIN;
+    if (child->rate > (smb_real)GENOME_RATE_MAX)
+        child->rate = (smb_real)GENOME_RATE_MAX;
+
+    /* apply round(rate) topology mutations, at least one */
+    moves = (long)((double)child->rate + 0.5);
+    if (moves < 1)
+        moves = 1;
+    for (k = 0; k < moves; k++)
+        genome_mutate(child, maxhid, maxwidth, rng);
 }
 
 void genome_mutate(Genome *g, size_t maxhid, size_t maxwidth, Rng *rng)
@@ -106,5 +135,6 @@ int genome_parse(Genome *g, const char *s)
     if (n < 2)
         return -1;
     g->n = n;
+    g->rate = 1.0f;   /* topology strings carry no rate; default it */
     return 0;
 }

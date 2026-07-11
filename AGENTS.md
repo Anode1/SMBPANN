@@ -43,6 +43,11 @@ against a matched-compute random control (run from the repo root):
     ./evolve -i 2 -o 1 -P 8 -G 8 -M 1              # XOR topologies, GA vs random
     COMMON="-f data.txt -i N -o M -e 3000" ./evolve -i N -o M -P 16 -G 20 -M 2
 
+`-M` is the *initial* mutation rate; it then self-adapts per lineage (ES-style),
+so the run is far less sensitive to it. The per-generation `rate=` field shows the
+best individual's evolved rate (it anneals: higher early to explore, lower to
+refine).
+
 The reproducible benchmark generates a task where topology matters and races the
 GA against random over several seeds (env: DIM N FREQ NOISE RUNS POP GENS EPOCHS
 MUT). The GA is sensitive to MUT (mutation moves per offspring):
@@ -59,7 +64,8 @@ MUT). The GA is sensitive to MUT (mutation moves per offspring):
     train      backpropagation: the generalized delta rule with momentum
     arena      marker/Mark-Release allocator (the population's heap)
     data       plain-text datasets + train/test split
-    genome     topology genome: random, mutation, format/parse (reproducible)
+    genome     topology genome: random, mutation, self-adaptive reproduction
+               (the mutation rate lives in the genome and evolves, ES-style)
     main.c     the CLI / evaluation worker (getopt); emits a RESULT fitness line
     evolve.c   the evolutionary search driver + matched random-search control
     gentask.c  reproducible synthetic-task generator (a task where topology matters)

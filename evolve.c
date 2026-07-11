@@ -29,7 +29,7 @@ static void usage(const char *prog)
 {
     fprintf(stderr,
         "usage: %s -i in -o out [-P pop] [-G gens] [-k elite] [-s seed]\n"
-        "          [-L maxhidden] [-W maxwidth] [-M mutations]\n"
+        "          [-L maxhidden] [-W maxwidth] [-M initial-rate]\n"
         "\n"
         "Evolves network topologies and races the GA against random search.\n"
         "Fitness comes from scripts/evaluate.sh (set COMMON for a dataset; with\n"
@@ -60,15 +60,16 @@ static int write_pop(const char *path, const Genome *pop, size_t n)
 }
 
 /* Run the coordinator on POPFILE, writing its sorted leaderboard to RESFILE,
- * then read the best fitness and the top-K topologies (elite). The leaderboard
- * is sorted best-first, so the first line is the best and the first K are the
- * elite. Returns 0 (and *NELITE >= 1), or -1 if nothing evaluated. */
+ * then read the best fitness and the top-K topology strings (sorted best-first).
+ * Topology strings only: the genome's rate lives in memory and does not cross
+ * the shell seam, so the caller recovers it by matching. Returns 0 (and
+ * *NTOP >= 1), or -1 if nothing evaluated. */
 static int evaluate(const char *evalcmd, const char *popfile, const char *resfile,
-                    Genome *elite, size_t k, size_t *nelite, double *best)
+                    char (*topos)[256], size_t k, size_t *ntop, double *best)
 {
-    char  cmd[1024];
-    char  line[512];
-    FILE *f;
+    char   cmd[1024];
+    char   line[512];
+    FILE  *f;
     size_t got = 0;
 
     *best = 0.0;
@@ -85,15 +86,11 @@ static int evaluate(const char *evalcmd, const char *popfile, const char *resfil
             continue;
         if (got == 0)
             *best = atof(fp + 8);            /* "fitness=" is 8 chars; best first */
-        if (got < k) {
-            char topo[256];
-            if (sscanf(tp + 9, "%255[0-9,]", topo) == 1   /* "topology=" is 9 */
-                && genome_parse(&elite[got], topo) == 0)
-                got++;
-        }
+        if (got < k && sscanf(tp + 9, "%255[0-9,]", topos[got]) == 1)
+            got++;                            /* "topology=" is 9 chars */
     }
     fclose(f);
-    *nelite = got;
+    *ntop = got;
     return (got > 0) ? 0 : -1;
 }
 
@@ -110,7 +107,9 @@ int main(int argc, char **argv)
     char        popfile[64], resfile[64];
     Rng         ga_rng, rand_rng;
     Genome      gapop[EV_MAX_POP], randpop[EV_MAX_POP], eliteg[EV_MAX_POP];
+    char        etop[EV_MAX_POP][256];
     double      ga_best = 0.0, rand_best = 0.0;
+    smb_real    ga_rate = 1.0f;
     char        ga_topo[256] = "", rand_topo[256] = "";
     int         have_ga = 0, have_rand = 0;
 
@@ -151,64 +150,86 @@ int main(int argc, char **argv)
     rng_seed(&ga_rng, (uint32_t)seed);
     rng_seed(&rand_rng, (uint32_t)seed ^ 0x5bd1e995u);
 
-    for (i = 0; i < (size_t)pop; i++)
+    for (i = 0; i < (size_t)pop; i++) {
         genome_random(&gapop[i], (size_t)ninput, (size_t)noutput,
                       (size_t)maxhid, (size_t)maxwidth, &ga_rng);
+        gapop[i].rate = (smb_real)mutations;   /* seed the self-adaptive rate */
+    }
 
     printf("evolving %ld topologies over %ld generations "
-           "(elite %ld, mutations %ld, seed %ld)\n",
+           "(elite %ld, initial rate %ld, self-adaptive, seed %ld)\n",
            pop, gens, elite, mutations, seed);
 
     for (gen = 1; gen <= gens; gen++) {
-        size_t ne;
+        size_t ne, e;
         double gbest, rbest;
+        char   rtop[1][256];
+        size_t rne;
 
         /* --- the genetic search --- */
         if (write_pop(popfile, gapop, (size_t)pop) != 0
-            || evaluate(evalcmd, popfile, resfile, eliteg, (size_t)elite,
+            || evaluate(evalcmd, popfile, resfile, etop, (size_t)elite,
                         &ne, &gbest) != 0) {
             fprintf(stderr, "evolve: evaluation failed (is %s runnable?)\n",
                     evalcmd);
             return 1;
         }
         total_evals += pop;
+
+        /* Recover the elite genomes -- with their evolved rates -- by matching
+         * the leaderboard's top topologies back to the population we submitted.
+         * (The rate lives only in memory; it never crosses the shell seam.) */
+        for (e = 0; e < ne; e++) {
+            char   buf[256];
+            size_t j;
+            int    found = 0;
+            for (j = 0; j < (size_t)pop; j++) {
+                genome_format(&gapop[j], buf, sizeof buf);
+                if (strcmp(buf, etop[e]) == 0) {
+                    eliteg[e] = gapop[j];
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) {                       /* should not happen; be safe */
+                genome_parse(&eliteg[e], etop[e]);
+                eliteg[e].rate = (smb_real)mutations;
+            }
+        }
+
         if (!have_ga || gbest < ga_best) {
             ga_best = gbest;
-            genome_format(&eliteg[0], ga_topo, sizeof ga_topo);
+            snprintf(ga_topo, sizeof ga_topo, "%s", etop[0]);
             have_ga = 1;
         }
-        /* next generation: keep the elite, refill with mutated elite */
+        ga_rate = eliteg[0].rate;               /* current best individual's rate */
+
+        /* next generation: keep the elite, refill by self-adaptive reproduction */
         for (i = 0; i < ne; i++)
             gapop[i] = eliteg[i];
-        for (i = ne; i < (size_t)pop; i++) {
-            long mv;
-            gapop[i] = eliteg[below_pop(&ga_rng, ne)];
-            for (mv = 0; mv < mutations; mv++)
-                genome_mutate(&gapop[i], (size_t)maxhid, (size_t)maxwidth, &ga_rng);
-        }
+        for (i = ne; i < (size_t)pop; i++)
+            genome_reproduce(&gapop[i], &eliteg[below_pop(&ga_rng, ne)],
+                             (size_t)maxhid, (size_t)maxwidth, &ga_rng);
 
         /* --- matched-compute random control: pop fresh random genomes --- */
         for (i = 0; i < (size_t)pop; i++)
             genome_random(&randpop[i], (size_t)ninput, (size_t)noutput,
                           (size_t)maxhid, (size_t)maxwidth, &rand_rng);
-        if (write_pop(popfile, randpop, (size_t)pop) == 0) {
-            Genome rbestg[EV_MAX_POP];
-            size_t rne;
-            if (evaluate(evalcmd, popfile, resfile, rbestg, 1, &rne, &rbest) == 0
-                && (!have_rand || rbest < rand_best)) {
-                rand_best = rbest;
-                genome_format(&rbestg[0], rand_topo, sizeof rand_topo);
-                have_rand = 1;
-            }
+        if (write_pop(popfile, randpop, (size_t)pop) == 0
+            && evaluate(evalcmd, popfile, resfile, rtop, 1, &rne, &rbest) == 0
+            && (!have_rand || rbest < rand_best)) {
+            rand_best = rbest;
+            snprintf(rand_topo, sizeof rand_topo, "%s", rtop[0]);
+            have_rand = 1;
         }
 
-        printf("gen %3ld   GA best=%.6g (%s)   RAND best=%.6g (%s)\n",
-               gen, ga_best, ga_topo, rand_best, rand_topo);
+        printf("gen %3ld   GA best=%.6g (%s) rate=%.2f   RAND best=%.6g (%s)\n",
+               gen, ga_best, ga_topo, (double)ga_rate, rand_best, rand_topo);
     }
 
-    printf("\nfinal:  GA %.6g (%s)  vs  RAND %.6g (%s)   "
+    printf("\nfinal:  GA %.6g (%s) rate=%.2f  vs  RAND %.6g (%s)   "
            "[%ld evaluations each]\n",
-           ga_best, ga_topo, rand_best, rand_topo, total_evals);
+           ga_best, ga_topo, (double)ga_rate, rand_best, rand_topo, total_evals);
 
     remove(popfile);
     remove(resfile);

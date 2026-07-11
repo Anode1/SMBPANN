@@ -203,9 +203,28 @@ quick sweep over it (3 seeds each, same task) swings the outcome:
 
 Too little mutation stalls near the random start, a moderate rate wins, too much
 drifts back toward a random walk. So even at this tiny scale a moderate mutation
-rate flips the result from a loss to a win. A full sweep (more seeds, a wider grid,
-a larger search space) is the real experiment; the point is that the harness makes
-it a one-command, reproducible question.
+rate flips the result from a loss to a win.
+
+**Self-adaptive mutation.** Rather than hand-set that rate, the mutation rate now
+lives in the genome and evolves with it (the ES self-adaptation idea, Rechenberg
+and Schwefel): each offspring inherits its parent's rate, perturbs it log-normally,
+and selection keeps whatever rate produced good offspring. You can watch it anneal
+within a run, higher early to explore, lower later to refine (for example 1.00,
+then 2.28, then 1.35 on XOR). What it buys is robustness to the one knob it
+replaces. Repeating the sweep with the rate self-adapting from each starting value:
+
+| initial rate (`-M`) | fixed rate: GA wins, gap | self-adaptive: GA wins, gap |
+|---|---|---|
+| 1 | 1/3, -0.0005 (random better) | 3/3, +0.0045 (GA better) |
+| 3 | 2/3, +0.0004               | 2/3, +0.0015 |
+| 6 | 1/3, +0.0006               | 1/3, +0.0006 |
+
+The worst starting rate (M=1), which *lost* to random at a fixed rate, now wins
+every run once the rate can adapt, and every starting rate gives a positive mean
+gap. Self-adaptation does not make the GA unbeatable, but it removes the risk that
+a poor mutation-rate guess sinks it. (These are 3-seed runs; read the trend, not
+the last digit.) A full sweep, a wider grid, and a larger search space are the real
+experiment; the harness makes each a one-command, reproducible question.
 
 ## Roadmap
 

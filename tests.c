@@ -228,6 +228,26 @@ int main(void)
         CHECK(ok, "genome: mutation preserves endpoints and stays in bounds");
     }
 
+    /* genome: self-adaptive reproduction keeps endpoints and a bounded rate */
+    {
+        Rng r;
+        Genome parent, child;
+        int i, ok = 1;
+        rng_seed(&r, 9);
+        genome_random(&parent, 2, 1, 3, 16, &r);
+        parent.rate = 2.0f;
+        for (i = 0; i < 200; i++) {
+            genome_reproduce(&child, &parent, 3, 16, &r);
+            if (child.dim[0] != 2 || child.dim[child.n - 1] != 1
+                || child.n < 2 || child.n > 5)
+                ok = 0;
+            if (!(child.rate > 0.0f) || child.rate > 100.0f)
+                ok = 0;
+            parent = child;   /* let the rate drift over a lineage */
+        }
+        CHECK(ok, "genome: self-adaptive reproduce keeps endpoints and a bounded rate");
+    }
+
     printf("\n%d checks, %d failed\n", t_run, t_fail);
     return t_fail ? 1 : 0;
 }
