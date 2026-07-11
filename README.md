@@ -49,6 +49,11 @@ SMBPANN is deliberately the **evolutionary** branch — a genetic search over de
 feed-forward topologies — rather than the reinforcement-learning (Zoph & Le) or
 differentiable (DARTS) branches.
 
+Population-based search is not new ground here: an earlier project by the author
+applied a genetic algorithm to **label placement** — positioning labels without
+overlap in a limited space, a classic combinatorial optimization problem — the
+same family of search now turned on network topology.
+
 **An honest open question drives the project.** Whether an evolved architecture
 search reliably beats cheap baselines — random search in particular — is not
 settled; Li & Talwalkar (2019) showed random search is a surprisingly strong NAS
