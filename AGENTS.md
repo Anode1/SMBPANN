@@ -37,6 +37,12 @@ of candidates (one topology per line) across `nproc` worker processes:
     printf '2,2,1\n2,4,1\n2,8,1\n' | scripts/evaluate.sh          # leaderboard
     COMMON="-f data.txt -i 2 -o 1" scripts/evaluate.sh pop.txt
 
+The search (`evolve`) drives that coordinator each generation and races the GA
+against a matched-compute random control (run from the repo root):
+
+    ./evolve -i 2 -o 1 -P 8 -G 8                    # XOR topologies, GA vs random
+    COMMON="-f data.txt -i N -o M -e 3000" ./evolve -i N -o M -P 16 -G 20
+
 ## Module map
 
     common.h   smb_real (=float), SMB_MAX_LAYERS, SMB_LINE_MAX
@@ -46,9 +52,14 @@ of candidates (one topology per line) across `nproc` worker processes:
     train      backpropagation: the generalized delta rule with momentum
     arena      marker/Mark-Release allocator (the population's heap)
     data       plain-text datasets + train/test split
+    genome     topology genome: random, mutation, format/parse (reproducible)
     main.c     the CLI / evaluation worker (getopt); emits a RESULT fitness line
-    tests.c    -DUNIT_TEST unit suite: rng act net xor arena data
+    evolve.c   the evolutionary search driver + matched random-search control
+    tests.c    -DUNIT_TEST unit suite: rng act net xor arena data genome
     scripts/evaluate.sh   the parallel coordinator (one worker process/candidate)
+
+Two binaries share the engine objects: `smbpann` (worker, links main.o) and
+`evolve` (search, links evolve.o); the Makefile filters out the other's main.
 
 Memory: allocation lives only in the `*_new` / `*_init` / load paths; the
 train/infer hot path allocates nothing; every path frees on exit (`goto`
@@ -71,8 +82,8 @@ file is shared across workers by the OS page cache).
 3. Datasets: plain-text train/test split. *(done)*
 4. Parallel evaluation: `scripts/evaluate.sh` fans candidates to `nproc` worker
    processes and ranks them by fitness. *(done)*
-5. The evolutionary search: population, mutation, selection on validation fitness,
-   against a matched-compute random-search control.
+5. The evolutionary search (`evolve`): population, mutation, selection on
+   validation fitness, against a matched-compute random-search control. *(done)*
 6. A reproducible benchmark: the search vs its random-search control on a standard
    NAS benchmark (NAS-Bench-101 / 201).
 

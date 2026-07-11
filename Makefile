@@ -16,6 +16,7 @@
 SHELL = /bin/sh
 
 BIN     = smbpann
+EVOLVE  = evolve
 TESTBIN = smbpann_ut
 
 # -- toolchain (overridable on the command line or by the packager) --------
@@ -40,9 +41,14 @@ SMB_VERSION := 0.0.0-dev
 endif
 SMB_VERDEF = -DSMB_VERSION='"$(SMB_VERSION)"'
 
-# Sources = every *.c at the top level. Drop in a .c and it compiles, no editing.
+# Sources = every *.c at the top level. Two programs share the engine objects:
+# smbpann (the worker, main.o) and evolve (the search driver, evolve.o). Each
+# links every object EXCEPT the other's main. tests.o is a harmless empty unit
+# in the non-test build.
 SOURCES.c := $(wildcard *.c)
 OBJS       = $(SOURCES.c:.c=.o)
+SMBPANN_OBJS = $(filter-out evolve.o, $(OBJS))
+EVOLVE_OBJS  = $(filter-out main.o, $(OBJS))
 
 # -- profiles tweak only the standard knobs --------------------------------
 debug    : CFLAGS  = -g -O0
@@ -58,10 +64,13 @@ release  : CFLAGS   = -O2
 
 .PHONY: all release debug pedantic clean ut ut-asan ut-ubsan check
 
-all release debug pedantic: $(BIN)
+all release debug pedantic: $(BIN) $(EVOLVE)
 
-$(BIN): $(OBJS)
-	$(CC) $(SMB_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(OBJS) $(LDLIBS) $(SMB_MATH)
+$(BIN): $(SMBPANN_OBJS)
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(SMBPANN_OBJS) $(LDLIBS) $(SMB_MATH)
+
+$(EVOLVE): $(EVOLVE_OBJS)
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $(EVOLVE) $(EVOLVE_OBJS) $(LDLIBS) $(SMB_MATH)
 
 # Test binary: all sources with -DUNIT_TEST (which compiles out main.c's main()
 # so tests.c provides the entry point). .PHONY ut/check always run.
@@ -84,6 +93,6 @@ ut-ubsan:
 	./$(TESTBIN)_ubsan
 
 clean:
-	-rm -f $(BIN) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan $(OBJS) $(OBJS:.o=.d)
+	-rm -f $(BIN) $(EVOLVE) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan $(OBJS) $(OBJS:.o=.d)
 
 -include $(OBJS:.o=.d)

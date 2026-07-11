@@ -136,7 +136,8 @@ From the [AIS](https://github.com/Anode1/ais) project:
 ## Layout
 
 ```
-.                 the active engine (C99): rng, act, net, train, data, arena, main
+.                 the C99 engine: rng, act, net, train, data, arena, genome
+                  smbpann (worker) + evolve (search); scripts/evaluate.sh (coordinator)
 legacy/java/      the original early-2000s Java prototype (object-graph design)
 ```
 
@@ -145,28 +146,36 @@ is the active language.
 
 ## Status
 
-**The genetic search, the project's actual subject, is not yet implemented.**
-What runs today is the backpropagation engine each candidate will use: a
-flat-array feed-forward network, backprop with momentum, plain-text dataset
-loading with a train/test split, and the arena allocator, all under a
-sanitizer-checked unit-test suite. The canonical gate is the **XOR** regression,
-the linearly-non-separable problem a single perceptron cannot learn, and the
-smallest proof that backprop through a hidden layer works.
+The engine and the search both run end to end:
+
+- `smbpann` trains a network of a given topology (built-in XOR, or a plain-text
+  dataset) and prints a machine-readable `fitness` line;
+- `scripts/evaluate.sh` evaluates a whole population in parallel, one worker
+  process per candidate, and ranks it;
+- `evolve` runs the evolutionary architecture search against a matched-compute
+  random-search control.
+
+The unit-test suite (29 checks: rng, act, net, the XOR backprop regression,
+arena, data, genome) runs clean under AddressSanitizer and UBSan.
 
 ```sh
-make          # build ./smbpann
-./smbpann     # train the XOR demo
-make ut       # run the unit-test suite (also: make ut-asan, make ut-ubsan)
+make                            # build ./smbpann and ./evolve
+./smbpann                       # train the built-in XOR demo
+./evolve -i 2 -o 1 -P 8 -G 8    # evolve XOR topologies, GA vs random search
+make ut                         # run the unit-test suite
 ```
 
 ```text
-XOR  topology 2-4-1  weights 12  rate 0.5  momentum 0.9  seed 1
-learned:
-  0 XOR 0  ->  0.0031  (target 0)
-  0 XOR 1  ->  0.9970  (target 1)
-  1 XOR 0  ->  0.9970  (target 1)
-  1 XOR 1  ->  0.0036  (target 0)
+evolving 8 topologies over 8 generations (elite 2, seed 1)
+gen   1   GA best=4.19705e-06 (2,8,11,15,1)   RAND best=4.78733e-06 (2,4,4,1)
+...
+final:  GA 2.62043e-06 (2,14,15,1)  vs  RAND 3.20376e-06 (2,7,14,1)   [64 evaluations each]
 ```
+
+This is demonstrated on XOR, where the search space is tiny and essentially every
+topology already solves the problem, so the GA-versus-random margin is thin and
+noisy. The reproducible comparison on a standard NAS benchmark (roadmap step 6) is
+where the question gets a real answer.
 
 ## Roadmap
 
@@ -176,8 +185,9 @@ learned:
 4. **Parallel evaluation**: a shell coordinator (`scripts/evaluate.sh`) that
    launches one worker process per candidate, sized to the CPU count, exchanging
    fitness as plain text and ranking the results. *(done)*
-5. **The evolutionary search**: a population of topologies, mutation, selection on
-   validation fitness, evaluated against a matched-compute random-search control.
+5. **The evolutionary search** (`evolve`): a population of topologies, mutation,
+   selection on validation fitness, raced against a matched-compute random-search
+   control. *(done)*
 6. **A reproducible benchmark**: run the search and its random-search control on a
    standard NAS benchmark (NAS-Bench-101 or 201), which provides pre-computed
    accuracies for a fixed search space, to answer the "does evolution beat random

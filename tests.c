@@ -15,6 +15,7 @@
 #include "arena.h"
 #include "common.h"
 #include "data.h"
+#include "genome.h"
 #include "net.h"
 #include "rng.h"
 #include "train.h"
@@ -197,6 +198,34 @@ int main(void)
             CHECK(0, "dataset_load succeeds");
         }
         remove(path);
+    }
+
+    /* genome: random within bounds, format/parse round-trip, safe mutation */
+    {
+        Rng r;
+        Genome g, g2;
+        char buf[256];
+        int i, ok = 1;
+        rng_seed(&r, 3);
+        genome_random(&g, 2, 1, 3, 16, &r);
+        CHECK(g.n >= 2 && g.n <= 5 && g.dim[0] == 2 && g.dim[g.n - 1] == 1,
+              "genome: random keeps fixed endpoints and layer bound");
+        genome_format(&g, buf, sizeof buf);
+        CHECK(genome_parse(&g2, buf) == 0 && g2.n == g.n
+              && g2.dim[0] == 2 && g2.dim[g2.n - 1] == 1,
+              "genome: format/parse round-trips");
+        for (i = 0; i < 200; i++) {
+            genome_mutate(&g, 3, 16, &r);
+            if (g.dim[0] != 2 || g.dim[g.n - 1] != 1 || g.n < 2 || g.n > 5)
+                ok = 0;
+            {
+                size_t j;
+                for (j = 1; j + 1 < g.n; j++)
+                    if (g.dim[j] < 1 || g.dim[j] > 16)
+                        ok = 0;
+            }
+        }
+        CHECK(ok, "genome: mutation preserves endpoints and stays in bounds");
     }
 
     printf("\n%d checks, %d failed\n", t_run, t_fail);
