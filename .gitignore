@@ -3,6 +3,7 @@
 *.d
 /smbpann
 /evolve
+/gentask
 /smbpann_ut
 /smbpann_ut_asan
 /smbpann_ut_ubsan

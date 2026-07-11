@@ -40,8 +40,15 @@ of candidates (one topology per line) across `nproc` worker processes:
 The search (`evolve`) drives that coordinator each generation and races the GA
 against a matched-compute random control (run from the repo root):
 
-    ./evolve -i 2 -o 1 -P 8 -G 8                    # XOR topologies, GA vs random
-    COMMON="-f data.txt -i N -o M -e 3000" ./evolve -i N -o M -P 16 -G 20
+    ./evolve -i 2 -o 1 -P 8 -G 8 -M 1              # XOR topologies, GA vs random
+    COMMON="-f data.txt -i N -o M -e 3000" ./evolve -i N -o M -P 16 -G 20 -M 2
+
+The reproducible benchmark generates a task where topology matters and races the
+GA against random over several seeds (env: DIM N FREQ NOISE RUNS POP GENS EPOCHS
+MUT). The GA is sensitive to MUT (mutation moves per offspring):
+
+    scripts/benchmark.sh                           # default settings
+    MUT=3 RUNS=5 scripts/benchmark.sh              # try a higher mutation rate
 
 ## Module map
 
@@ -55,11 +62,14 @@ against a matched-compute random control (run from the repo root):
     genome     topology genome: random, mutation, format/parse (reproducible)
     main.c     the CLI / evaluation worker (getopt); emits a RESULT fitness line
     evolve.c   the evolutionary search driver + matched random-search control
+    gentask.c  reproducible synthetic-task generator (a task where topology matters)
     tests.c    -DUNIT_TEST unit suite: rng act net xor arena data genome
-    scripts/evaluate.sh   the parallel coordinator (one worker process/candidate)
+    scripts/evaluate.sh    the parallel coordinator (one worker process/candidate)
+    scripts/benchmark.sh   the reproducible GA-vs-random benchmark (step 6)
 
-Two binaries share the engine objects: `smbpann` (worker, links main.o) and
-`evolve` (search, links evolve.o); the Makefile filters out the other's main.
+Three binaries share the engine objects: `smbpann` (worker, main.o), `evolve`
+(search, evolve.o), and `gentask` (gentask.o); the Makefile filters out the other
+programs' mains.
 
 Memory: allocation lives only in the `*_new` / `*_init` / load paths; the
 train/infer hot path allocates nothing; every path frees on exit (`goto`
@@ -84,6 +94,11 @@ file is shared across workers by the OS page cache).
    processes and ranks them by fitness. *(done)*
 5. The evolutionary search (`evolve`): population, mutation, selection on
    validation fitness, against a matched-compute random-search control. *(done)*
+6. A reproducible benchmark (`gentask` + `scripts/benchmark.sh`): the race on a
+   self-contained synthetic task where topology matters, over several seeds.
+   *(done)* First finding: at one untuned setting the GA does not beat random;
+   the result is sensitive to mutation rate and search-space size. Real
+   NAS-Bench-101/201 (cell-based, multi-GB PyTorch) is future work.
 6. A reproducible benchmark: the search vs its random-search control on a standard
    NAS benchmark (NAS-Bench-101 / 201).
 

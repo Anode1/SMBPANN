@@ -29,7 +29,7 @@ static void usage(const char *prog)
 {
     fprintf(stderr,
         "usage: %s -i in -o out [-P pop] [-G gens] [-k elite] [-s seed]\n"
-        "          [-L maxhidden] [-W maxwidth]\n"
+        "          [-L maxhidden] [-W maxwidth] [-M mutations]\n"
         "\n"
         "Evolves network topologies and races the GA against random search.\n"
         "Fitness comes from scripts/evaluate.sh (set COMMON for a dataset; with\n"
@@ -101,6 +101,7 @@ int main(int argc, char **argv)
 {
     long   ninput = 0, noutput = 0;
     long   pop = 8, gens = 10, elite = 2, seed = 1, maxhid = 3, maxwidth = 16;
+    long   mutations = 1;   /* mutation moves applied to each offspring */
     int    c;
     long   gen, total_evals = 0;
     size_t i;
@@ -113,16 +114,17 @@ int main(int argc, char **argv)
     char        ga_topo[256] = "", rand_topo[256] = "";
     int         have_ga = 0, have_rand = 0;
 
-    while ((c = getopt(argc, argv, "i:o:P:G:k:s:L:W:h")) != -1) {
+    while ((c = getopt(argc, argv, "i:o:P:G:k:s:L:W:M:h")) != -1) {
         switch (c) {
-        case 'i': ninput   = atol(optarg); break;
-        case 'o': noutput  = atol(optarg); break;
-        case 'P': pop      = atol(optarg); break;
-        case 'G': gens     = atol(optarg); break;
-        case 'k': elite    = atol(optarg); break;
-        case 's': seed     = atol(optarg); break;
-        case 'L': maxhid   = atol(optarg); break;
-        case 'W': maxwidth = atol(optarg); break;
+        case 'i': ninput    = atol(optarg); break;
+        case 'o': noutput   = atol(optarg); break;
+        case 'P': pop       = atol(optarg); break;
+        case 'G': gens      = atol(optarg); break;
+        case 'k': elite     = atol(optarg); break;
+        case 's': seed      = atol(optarg); break;
+        case 'L': maxhid    = atol(optarg); break;
+        case 'W': maxwidth  = atol(optarg); break;
+        case 'M': mutations = atol(optarg); break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 2;
         }
@@ -132,9 +134,9 @@ int main(int argc, char **argv)
         return 2;
     }
     if (pop < 2 || pop > EV_MAX_POP || elite < 1 || elite >= pop
-        || gens < 1 || maxwidth < 1) {
+        || gens < 1 || maxwidth < 1 || mutations < 1) {
         fprintf(stderr, "evolve: need 2 <= pop <= %d, 1 <= elite < pop, "
-                        "gens >= 1, maxwidth >= 1\n", EV_MAX_POP);
+                        "gens >= 1, maxwidth >= 1, mutations >= 1\n", EV_MAX_POP);
         return 2;
     }
 
@@ -154,7 +156,8 @@ int main(int argc, char **argv)
                       (size_t)maxhid, (size_t)maxwidth, &ga_rng);
 
     printf("evolving %ld topologies over %ld generations "
-           "(elite %ld, seed %ld)\n", pop, gens, elite, seed);
+           "(elite %ld, mutations %ld, seed %ld)\n",
+           pop, gens, elite, mutations, seed);
 
     for (gen = 1; gen <= gens; gen++) {
         size_t ne;
@@ -178,8 +181,10 @@ int main(int argc, char **argv)
         for (i = 0; i < ne; i++)
             gapop[i] = eliteg[i];
         for (i = ne; i < (size_t)pop; i++) {
+            long mv;
             gapop[i] = eliteg[below_pop(&ga_rng, ne)];
-            genome_mutate(&gapop[i], (size_t)maxhid, (size_t)maxwidth, &ga_rng);
+            for (mv = 0; mv < mutations; mv++)
+                genome_mutate(&gapop[i], (size_t)maxhid, (size_t)maxwidth, &ga_rng);
         }
 
         /* --- matched-compute random control: pop fresh random genomes --- */
