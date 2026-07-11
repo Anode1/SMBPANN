@@ -1,34 +1,89 @@
 #
-# SMBPANN (Ada) -- the active implementation. GNAT + gnatmake, no gprbuild
-# needed, mirroring the plain-Makefile spirit of AIS's C build.
+# Copyright (C) 2001 Vasili Gavrilov
 #
-#   make        build every program (all warnings + contracts enabled)
-#   make run    build and run the XOR demo
-#   make test   build and run the unit test suite (rng, act, nets, xor, arena)
-#   make clean  remove build artifacts
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or any later version.
 #
-# -gnatwa   : every warning (a warning is a defect, as in AIS)
-# -gnata    : enable Pre/Post/Assert contracts as runtime checks
-# -gnat2012 : the language level used across the engine
+# SMBPANN in C99. Layout and build follow the AIS project: no framework, a plain
+# Makefile and cc, sources auto-globbed so dropping in a new *.c just compiles.
+#
+# Honors the standard variables so packagers and other compilers just work:
+#   CC CFLAGS CPPFLAGS LDFLAGS LDLIBS  -- project flags are APPENDED, not
+#   overriding yours. Profiles: make | make release | make debug | make pedantic
 #
 
-GNATMAKE ?= gnatmake
-ADAFLAGS  = -gnatwa -gnata -gnat2012
+SHELL = /bin/sh
 
-PROGRAMS = xor_demo tests
+BIN     = smbpann
+TESTBIN = smbpann_ut
 
-.PHONY: all run test clean $(PROGRAMS)
+# -- toolchain (overridable on the command line or by the packager) --------
+CC       ?= cc
+CFLAGS   ?= -O2
+CPPFLAGS ?=
+LDFLAGS  ?=
+LDLIBS   ?=
 
-all: $(PROGRAMS)
+# -- project-required flags (always applied, before yours) -----------------
+SMB_STD    = -std=c99
+SMB_WARN   = -W -Wall
+SMB_CFLAGS = $(SMB_STD) $(SMB_WARN)
+SMB_MATH   = -lm            # act.c uses exp()
 
-$(PROGRAMS):
-	$(GNATMAKE) $(ADAFLAGS) $@.adb
+# Version: single source = the git tag, like AIS. `git describe` gives the exact
+# tag on a release build and tag+commits+sha between tags; a bare copy with no
+# .git falls back to 0.0.0-dev. Stamped into the binary via -D (main.c reads it).
+SMB_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//')
+ifeq ($(strip $(SMB_VERSION)),)
+SMB_VERSION := 0.0.0-dev
+endif
+SMB_VERDEF = -DSMB_VERSION='"$(SMB_VERSION)"'
 
-run: xor_demo
-	./xor_demo
+# Sources = every *.c at the top level. Drop in a .c and it compiles, no editing.
+SOURCES.c := $(wildcard *.c)
+OBJS       = $(SOURCES.c:.c=.o)
 
-test: tests
-	./tests
+# -- profiles tweak only the standard knobs --------------------------------
+debug    : CFLAGS  = -g -O0
+debug    : SMB_WARN += -Wundef
+pedantic : SMB_STD  = -std=c99 -pedantic
+pedantic : SMB_WARN += -Wundef -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
+release  : CFLAGS   = -O2
+
+.SUFFIXES:
+.SUFFIXES: .d .o .h .c
+%.o: %.c
+	$(CC) $(SMB_CFLAGS) $(SMB_VERDEF) $(CPPFLAGS) $(CFLAGS) -MMD -c $< -o $@
+
+.PHONY: all release debug pedantic clean ut ut-asan ut-ubsan check
+
+all release debug pedantic: $(BIN)
+
+$(BIN): $(OBJS)
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(OBJS) $(LDLIBS) $(SMB_MATH)
+
+# Test binary: all sources with -DUNIT_TEST (which compiles out main.c's main()
+# so tests.c provides the entry point). .PHONY ut/check always run.
+$(TESTBIN): $(SOURCES.c)
+	$(CC) $(SMB_CFLAGS) -g -DUNIT_TEST $(CPPFLAGS) $(SOURCES.c) -o $(TESTBIN) $(LDLIBS) $(SMB_MATH)
+
+ut check: $(TESTBIN)
+	./$(TESTBIN)
+
+# ut-asan / ut-ubsan: the same tests under AddressSanitizer / UBSan, so memory
+# errors and undefined behaviour abort with a file:line report instead of
+# passing silently under -O2. Kept out of the default build (2-3x slower).
+ut-asan:
+	$(CC) $(SMB_CFLAGS) -g -DUNIT_TEST -fsanitize=address -fno-omit-frame-pointer \
+	  $(CPPFLAGS) $(SOURCES.c) -o $(TESTBIN)_asan $(LDLIBS) $(SMB_MATH)
+	./$(TESTBIN)_asan
+ut-ubsan:
+	$(CC) $(SMB_CFLAGS) -g -DUNIT_TEST -fsanitize=undefined -fno-sanitize-recover=undefined \
+	  $(CPPFLAGS) $(SOURCES.c) -o $(TESTBIN)_ubsan $(LDLIBS) $(SMB_MATH)
+	./$(TESTBIN)_ubsan
 
 clean:
-	-rm -f *.o *.ali $(PROGRAMS)
+	-rm -f $(BIN) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan $(OBJS) $(OBJS:.o=.d)
+
+-include $(OBJS:.o=.d)

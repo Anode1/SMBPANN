@@ -11,7 +11,7 @@ tensor form, was prototyped in Java in the early 2000s, and was set aside in 201
 on the arrival of TensorFlow. The idea, letting a search choose the architecture
 instead of a human, lines up with what the field now calls **Neural Architecture
 Search (NAS)** and **AutoML**. This is a clean re-implementation of that idea in
-Ada.
+C99.
 
 ## The goal
 
@@ -76,126 +76,105 @@ enough for a GA to exploit topological structure a random sampler cannot;
 enlarging the space beyond the current small one is a design target, not yet
 reached.
 
-## Language: Ada
+## Language: C
 
-SMBPANN is written in **Ada 2012**. The numeric core is written to be amenable to
-SPARK proof (a planned step); the memory-management layer is deliberately outside
-the SPARK subset, as noted below. The choice follows the work:
+SMBPANN is written in **C99**, in the coding discipline of the
+[AIS](https://github.com/Anode1/ais) project: one concept per `.c` and `.h`,
+bounded strings, return codes, single-exit cleanup, and a plain `make` build with
+no framework or dependency. The choice is about fit: for this workload C is the
+simplest tool that does the job well.
 
-- **Proof, not just tests, for the numeric core.** SPARK with GNATprove can
-  *prove* the absence of run-time errors (integer overflow, out-of-bounds
-  indexing, division by zero) in the flat-array math, rather than testing for
-  them.
-- **A native arena allocator.** The manual heap with markers the population wants
-  (Mark and Release) is a first-class Ada storage pool. This memory layer is
-  intentionally outside SPARK: custom storage pools and post-Release dangling
-  pointers are exactly what SPARK's ownership model excludes, so it is guaranteed
-  by construction and by test, not by proof.
-- **A parallel population, in the language.** Evaluating many candidates at once
-  is Ada tasking: a fixed pool of workers drawing from a `protected` work queue.
-  Because several workers wait on one queue, this fits the Jorvik profile (Ada
-  2022), under which SPARK can prove freedom from data races and deadlocks.
-  (Planned; see roadmap.)
-- **A shared GCC back end.** GNAT is a GCC front-end, so with run-time checks
-  suppressed the numeric loops optimize to machine code comparable to C, with no
-  interpreter or virtual-machine overhead. A C reference implementation
-  (`legacy/c/`) cross-checks the Ada's output, matching to the last printed digit.
+- **Concurrency by process, not by thread.** The evolutionary search is
+  embarrassingly parallel, because candidates are independent. Each candidate is
+  evaluated in its own **process**, launched from a shell coordinator sized to the
+  CPU count, exchanging plain text with the parent. There is no shared memory, so
+  there are no data races and no synchronization code to get wrong, and a
+  candidate that crashes takes down only its own worker, not the run. For
+  independent-candidate search this is the simplest robust concurrency there is.
+- **Streaming data, bounded memory.** Backpropagation is inherently piecewise: the
+  engine trains on one example at a time. A worker streams its dataset in pieces
+  with a bounded footprint, so dataset size never dictates memory, and a read-only
+  data file is shared across all workers for free by the operating system's page
+  cache.
+- **Manual memory, disciplined.** Following AIS, allocation happens only at
+  construction (`net_new`, `trainer_new`), the train and infer hot path allocates
+  nothing, and the population carves each generation from a Mark/Release arena.
+  Peak footprint is computable by hand.
+- **Safety by isolation and tools, stated honestly.** C is not memory-safe the way
+  Java, Rust, or SPARK-verified Ada are; a bug can corrupt memory. Two things
+  contain that here: process isolation (a fault stays in one worker), and the test
+  suite run under AddressSanitizer and UBSan on every change, over the stack-first
+  discipline that keeps most of the bug classes from arising in the first place.
+  This is robustness suited to a research tool, not a formal proof.
 
-### Why Ada, and not Rust?
+### Why C, and not Ada or Rust?
 
-Rust is the other modern memory-safe systems language, and a good one; this is
-not a claim that Ada is safer, since both prevent the classic memory errors. The
-reasons are specific:
-
-- **Familiarity and revival.** The author programmed in Ada (83 and 95) in
-  1995-96, including multi-agent interaction programs, and wants to bring the
-  language back for what it is good at: non-mobile, concurrent, well-parallelizable
-  applications on the desktop. A known tool shortens the path from idea to working
-  code.
-- **Where the two draw the safety line.** Rust's borrow checker delivers memory
-  safety and data-race freedom automatically, with no annotations, for all safe
-  code, but it does not prove absence of arithmetic overflow, panics, or
-  functional correctness. SPARK with GNATprove reaches further in *what* it can
-  establish, absence of run-time errors (overflow, out-of-bounds, division by
-  zero) and functional correctness against contracts, but that reach is not free:
-  it takes explicit contracts and proof effort, and applies only to code in the
-  SPARK subset. For a numeric engine whose correctness we want to state and check,
-  that broader, contract-based reach is the draw, not a claim that Rust is less
-  safe. (The Mark/Release arena here is outside the SPARK subset; Rust's borrow
-  checker would likewise reject it in safe code and push it into `unsafe`. On
-  manual memory the two are symmetric.)
-- **Model, as a preference.** The friction people report with Rust is less its
-  surface syntax than its ownership, lifetime, and trait machinery, whose learning
-  curve is well documented; the author finds Ada's explicit, readable style an
-  easier fit. This is a preference, not a metric: Ada has its own verbosity, and
-  Rust users are productive once past the initial climb.
-- **Concurrency native to the language.** Ada has had `task` and `protected`
-  objects since Ada 83, with parallel loops added in Ada 2022, a mature model well
-  suited to a CPU-bound, parallelizable desktop search, and one SPARK can prove
-  free of data races and deadlocks under the Jorvik profile. Rust matches the
-  automatic side of this: its ownership model gives compile-time data-race freedom
-  for free (`Send`/`Sync`), where Ada relies on you actually using `protected`
-  objects. The deciding factor here is fit, not a claim that Rust's threads are
-  less capable.
-
-Rust's larger ecosystem and zero-annotation guarantees are real advantages; the
-choice here is about fit, and about reviving a language the author knows and
-values.
+Both Ada (with SPARK) and Rust are memory-safe and were seriously considered; an
+Ada 2012 implementation of this engine was written and is preserved in the git
+history. C won on fit for *this* problem. The search is embarrassingly parallel,
+so process isolation gives robust, synchronization-free concurrency without a
+language-level thread-safety guarantee; the data streams, so there is no large
+shared structure to manage; and the memory pattern (allocate once, an arena per
+generation) is simple enough that manual management plus sanitizers is adequate.
+The safety the heavier languages add applies mostly to shared-memory threading
+and complex ownership, neither of which this design uses. C also keeps the
+toolchain and the code smallest and most portable, and reuses the disciplined C
+foundation the project already had.
 
 ## Design principles
 
-Inherited from the [AIS](https://github.com/Anode1/ais) project, many of them now
-enforced by the compiler (strong typing, `Pre` and `Post` contracts) rather than
-by discipline:
+From the [AIS](https://github.com/Anode1/ais) project:
 
-- one concept per compilation unit; clear, literal names;
-- allocation only at construction, kept by convention (`new` appears only in the
-  `Create` functions), so the train and infer hot path allocates nothing;
-- no framework, no dependency; a plain build with GNAT;
-- reproducible by construction: a seeded PRNG and no wall-clock in the engine (a
-  property the future parallel search will have to preserve deliberately);
-- regression tests from the smallest cases up (XOR is the first gate).
+- one concept per `.c` and `.h`; clear, literal names;
+- allocation only at construction, so the train and infer hot path allocates
+  nothing;
+- no framework, no dependency; a plain `make` and `cc` build;
+- reproducible by construction: a seeded PRNG, no wall-clock in the engine;
+- regression tests from the smallest cases up, run under sanitizers (XOR is the
+  first gate).
 
 ## Layout
 
 ```
-.                 the active engine (Ada 2012): rng, act, nets, training, data, arena
-legacy/c/         a C99 foundation, kept as a reference oracle
+.                 the active engine (C99): rng, act, net, train, data, arena, main
 legacy/java/      the original early-2000s Java prototype (object-graph design)
 ```
+
+An Ada 2012 implementation lived here too and is preserved in the git history; C
+is the active language.
 
 ## Status
 
 **The genetic search, the project's actual subject, is not yet implemented.**
 What runs today is the backpropagation engine each candidate will use: a
 flat-array feed-forward network, backprop with momentum, plain-text dataset
-loading with a train/test split, and the arena allocator, all under a unit-test
-suite. The canonical gate is the **XOR** regression, the linearly-non-separable
-problem a single perceptron cannot learn, and the smallest proof that backprop
-through a hidden layer works.
+loading with a train/test split, and the arena allocator, all under a
+sanitizer-checked unit-test suite. The canonical gate is the **XOR** regression,
+the linearly-non-separable problem a single perceptron cannot learn, and the
+smallest proof that backprop through a hidden layer works.
 
 ```sh
-make run     # train the XOR demo
-make test    # run the unit-test suite
+make          # build ./smbpann
+./smbpann     # train the XOR demo
+make ut       # run the unit-test suite (also: make ut-asan, make ut-ubsan)
 ```
 
 ```text
 XOR  topology 2-4-1  weights 12  rate 0.5  momentum 0.9  seed 1
 learned:
-   0 XOR 0  ->  3.13E-03   (target 0)
-   0 XOR 1  ->  9.97E-01   (target 1)
-   1 XOR 0  ->  9.97E-01   (target 1)
-   1 XOR 1  ->  3.56E-03   (target 0)
+  0 XOR 0  ->  0.0031  (target 0)
+  0 XOR 1  ->  0.9970  (target 1)
+  1 XOR 0  ->  0.9970  (target 1)
+  1 XOR 1  ->  0.0036  (target 0)
 ```
 
 ## Roadmap
 
 1. **Foundation**: flat-array FFNN, backprop with momentum, XOR. *(done)*
-2. **Arena storage pool**: the Mark and Release allocator the population carves
-   from. *(done)*
+2. **Arena allocator**: the Mark/Release pool the population carves from. *(done)*
 3. **Datasets**: plain-text train and test data. *(done)*
-4. **Task pool**: a fixed pool of workers sized to the CPU count, over a
-   `protected` queue.
+4. **Parallel evaluation**: a shell coordinator that launches one worker process
+   per candidate, sized to the CPU count, exchanging fitness as plain text.
 5. **The evolutionary search**: a population of topologies, mutation, selection on
    validation fitness, evaluated against a matched-compute random-search control.
 6. **A reproducible benchmark**: run the search and its random-search control on a

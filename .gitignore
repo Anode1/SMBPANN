@@ -1,16 +1,10 @@
-# -- build artifacts (Ada engine at repo root) --
+# -- build artifacts (C engine at repo root) --
 *.o
-*.ali
 *.d
-obj/
-/xor_demo
-/tests
-
-# -- legacy/c executables --
-legacy/c/smbpann
-legacy/c/smbpann_ut
-legacy/c/smbpann_ut_asan
-legacy/c/smbpann_ut_ubsan
+/smbpann
+/smbpann_ut
+/smbpann_ut_asan
+/smbpann_ut_ubsan
 
 # -- legacy/java --
 legacy/java/build/

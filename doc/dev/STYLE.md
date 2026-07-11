@@ -1,12 +1,5 @@
 # SMBPANN: Coding Style and Ideology
 
-> **Note (active implementation is now Ada).** This document describes the C99
-> coding ideology of the original foundation, now preserved as the reference
-> oracle in `legacy/c/`. The active engine is Ada 2012 (at the repo root), which carries
-> the same discipline enforced by the compiler (contracts, controlled types,
-> `new` only at construction). An Ada-specific rewrite of this document is
-> pending; the ideology below still holds, and `legacy/c/` is its literal form.
-
 SMBPANN is written in C99 in the idiom of the **AIS** project. AIS's
 `doc/dev/STYLE.md` is the parent contract; read it first. This file records only
 where SMBPANN follows it and the **one place it must deviate**, with the reason.
