@@ -1,11 +1,16 @@
-/* main.c -- the SMBPANN command-line front end.
+/* main.c -- the SMBPANN command-line front end and evaluation worker.
  *
  * The CLI is the only layer that turns a fatal condition into an exit or prints
  * to the user; the engine modules (net, train, ...) return codes and stay
- * silent (AIS STYLE.md). This milestone drives the built-in XOR demo -- the
- * thesis's canonical linearly-non-separable problem, unlearnable by a single
- * perceptron and the smallest proof that backprop through a hidden layer works.
- * Later milestones add plain-text datasets and the genetic architecture search.
+ * silent (AIS STYLE.md).
+ *
+ * As a worker it does one thing: build a network of a given topology, train it
+ * (on a plain-text dataset, or on the built-in XOR problem), and emit a single
+ * machine-readable RESULT line carrying a fitness value (lower is better). The
+ * shell coordinator (scripts/) launches one such worker process per candidate
+ * and ranks them by that value. With no dataset it trains XOR -- the thesis's
+ * canonical linearly-non-separable problem, the smallest proof that backprop
+ * through a hidden layer works.
  */
 #ifndef UNIT_TEST
 
@@ -15,6 +20,7 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "data.h"
 #include "net.h"
 #include "rng.h"
 #include "train.h"
@@ -26,45 +32,169 @@
 static void usage(const char *prog)
 {
     fprintf(stderr,
-        "usage: %s [-e epochs] [-r rate] [-m momentum] [-s seed] [-H hidden]\n"
+        "usage: %s [-t topology] [-f file -i in -o out [-p frac]]\n"
+        "          [-e epochs] [-r rate] [-m momentum] [-s seed] [-H hidden] [-q]\n"
         "       %s -v | -h\n"
         "\n"
-        "Trains a 2-H-1 network on XOR and prints the learned outputs.\n"
-        "  -e epochs    training epochs           (default 20000)\n"
-        "  -r rate      learning rate             (default 0.5)\n"
-        "  -m momentum  momentum coefficient      (default 0.9)\n"
-        "  -s seed      PRNG seed                 (default 1)\n"
-        "  -H hidden    hidden-layer width        (default 4)\n"
+        "Trains a network and prints a RESULT line with its fitness (lower is\n"
+        "better). With no -f it trains the built-in XOR problem.\n"
+        "  -t topology  comma-separated layer widths, e.g. 2,4,1\n"
+        "  -f file      dataset: each line is `in` inputs then `out` targets\n"
+        "  -i in        number of input values per sample   (with -f)\n"
+        "  -o out       number of target values per sample  (with -f)\n"
+        "  -p frac      train fraction of the split         (default 0.8)\n"
+        "  -e epochs    training epochs                     (default 20000)\n"
+        "  -r rate      learning rate                       (default 0.5)\n"
+        "  -m momentum  momentum coefficient                (default 0.9)\n"
+        "  -s seed      PRNG seed                           (default 1)\n"
+        "  -H hidden    hidden width for the XOR default    (default 4)\n"
+        "  -q           quiet: print only the RESULT line\n"
         "  -v           print version and exit\n"
         "  -h           print this help and exit\n",
         prog, prog);
 }
 
-int main(int argc, char **argv)
+/* Parse "2,4,1" into DIMS (capacity MAX); set *NOUT to the layer count.
+ * Returns 0, or -1 on a malformed list, a non-positive width, or overflow. */
+static int parse_topology(const char *s, size_t *dims, size_t max, size_t *nout)
 {
-    long   epochs = 20000, seed = 1, hidden = 4;
-    double rate = 0.5, momentum = 0.9;
-    int    c;
+    size_t      n = 0;
+    const char *p = s;
 
-    /* XOR truth table: the four points of the unit square (thesis: no single
-     * line separates them, so at least one hidden unit is required). */
+    while (*p != '\0') {
+        char *end;
+        long  v = strtol(p, &end, 10);
+        if (end == p || v <= 0)
+            return -1;
+        if (n >= max)
+            return -1;
+        dims[n++] = (size_t)v;
+        p = end;
+        while (*p == ',' || *p == ' ')
+            p++;
+    }
+    if (n < 2)
+        return -1;
+    *nout = n;
+    return 0;
+}
+
+/* Format DIMS as "2,4,1" into BUF. */
+static void format_topology(const size_t *dims, size_t n, char *buf, size_t bufsz)
+{
+    size_t i, off = 0;
+
+    for (i = 0; i < n && off < bufsz; i++) {
+        int w = snprintf(buf + off, bufsz - off, "%s%zu",
+                         (i > 0) ? "," : "", dims[i]);
+        if (w < 0 || (size_t)w >= bufsz - off)
+            break;
+        off += (size_t)w;
+    }
+}
+
+/* Mean squared error over the train (USE_TEST=0) or test (USE_TEST=1) half. */
+static double eval_mse(Net *net, const Dataset *ds, const Split *sp, int use_test)
+{
+    size_t count = use_test ? split_test_count(sp) : split_train_count(sp);
+    size_t p, k;
+    double sum = 0.0;
+
+    if (count == 0)
+        return 0.0;
+    for (p = 0; p < count; p++) {
+        size_t          idx = use_test ? split_test_index(sp, p)
+                                       : split_train_index(sp, p);
+        const smb_real *x = dataset_input(ds, idx);
+        const smb_real *d = dataset_target(ds, idx);
+        const smb_real *y = net_forward(net, x);
+        for (k = 0; k < ds->noutput; k++) {
+            double e = (double)d[k] - (double)y[k];
+            sum += e * e;
+        }
+    }
+    return sum / (double)(count * ds->noutput);
+}
+
+/* Load FILE, split it, train NET/T on the train half, and report train and
+ * test MSE. Returns 0, or -1 on load/split failure. */
+static int run_dataset(Net *net, Trainer *t, const char *file,
+                       size_t ni, size_t no, double frac, long epochs,
+                       uint32_t seed, double *train_err, double *test_err)
+{
+    Dataset ds;
+    Split   sp;
+    Rng     r;
+    long    ep;
+    size_t  p;
+
+    if (dataset_load(&ds, file, ni, no) != 0)
+        return -1;
+    rng_seed(&r, seed);
+    if (split_make(&sp, &ds, (smb_real)frac, &r) != 0) {
+        dataset_free(&ds);
+        return -1;
+    }
+    for (ep = 0; ep < epochs; ep++)
+        for (p = 0; p < split_train_count(&sp); p++) {
+            size_t idx = split_train_index(&sp, p);
+            (void)trainer_learn(t, dataset_input(&ds, idx),
+                                dataset_target(&ds, idx));
+        }
+    *train_err = eval_mse(net, &ds, &sp, 0);
+    *test_err  = eval_mse(net, &ds, &sp, 1);
+    split_free(&sp);
+    dataset_free(&ds);
+    return 0;
+}
+
+/* Train the built-in XOR problem; report the final sum-squared error. */
+static double run_xor(Trainer *t, long epochs)
+{
     static const smb_real X[4][2] = { {0, 0}, {0, 1}, {1, 0}, {1, 1} };
     static const smb_real D[4][1] = { {0},    {1},    {1},    {0}    };
-
-    size_t   dims[3];
-    Net     *net;
-    Trainer *t;
-    Rng      rng;
+    smb_real E = 0;
     long     ep;
     int      i;
 
-    while ((c = getopt(argc, argv, "e:r:m:s:H:vh")) != -1) {
+    for (ep = 0; ep < epochs; ep++) {
+        E = 0;
+        for (i = 0; i < 4; i++)
+            E += trainer_learn(t, X[i], D[i]);
+    }
+    return (double)E;
+}
+
+int main(int argc, char **argv)
+{
+    long   epochs = 20000, seed = 1, hidden = 4;
+    long   ninput = 0, noutput = 0;
+    double rate = 0.5, momentum = 0.9, frac = 0.8;
+    char  *topo_arg = NULL, *file = NULL;
+    int    quiet = 0, c;
+
+    size_t   dims[SMB_MAX_LAYERS];
+    size_t   nlayers = 0;
+    char     topo[256];
+    Net     *net = NULL;
+    Trainer *t = NULL;
+    Rng      rng;
+    double   train_err = 0.0, test_err = 0.0, fitness = 0.0;
+    int      rc = 0;
+
+    while ((c = getopt(argc, argv, "t:f:i:o:p:e:r:m:s:H:qvh")) != -1) {
         switch (c) {
+        case 't': topo_arg = optarg; break;
+        case 'f': file     = optarg; break;
+        case 'i': ninput   = atol(optarg); break;
+        case 'o': noutput  = atol(optarg); break;
+        case 'p': frac     = atof(optarg); break;
         case 'e': epochs   = atol(optarg); break;
         case 'r': rate     = atof(optarg); break;
         case 'm': momentum = atof(optarg); break;
         case 's': seed     = atol(optarg); break;
         case 'H': hidden   = atol(optarg); break;
+        case 'q': quiet    = 1; break;
         case 'v': printf("smbpann %s\n", SMB_VERSION); return 0;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 2;
@@ -75,10 +205,36 @@ int main(int argc, char **argv)
         return 2;
     }
 
-    dims[0] = 2;
-    dims[1] = (size_t)hidden;
-    dims[2] = 1;
-    net = net_new(dims, 3);
+    /* Topology: from -t, else the XOR default 2-hidden-1. */
+    if (topo_arg != NULL) {
+        if (parse_topology(topo_arg, dims, SMB_MAX_LAYERS, &nlayers) != 0) {
+            fprintf(stderr, "smbpann: bad topology '%s'\n", topo_arg);
+            return 2;
+        }
+    } else {
+        dims[0] = 2;
+        dims[1] = (size_t)hidden;
+        dims[2] = 1;
+        nlayers = 3;
+    }
+
+    if (file != NULL) {
+        if (ninput <= 0 || noutput <= 0) {
+            fprintf(stderr, "smbpann: -f requires -i and -o\n");
+            return 2;
+        }
+        if (dims[0] != (size_t)ninput || dims[nlayers - 1] != (size_t)noutput) {
+            fprintf(stderr, "smbpann: topology ends (%zu,%zu) must match data "
+                            "(%ld,%ld)\n",
+                    dims[0], dims[nlayers - 1], ninput, noutput);
+            return 2;
+        }
+    } else if (dims[0] != 2 || dims[nlayers - 1] != 1) {
+        fprintf(stderr, "smbpann: the XOR default needs a 2-...-1 topology\n");
+        return 2;
+    }
+
+    net = net_new(dims, nlayers);
     if (net == NULL) {
         fprintf(stderr, "smbpann: cannot build network\n");
         return 1;
@@ -88,31 +244,42 @@ int main(int argc, char **argv)
 
     t = trainer_new(net, (smb_real)rate, (smb_real)momentum);
     if (t == NULL) {
-        net_free(net);
         fprintf(stderr, "smbpann: cannot build trainer\n");
-        return 1;
+        rc = 1;
+        goto cleanup;
     }
 
-    printf("XOR  topology 2-%ld-1  weights %zu  rate %g  momentum %g  seed %ld\n",
-           hidden, net_nweights(net), rate, momentum, seed);
-    for (ep = 0; ep < epochs; ep++) {
-        smb_real E = 0;
-        for (i = 0; i < 4; i++)
-            E += trainer_learn(t, X[i], D[i]);
-        if (ep % (epochs / 10 > 0 ? epochs / 10 : 1) == 0)
-            printf("  epoch %6ld   sse %.6f\n", ep, (double)E);
+    if (file != NULL) {
+        if (run_dataset(net, t, file, (size_t)ninput, (size_t)noutput, frac,
+                        epochs, (uint32_t)seed, &train_err, &test_err) != 0) {
+            fprintf(stderr, "smbpann: cannot load or split '%s'\n", file);
+            rc = 1;
+            goto cleanup;
+        }
+        fitness = test_err;
+    } else {
+        train_err = test_err = fitness = run_xor(t, epochs);
+        if (!quiet) {
+            static const smb_real X[4][2] = { {0,0}, {0,1}, {1,0}, {1,1} };
+            int i;
+            printf("learned:\n");
+            for (i = 0; i < 4; i++) {
+                const smb_real *y = net_forward(net, X[i]);
+                printf("  %g XOR %g  ->  %.4f\n",
+                       (double)X[i][0], (double)X[i][1], (double)y[0]);
+            }
+        }
     }
 
-    printf("learned:\n");
-    for (i = 0; i < 4; i++) {
-        const smb_real *y = net_forward(net, X[i]);
-        printf("  %g XOR %g  ->  %.4f  (target %g)\n",
-               (double)X[i][0], (double)X[i][1], (double)y[0], (double)D[i][0]);
-    }
+    format_topology(dims, nlayers, topo, sizeof topo);
+    printf("RESULT topology=%s weights=%zu seed=%ld epochs=%ld "
+           "train=%.6g test=%.6g fitness=%.6g\n",
+           topo, net_nweights(net), seed, epochs, train_err, test_err, fitness);
 
+cleanup:
     trainer_free(t);
     net_free(net);
-    return 0;
+    return rc;
 }
 
 #endif /* !UNIT_TEST */

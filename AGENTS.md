@@ -27,8 +27,15 @@ git history. This is the operating manual.
     make clean
 
 `make ut` is the commit gate; run `make ut-asan` and `make ut-ubsan` before
-committing. A warning is a defect. Run the demo: `./smbpann -H 4 -e 20000`
-(train a 2-4-1 net on XOR); `./smbpann -h` for options.
+committing. A warning is a defect.
+
+The worker: `./smbpann -t 2,4,1 -q` trains a topology and prints a machine-readable
+`RESULT ... fitness=<x>` line (lower is better; a dataset via `-f file -i in -o out`,
+else built-in XOR); `./smbpann -h` for options. The coordinator fans a population
+of candidates (one topology per line) across `nproc` worker processes:
+
+    printf '2,2,1\n2,4,1\n2,8,1\n' | scripts/evaluate.sh          # leaderboard
+    COMMON="-f data.txt -i 2 -o 1" scripts/evaluate.sh pop.txt
 
 ## Module map
 
@@ -39,8 +46,9 @@ committing. A warning is a defect. Run the demo: `./smbpann -H 4 -e 20000`
     train      backpropagation: the generalized delta rule with momentum
     arena      marker/Mark-Release allocator (the population's heap)
     data       plain-text datasets + train/test split
-    main.c     the CLI (getopt); the only layer that prints or exits
+    main.c     the CLI / evaluation worker (getopt); emits a RESULT fitness line
     tests.c    -DUNIT_TEST unit suite: rng act net xor arena data
+    scripts/evaluate.sh   the parallel coordinator (one worker process/candidate)
 
 Memory: allocation lives only in the `*_new` / `*_init` / load paths; the
 train/infer hot path allocates nothing; every path frees on exit (`goto`
@@ -61,7 +69,8 @@ file is shared across workers by the OS page cache).
 1. Foundation: flat-array FFNN, backprop + momentum, XOR. *(done)*
 2. Arena allocator (Mark/Release). *(done)*
 3. Datasets: plain-text train/test split. *(done)*
-4. Parallel evaluation: a shell coordinator, one worker process per candidate.
+4. Parallel evaluation: `scripts/evaluate.sh` fans candidates to `nproc` worker
+   processes and ranks them by fitness. *(done)*
 5. The evolutionary search: population, mutation, selection on validation fitness,
    against a matched-compute random-search control.
 6. A reproducible benchmark: the search vs its random-search control on a standard

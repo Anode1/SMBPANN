@@ -173,8 +173,9 @@ learned:
 1. **Foundation**: flat-array FFNN, backprop with momentum, XOR. *(done)*
 2. **Arena allocator**: the Mark/Release pool the population carves from. *(done)*
 3. **Datasets**: plain-text train and test data. *(done)*
-4. **Parallel evaluation**: a shell coordinator that launches one worker process
-   per candidate, sized to the CPU count, exchanging fitness as plain text.
+4. **Parallel evaluation**: a shell coordinator (`scripts/evaluate.sh`) that
+   launches one worker process per candidate, sized to the CPU count, exchanging
+   fitness as plain text and ranking the results. *(done)*
 5. **The evolutionary search**: a population of topologies, mutation, selection on
    validation fitness, evaluated against a matched-compute random-search control.
 6. **A reproducible benchmark**: run the search and its random-search control on a
