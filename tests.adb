@@ -6,6 +6,7 @@
 
 with Ada.Text_IO;               use Ada.Text_IO;
 with Ada.Command_Line;          use Ada.Command_Line;
+with Ada.Directories;
 with Interfaces;                use type Interfaces.Unsigned_32;
 with System.Storage_Elements;   use System.Storage_Elements;
 with SMBPANN;                   use SMBPANN;
@@ -14,6 +15,7 @@ with SMBPANN.Act;
 with SMBPANN.Nets;              use SMBPANN.Nets;
 with SMBPANN.Nets.Training;     use SMBPANN.Nets.Training;
 with SMBPANN.Arena;             use SMBPANN.Arena;
+with SMBPANN.Data;              use SMBPANN.Data;
 
 procedure Tests is
 
@@ -151,6 +153,53 @@ begin
          when Storage_Error =>
             Check (True, "arena: over-capacity allocation raises Storage_Error");
       end;
+   end;
+
+   --  data: load a plain-text file (comment + integer tokens), then split it
+   declare
+      Path : constant String := "smbpann_data_test.tmp";
+      G    : SMBPANN.Rng.Generator;
+   begin
+      declare
+         TF : File_Type;
+      begin
+         Create (TF, Out_File, Path);
+         Put_Line (TF, "# xor sample set");
+         Put_Line (TF, "0 0 0");
+         Put_Line (TF, "0 1 1");
+         Put_Line (TF, "1 0 1");
+         Put_Line (TF, "1 1 0");
+         Close (TF);
+      end;
+
+      declare
+         DS : constant Dataset := Load (Path, 2, 1);
+      begin
+         Check (Samples (DS) = 4, "data: loads all rows, skips the comment");
+         Check (N_Input (DS) = 2 and then N_Output (DS) = 1,
+                "data: input/output widths");
+         Check (Input (DS, 2) = (0.0, 1.0) and then Target (DS, 2) = (1 => 1.0),
+                "data: row values parsed (integer tokens accepted)");
+
+         SMBPANN.Rng.Seed (G, 5);
+         declare
+            Sp   : constant Split := Make_Split (DS, 0.75, G);
+            Seen : array (1 .. 4) of Boolean := (others => False);
+         begin
+            Check (Train_Count (Sp) = 3 and then Test_Count (Sp) = 1,
+                   "data: 75% split -> 3 train, 1 test");
+            for P in 1 .. Train_Count (Sp) loop
+               Seen (Train_Index (Sp, P)) := True;
+            end loop;
+            for P in 1 .. Test_Count (Sp) loop
+               Seen (Test_Index (Sp, P)) := True;
+            end loop;
+            Check (Seen = (True, True, True, True),
+                   "data: split covers every sample exactly once");
+         end;
+      end;
+
+      Ada.Directories.Delete_File (Path);
    end;
 
    New_Line;
