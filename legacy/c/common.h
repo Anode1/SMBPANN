@@ -28,4 +28,8 @@ typedef float smb_real;
  * feed-forward net in the 1997 thesis (2-5 layers). */
 #define SMB_MAX_LAYERS 32
 
+/* One dataset line: a bounded read buffer. Wide inputs (e.g. 784 MNIST pixels)
+ * fit comfortably; a longer line is a load error, not a silent truncation. */
+#define SMB_LINE_MAX 65536
+
 #endif /* SMB_COMMON_H */
