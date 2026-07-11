@@ -18,7 +18,8 @@ set -eu
 
 DIM="${DIM:-4}"; N="${N:-600}"; FREQ="${FREQ:-3}"; NOISE="${NOISE:-5}"
 RUNS="${RUNS:-5}"; POP="${POP:-10}"; GENS="${GENS:-10}"; EPOCHS="${EPOCHS:-1500}"
-MUT="${MUT:-1}"   # mutation moves per offspring; the GA is sensitive to this
+MUT="${MUT:-1}"     # mutation rate (initial, if self-adaptive)
+ADAPT="${ADAPT:-1}" # 1 = self-adaptive rate, 0 = fixed rate
 
 task=$(mktemp)
 trap 'rm -f "$task"' EXIT
@@ -32,7 +33,7 @@ sumgap=0
 run=1
 while [ "$run" -le "$RUNS" ]; do
     final=$(COMMON="-f $task -i $DIM -o 1 -e $EPOCHS" \
-            ./evolve -i "$DIM" -o 1 -P "$POP" -G "$GENS" -M "$MUT" -s "$run" 2>/dev/null \
+            ./evolve -i "$DIM" -o 1 -P "$POP" -G "$GENS" -M "$MUT" -A "$ADAPT" -s "$run" 2>/dev/null \
             | grep '^final')
     # tokens after "GA" and after "RAND" are the two best test-MSE values.
     ga=$(printf '%s\n' "$final" | awk '{for(i=1;i<=NF;i++) if($i=="GA") print $(i+1)}')
