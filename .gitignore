@@ -4,8 +4,7 @@
 *.d
 obj/
 /xor_demo
-/smbpann
-/smbpann_ut
+/tests
 
 # -- legacy/c executables --
 legacy/c/smbpann

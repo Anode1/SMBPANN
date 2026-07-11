@@ -4,7 +4,7 @@
 #
 #   make        build every program (all warnings + contracts enabled)
 #   make run    build and run the XOR demo
-#   make test   build and run the unit tests (arena, ...)
+#   make test   build and run the unit test suite (rng, act, nets, xor, arena)
 #   make clean  remove build artifacts
 #
 # -gnatwa   : every warning (a warning is a defect, as in AIS)
@@ -15,7 +15,7 @@
 GNATMAKE ?= gnatmake
 ADAFLAGS  = -gnatwa -gnata -gnat2012
 
-PROGRAMS = xor_demo arena_test
+PROGRAMS = xor_demo tests
 
 .PHONY: all run test clean $(PROGRAMS)
 
@@ -27,8 +27,8 @@ $(PROGRAMS):
 run: xor_demo
 	./xor_demo
 
-test: arena_test
-	./arena_test
+test: tests
+	./tests
 
 clean:
 	-rm -f *.o *.ali $(PROGRAMS)

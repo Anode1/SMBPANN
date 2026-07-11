@@ -50,8 +50,8 @@ proof (`gnatprove`) is a later, opt-in step and needs the SPARK toolset installe
     smbpann-nets-training.*   backprop (generalized delta rule + momentum), a
                               child package so it sees the private Layer rep
     smbpann-arena.{ads,adb}   marker/Mark-Release storage pool (the population's heap)
-    xor_demo.adb              the XOR demonstration
-    arena_test.adb            unit test for the arena (make test)
+    xor_demo.adb              the XOR demonstration (make run)
+    tests.adb                 unit test suite: rng act nets xor arena (make test)
 
 Memory: `new` appears only in the two `Create` functions (network, trainer);
 Forward/Learn allocate nothing; controlled `Finalize` releases everything. That
