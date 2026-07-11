@@ -30,8 +30,9 @@ only at construction — is expressed here where the compiler checks it.
 
 ## Build and test
 
-    make            # build the XOR demo: gnatmake -gnatwa -gnata -gnat2012
-    make run        # build and run it
+    make            # build every program: gnatmake -gnatwa -gnata -gnat2012
+    make run        # build and run the XOR demo
+    make test       # build and run the unit tests (arena, ...)
     make clean
 
 `-gnatwa` makes every warning fatal-by-attention (a warning is a defect, as in
@@ -48,7 +49,9 @@ proof (`gnatprove`) is a later, opt-in step and needs the SPARK toolset installe
                               a controlled type -- Finalize frees automatically
     smbpann-nets-training.*   backprop (generalized delta rule + momentum), a
                               child package so it sees the private Layer rep
-    xor_demo.adb              the XOR demonstration (the current gate)
+    smbpann-arena.{ads,adb}   marker/Mark-Release storage pool (the population's heap)
+    xor_demo.adb              the XOR demonstration
+    arena_test.adb            unit test for the arena (make test)
 
 Memory: `new` appears only in the two `Create` functions (network, trainer);
 Forward/Learn allocate nothing; controlled `Finalize` releases everything. That
@@ -61,8 +64,10 @@ topology. In the AIS "lock the contract, implement, test" loop:
 
 1. **Foundation (done):** flat-array FFNN, backprop + momentum, XOR regression,
    matching the C oracle.
-2. **`smbpann-arena.*`:** a marker/arena storage pool (Mark/Release), the native
-   Ada form of the manual heap the population will carve from.
+2. **`smbpann-arena.*` (done):** a marker/arena storage pool (Mark/Release) as a
+   real Ada `Storage_Pool`, the native form of the manual heap the population
+   carves from. `new` allocates by bumping a high-water mark; `Release` reclaims
+   a whole region in O(1). Tested by `arena_test` (make test).
 3. **Tasking demo:** a fixed pool of `Number_Of_CPUs` worker tasks pulling
    candidates from a `protected` queue.
 4. **`smbpann-data.*`:** plain-text datasets (train/test split); a real problem
