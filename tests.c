@@ -217,17 +217,24 @@ int main(void)
               && g2.dim[0] == 2 && g2.dim[g2.n - 1] == 1,
               "genome: format/parse round-trips");
         for (i = 0; i < 200; i++) {
+            Net *nn;
             genome_mutate(&g, 3, 16, &r);
             if (g.dim[0] != 2 || g.dim[g.n - 1] != 1 || g.n < 2 || g.n > 5)
                 ok = 0;
-            {
+            /* every mutated genome (dense or conv) must build a net whose
+             * per-layer widths match the genome's -- the recompute invariant */
+            nn = net_build(g.dim, g.kind, g.nfilt, g.ksize, g.n);
+            if (nn == NULL) {
+                ok = 0;
+            } else {
                 size_t j;
-                for (j = 1; j + 1 < g.n; j++)
-                    if (g.dim[j] < 1 || g.dim[j] > 16)
+                for (j = 0; j < g.n; j++)
+                    if (nn->dim[j] != g.dim[j])
                         ok = 0;
+                net_free(nn);
             }
         }
-        CHECK(ok, "genome: mutation preserves endpoints and stays in bounds");
+        CHECK(ok, "genome: mutation stays valid and builds a matching net");
     }
 
     /* genome: self-adaptive reproduction keeps endpoints and a bounded rate */

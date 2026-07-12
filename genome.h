@@ -14,6 +14,7 @@
 
 #include "act.h"
 #include "common.h"
+#include "net.h"
 #include "rng.h"
 
 /* A genome carries the topology AND its own training hyper-parameters, so the
@@ -22,7 +23,11 @@
  * co-evolve; the mutation rate itself is self-adaptive. */
 typedef struct {
     size_t   n;                     /* layers, input and output included (>= 2) */
-    size_t   dim[SMB_MAX_LAYERS];   /* widths; dim[0]=inputs, dim[n-1]=outputs */
+    size_t   dim[SMB_MAX_LAYERS];   /* widths; dim[0]=inputs, dim[n-1]=outputs;
+                                       a conv layer's width is derived, not free */
+    int      kind[SMB_MAX_LAYERS];  /* LAYER_DENSE | LAYER_CONV per layer (l>=1) */
+    size_t   nfilt[SMB_MAX_LAYERS]; /* conv: filters                            */
+    size_t   ksize[SMB_MAX_LAYERS]; /* conv: kernel size                        */
     smb_real rate;                  /* self-adaptive mutation rate (moves/child)*/
     smb_real lrate;                 /* learning rate  (co-evolved)              */
     smb_real momentum;              /* momentum       (co-evolved)              */

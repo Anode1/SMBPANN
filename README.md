@@ -34,10 +34,18 @@ performance; each candidate's weights are trained by backpropagation (the 1997
 delta rule). Those hyper-parameters were arguments of the top signature and are
 now discovered instead of specified, a concrete step toward the bottom one. (On
 XOR the search reliably finds, on its own, that a ReLU hidden layer with high
-momentum solves it near-exactly.) The search returns the architecture that
-generalizes best on validation, with the standard caveat that the search itself
-can overfit the validation split, so a final untouched test set is needed to
-judge it.
+momentum solves it near-exactly.)
+
+Layers are also **structural**: each hidden layer can evolve between a dense one
+and a weight-shared, locally-connected **convolution-like** kind. So the search
+can, in principle, discover the shift-invariant, weight-sharing structure LeCun
+designed by hand for images, rather than being told it, which is the 1997 thesis's
+central point that the architecture's inductive bias carries much of the work. The
+convolutional backprop is verified by a numerical gradient check in the test suite.
+
+The search returns the architecture that generalizes best on validation, with the
+standard caveat that the search itself can overfit the validation split, so a
+final untouched test set is needed to judge it.
 
 Recombining two arbitrary topologies by crossover is a known hard problem (the
 competing-conventions problem, where two networks encode the same function with

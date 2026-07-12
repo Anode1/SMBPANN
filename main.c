@@ -180,6 +180,8 @@ int main(int argc, char **argv)
     size_t   dims[SMB_MAX_LAYERS];
     size_t   nlayers = 0;
     char     topo[256];
+    Genome   gen;
+    int      have_spec = 0;
     Net     *net = NULL;
     Trainer *t = NULL;
     Rng      rng;
@@ -214,12 +216,12 @@ int main(int argc, char **argv)
      * hyper-parameters, and overrides -t/-r/-m. Else -t gives the topology, else
      * the XOR default 2-hidden-1. */
     if (spec_arg != NULL) {
-        Genome gen;
         size_t i;
         if (genome_parse(&gen, spec_arg) != 0) {
             fprintf(stderr, "smbpann: bad spec '%s'\n", spec_arg);
             return 2;
         }
+        have_spec = 1;
         nlayers = gen.n;
         for (i = 0; i < nlayers; i++)
             dims[i] = gen.dim[i];
@@ -254,7 +256,11 @@ int main(int argc, char **argv)
         return 2;
     }
 
-    net = net_new(dims, nlayers);
+    /* A spec may include conv layers, so build via net_build (which honours the
+     * per-layer kinds); a bare -t/XOR run is all dense. */
+    net = have_spec
+        ? net_build(gen.dim, gen.kind, gen.nfilt, gen.ksize, gen.n)
+        : net_new(dims, nlayers);
     if (net == NULL) {
         fprintf(stderr, "smbpann: cannot build network\n");
         return 1;

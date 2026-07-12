@@ -63,13 +63,16 @@ MUT). The GA is sensitive to MUT (mutation moves per offspring):
     rng        deterministic xorshift PRNG (reproducible init + evolution)
     act        activation functions: sigmoid, tanh, relu (selectable per net)
     net        the network: flat weight matrices, forward pass, thesis init;
-               hidden layers use net->activation, the output stays sigmoid
-    train      backpropagation: the generalized delta rule with momentum
+               dense and weight-shared conv1d layer kinds; hidden layers use
+               net->activation, the output stays a dense sigmoid
+    train      backpropagation: the generalized delta rule with momentum;
+               conv layers share gradients across positions (gradient-checked)
     arena      marker/Mark-Release allocator (the population's heap)
     data       plain-text datasets + train/test split
-    genome     topology + co-evolved hyper-parameters (learning rate, momentum,
-               activation); the mutation rate is self-adaptive (ES-style). A
-               candidate spec is "topology|lrate|momentum|activation".
+    genome     topology (each hidden layer evolves between dense and conv) +
+               co-evolved hyper-parameters (learning rate, momentum, activation);
+               the mutation rate is self-adaptive (ES-style). A candidate spec is
+               "topology|lrate|momentum|activation", a conv layer written cF:K.
     main.c     the CLI / evaluation worker (getopt); emits a RESULT fitness line
     evolve.c   the evolutionary search driver + matched random-search control
     gentask.c  reproducible synthetic-task generator (a task where topology matters)
