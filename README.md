@@ -195,13 +195,31 @@ reproducing the Bergstra and Bengio / Li and Talwalkar result. Second,
 the rate at all. You can watch the rate anneal within a run, higher early to
 explore, lower later to refine (for example 1.00, then 2.28, then 1.35 on XOR).
 
-The effect is real but small, and quieter than a first, noisier pass suggested: a
-3-seed run had shown a fixed rate *losing* at M=1 and a mutation-rate "sweet spot"
-swinging the outcome, but ten seeds regress both to the mean. That is exactly the
-value of more seeds. The honest verdict: in a small search space random search is
-hard to beat, self-adaptation reliably beats a fixed rate by a little, and a
-larger, more structured search space is where the question gets a decisive answer.
-The harness makes each of those a one-command, reproducible run.
+The effect is real but small, and quieter than a first, noisier pass suggested (a
+3-seed run had shown a fixed rate *losing* at M=1 and a mutation-rate "sweet spot";
+ten seeds regress both to the mean). That is the value of more seeds.
+
+Does a *bigger* search space favor the directed search, as the small-space result
+hinted? At a fixed budget, the opposite. Enlarging the space to five layers by
+twenty-eight wide (from three by sixteen), holding the roughly 100 evaluations
+fixed, and re-drawing a fresh learnable task for each of 15 seeds, the GA does
+**worse** than random: it wins 5 of 15 self-adaptive and 4 of 15 fixed, with
+random better on average (gap about -0.003). The cause is budget, not the search:
+the same roughly 100 evaluations now cover a far larger space, so the GA's local,
+gradient-like convergence settles near its random start while an exhaustive random
+sampler keeps covering ground. It is the exploration-versus-exploitation trade-off
+in the open, and it confirms the intuition that broad random sampling wins once
+the space outgrows the search's budget. Giving evolution a fair chance in a bigger
+space means scaling the population and generations with it, which is the real next
+experiment.
+
+The honest overall tendency: random search is a strong baseline for architecture
+search at this scale; self-adaptation beats a fixed mutation rate reliably by a
+little; and enlarging the search space without enlarging the budget hands the
+advantage back to random. Consistent with the field (Bergstra and Bengio 2012; Li
+and Talwalkar 2019), and reproduced here from scratch, one command at a time. Each
+of these is a one-command, reproducible run (`scripts/benchmark.sh`, with `ADAPT`,
+`LMAX`, `WMAX`, `RUNS`, and the task size as environment variables).
 
 ## Roadmap
 
