@@ -1,14 +1,34 @@
 /* net.c -- feed-forward network and the forward pass. See net.h.
  *
- * All allocation is here in net_new (once, at construction) and released in
- * net_free. net_forward and net_init touch no allocator. */
+ * All allocation is here in net_build (once, at construction) and released in
+ * net_free. net_forward and net_init touch no allocator. Layers are dense or
+ * 1D-convolutional (weight-shared, local); the forward pass branches per layer. */
 #include <stdlib.h>
 #include <string.h>
 
 #include "act.h"
 #include "net.h"
 
-Net *net_new(const size_t *dims, size_t nlayers)
+size_t net_conv_positions(const Net *net, size_t l)
+{
+    size_t prev = net->dim[l - 1];
+    return (prev >= net->ksize[l]) ? (prev - net->ksize[l] + 1) : 0;
+}
+
+size_t net_layer_wsize(const Net *net, size_t l)
+{
+    return (net->kind[l] == LAYER_CONV)
+         ? net->nfilt[l] * net->ksize[l]           /* shared: F filters x K */
+         : net->dim[l] * net->dim[l - 1];
+}
+
+size_t net_layer_bsize(const Net *net, size_t l)
+{
+    return (net->kind[l] == LAYER_CONV) ? net->nfilt[l] : net->dim[l];
+}
+
+Net *net_build(const size_t *dims, const int *kind,
+               const size_t *nfilt, const size_t *ksize, size_t nlayers)
 {
     Net   *net;
     size_t l;
@@ -16,26 +36,42 @@ Net *net_new(const size_t *dims, size_t nlayers)
     if (dims == NULL || nlayers < 2 || nlayers > SMB_MAX_LAYERS)
         return NULL;
 
-    net = calloc(1, sizeof *net);   /* zero: every pointer starts NULL */
+    net = calloc(1, sizeof *net);   /* zero: pointers NULL, kinds DENSE */
     if (net == NULL)
         return NULL;
     net->nlayers = nlayers;
 
-    for (l = 0; l < nlayers; l++) {
-        if (dims[l] == 0)
-            goto fail;
-        net->dim[l] = dims[l];
+    if (dims[0] == 0)
+        goto fail;
+    net->dim[0] = dims[0];
+
+    /* Resolve each layer's kind and width (conv widths are computed). The output
+     * layer is always dense so its width equals the number of targets. */
+    for (l = 1; l < nlayers; l++) {
+        int k = (kind != NULL && l != nlayers - 1) ? kind[l] : LAYER_DENSE;
+        if (k == LAYER_CONV) {
+            size_t F = (nfilt != NULL) ? nfilt[l] : 0;
+            size_t K = (ksize != NULL) ? ksize[l] : 0;
+            if (F == 0 || K == 0 || K > net->dim[l - 1])
+                goto fail;            /* kernel must fit the previous layer */
+            net->kind[l]  = LAYER_CONV;
+            net->nfilt[l] = F;
+            net->ksize[l] = K;
+            net->dim[l]   = F * (net->dim[l - 1] - K + 1);
+        } else {
+            if (dims[l] == 0)
+                goto fail;
+            net->kind[l] = LAYER_DENSE;
+            net->dim[l]  = dims[l];
+        }
     }
 
-    /* Input layer holds only its activation vector (the copied input). */
     net->a[0] = calloc(net->dim[0], sizeof *net->a[0]);
     if (net->a[0] == NULL)
         goto fail;
-
-    /* Each subsequent layer: weight matrix, biases, activations, pre-acts. */
     for (l = 1; l < nlayers; l++) {
-        net->w[l] = malloc(net->dim[l] * net->dim[l - 1] * sizeof *net->w[l]);
-        net->b[l] = calloc(net->dim[l], sizeof *net->b[l]);
+        net->w[l] = malloc(net_layer_wsize(net, l) * sizeof *net->w[l]);
+        net->b[l] = calloc(net_layer_bsize(net, l), sizeof *net->b[l]);
         net->a[l] = calloc(net->dim[l], sizeof *net->a[l]);
         net->z[l] = calloc(net->dim[l], sizeof *net->z[l]);
         if (net->w[l] == NULL || net->b[l] == NULL ||
@@ -45,50 +81,76 @@ Net *net_new(const size_t *dims, size_t nlayers)
     return net;
 
 fail:
-    net_free(net);   /* frees the partial network and the struct */
+    net_free(net);
     return NULL;
+}
+
+Net *net_new(const size_t *dims, size_t nlayers)
+{
+    return net_build(dims, NULL, NULL, NULL, nlayers);
 }
 
 void net_init(Net *net, Rng *rng)
 {
-    size_t l, i, nw;
+    size_t l, i;
 
     for (l = 1; l < net->nlayers; l++) {
-        /* Thesis initialization: uniform in [-2.4/fan_in, +2.4/fan_in], where
-         * fan_in is the number of inputs to a unit (the sending layer width). */
-        smb_real range = (smb_real)(2.4 / (double)net->dim[l - 1]);
-        nw = net->dim[l] * net->dim[l - 1];
+        /* Thesis init [-2.4/fan_in, +2.4/fan_in]; a conv unit's fan-in is the
+         * kernel size, a dense unit's is the previous layer width. */
+        size_t   fanin = (net->kind[l] == LAYER_CONV)
+                       ? net->ksize[l] : net->dim[l - 1];
+        smb_real range = (smb_real)(2.4 / (double)fanin);
+        size_t   nw = net_layer_wsize(net, l);
+        size_t   nb = net_layer_bsize(net, l);
         for (i = 0; i < nw; i++)
             net->w[l][i] = rng_uniform(rng, -range, range);
-        for (i = 0; i < net->dim[l]; i++)
+        for (i = 0; i < nb; i++)
             net->b[l][i] = rng_uniform(rng, -range, range);
     }
 }
 
 const smb_real *net_forward(Net *net, const smb_real *x)
 {
-    size_t l, i, j;
+    size_t l;
+    size_t L = net->nlayers - 1;
 
     memcpy(net->a[0], x, net->dim[0] * sizeof *net->a[0]);
 
     for (l = 1; l < net->nlayers; l++) {
         const smb_real *prev = net->a[l - 1];
-        size_t          nprev = net->dim[l - 1];
-        for (i = 0; i < net->dim[l]; i++) {
-            /* z[l][i] = b[l][i] + sum_j w[l][i][j] * a[l-1][j] */
-            const smb_real *wi = net->w[l] + i * nprev;
-            smb_real        s = net->b[l][i];
-            for (j = 0; j < nprev; j++)
-                s += wi[j] * prev[j];
-            net->z[l][i] = s;
-            /* hidden layers use the net's chosen activation; the output layer
-             * stays sigmoid so classification outputs remain in (0,1) */
-            net->a[l][i] = (l == net->nlayers - 1)
-                         ? act_sigmoid(s)
-                         : act_apply(net->activation, s);
+
+        if (net->kind[l] == LAYER_CONV) {
+            size_t K = net->ksize[l], F = net->nfilt[l];
+            size_t opos = net->dim[l - 1] - K + 1;
+            size_t f, p, k;
+            for (f = 0; f < F; f++) {
+                const smb_real *wf = net->w[l] + f * K;   /* shared kernel */
+                smb_real        bf = net->b[l][f];
+                for (p = 0; p < opos; p++) {
+                    smb_real s = bf;
+                    size_t   idx = f * opos + p;
+                    for (k = 0; k < K; k++)
+                        s += wf[k] * prev[p + k];
+                    net->z[l][idx] = s;
+                    net->a[l][idx] = act_apply(net->activation, s);
+                }
+            }
+        } else {
+            size_t nprev = net->dim[l - 1];
+            size_t i, j;
+            for (i = 0; i < net->dim[l]; i++) {
+                const smb_real *wi = net->w[l] + i * nprev;
+                smb_real        s = net->b[l][i];
+                for (j = 0; j < nprev; j++)
+                    s += wi[j] * prev[j];
+                net->z[l][i] = s;
+                /* the output layer stays sigmoid so outputs remain in (0,1) */
+                net->a[l][i] = (l == L) ? act_sigmoid(s)
+                                        : act_apply(net->activation, s);
+            }
         }
     }
-    return net->a[net->nlayers - 1];
+    return net->a[L];
 }
 
 size_t net_nweights(const Net *net)
@@ -96,7 +158,7 @@ size_t net_nweights(const Net *net)
     size_t l, n = 0;
 
     for (l = 1; l < net->nlayers; l++)
-        n += net->dim[l] * net->dim[l - 1];
+        n += net_layer_wsize(net, l);
     return n;
 }
 

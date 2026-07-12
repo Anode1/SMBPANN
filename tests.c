@@ -9,7 +9,9 @@
  */
 #ifdef UNIT_TEST
 
+#include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "act.h"
 #include "arena.h"
@@ -273,6 +275,126 @@ int main(void)
             g = c;
         }
         CHECK(ok, "genome: co-evolved hyper-parameters stay bounded");
+    }
+
+    /* conv1d: forward (weight sharing), gradient correctness, and learning */
+    {
+        Rng r;
+
+        /* forward with known weights: one filter, kernel {1,1}, so each local
+         * window sums adjacent inputs -- the same two weights reused at each spot */
+        {
+            size_t   dims[3]  = { 4, 0, 1 };
+            int      kind[3]  = { LAYER_DENSE, LAYER_CONV, LAYER_DENSE };
+            size_t   nfilt[3] = { 0, 1, 0 };
+            size_t   ksize[3] = { 0, 2, 0 };
+            Net     *n = net_build(dims, kind, nfilt, ksize, 3);
+            smb_real x[4] = { 1, 2, 3, 4 };
+            int      ok = (n != NULL);
+            if (ok) {
+                n->w[1][0] = 1.0f; n->w[1][1] = 1.0f; n->b[1][0] = 0.0f;
+                net_forward(n, x);
+                ok = (n->dim[1] == 3)                       /* 1 filter x 3 pos */
+                   && fabsf(n->a[1][0] - act_sigmoid(3.0f)) < 1e-5f
+                   && fabsf(n->a[1][1] - act_sigmoid(5.0f)) < 1e-5f
+                   && fabsf(n->a[1][2] - act_sigmoid(7.0f)) < 1e-5f;
+                net_free(n);
+            }
+            CHECK(ok, "conv: forward shares weights over local windows");
+        }
+
+        /* numerical gradient check: at rate 1 with no momentum the applied update
+         * is exactly -dE/dw, so compare it to central finite differences of E */
+        {
+            size_t dims[3]  = { 6, 0, 1 };
+            int    kind[3]  = { LAYER_DENSE, LAYER_CONV, LAYER_DENSE };
+            size_t nfilt[3] = { 0, 2, 0 };
+            size_t ksize[3] = { 0, 3, 0 };
+            Net   *n = net_build(dims, kind, nfilt, ksize, 3);
+            int    ok = (n != NULL);
+            if (ok) {
+                smb_real  x[6] = { 0.3f, -0.1f, 0.7f, 0.2f, -0.5f, 0.4f };
+                smb_real  d[1] = { 0.8f };
+                smb_real  sw1[8], sw2[16], sb1[8], sb2[8];
+                size_t    nw1 = net_layer_wsize(n, 1), nw2 = net_layer_wsize(n, 2);
+                size_t    nb1 = net_layer_bsize(n, 1), nb2 = net_layer_bsize(n, 2);
+                double    eps = 0.01;
+                Trainer  *t;
+                size_t    idx;
+                rng_seed(&r, 5);
+                net_init(n, &r);
+                memcpy(sw1, n->w[1], nw1 * sizeof(smb_real));
+                memcpy(sw2, n->w[2], nw2 * sizeof(smb_real));
+                memcpy(sb1, n->b[1], nb1 * sizeof(smb_real));
+                memcpy(sb2, n->b[2], nb2 * sizeof(smb_real));
+                t = trainer_new(n, 1.0f, 0.0f);
+                (void)trainer_learn(t, x, d);   /* applied dw = -dE/dw (rate 1) */
+                memcpy(n->w[1], sw1, nw1 * sizeof(smb_real));   /* undo the step */
+                memcpy(n->w[2], sw2, nw2 * sizeof(smb_real));
+                memcpy(n->b[1], sb1, nb1 * sizeof(smb_real));
+                memcpy(n->b[2], sb2, nb2 * sizeof(smb_real));
+                for (idx = 0; idx < nw1 && ok; idx++) {
+                    double          ana = -(double)t->dw[1][idx];
+                    double          ep, em, num;
+                    smb_real        save = n->w[1][idx];
+                    const smb_real *y;
+                    n->w[1][idx] = save + (smb_real)eps;
+                    y = net_forward(n, x);
+                    ep = 0.5 * ((double)d[0] - y[0]) * ((double)d[0] - y[0]);
+                    n->w[1][idx] = save - (smb_real)eps;
+                    y = net_forward(n, x);
+                    em = 0.5 * ((double)d[0] - y[0]) * ((double)d[0] - y[0]);
+                    n->w[1][idx] = save;
+                    num = (ep - em) / (2.0 * eps);
+                    if (fabs(num - ana) > 5e-3 + 0.02 * fabs(ana))
+                        ok = 0;
+                }
+                trainer_free(t);
+                net_free(n);
+            }
+            CHECK(ok, "conv: backprop gradients match finite differences");
+        }
+
+        /* a conv net actually learns: total error falls sharply while fitting */
+        {
+            size_t dims[3]  = { 8, 0, 1 };
+            int    kind[3]  = { LAYER_DENSE, LAYER_CONV, LAYER_DENSE };
+            size_t nfilt[3] = { 0, 3, 0 };
+            size_t ksize[3] = { 0, 3, 0 };
+            Net   *n = net_build(dims, kind, nfilt, ksize, 3);
+            int    ok = (n != NULL);
+            if (ok) {
+                smb_real X[6][8], D[6][1];
+                smb_real e0 = 0, e1 = 0;
+                Trainer *t;
+                int      s, ep, i;
+                rng_seed(&r, 8);
+                net_init(n, &r);
+                for (s = 0; s < 6; s++) {
+                    for (i = 0; i < 8; i++)
+                        X[s][i] = rng_uniform(&r, 0.0f, 1.0f);
+                    D[s][0] = (smb_real)(s & 1);
+                }
+                for (s = 0; s < 6; s++) {
+                    const smb_real *y = net_forward(n, X[s]);
+                    smb_real e = D[s][0] - y[0];
+                    e0 += (smb_real)0.5 * e * e;
+                }
+                t = trainer_new(n, 0.3f, 0.9f);
+                for (ep = 0; ep < 3000; ep++)
+                    for (s = 0; s < 6; s++)
+                        (void)trainer_learn(t, X[s], D[s]);
+                for (s = 0; s < 6; s++) {
+                    const smb_real *y = net_forward(n, X[s]);
+                    smb_real e = D[s][0] - y[0];
+                    e1 += (smb_real)0.5 * e * e;
+                }
+                ok = (e1 < (smb_real)0.25 * e0);
+                trainer_free(t);
+                net_free(n);
+            }
+            CHECK(ok, "conv: a convolutional net trains (error falls)");
+        }
     }
 
     printf("\n%d checks, %d failed\n", t_run, t_fail);
