@@ -33,12 +33,24 @@ task=$(mktemp)
 res=$(mktemp)
 trap 'rm -f "$task" "$res"' EXIT
 
-printf 'error control: target=%s | task dim=%s samples=%s freq=%s noise=%s%% space=<=%sx%s | %s runs (fresh task each), pop=%s cap=%s gens epochs=%s mut=%s adapt=%s\n\n' \
-    "$TARGET" "$DIM" "$N" "$FREQ" "$NOISE" "$LMAX" "$WMAX" "$RUNS" "$POP" "$GENS" "$EPOCHS" "$MUT" "$ADAPT"
+# FIXTASK (optional): a seed to hold the task constant across runs, so only the
+# search seed varies. This isolates search efficiency from task-difficulty luck
+# (the cleaner time-to-target measure). Unset = a fresh task per run (a sample
+# over task instances, as in benchmark.sh).
+FIXTASK="${FIXTASK:-}"
+if [ -n "$FIXTASK" ]; then
+    ./gentask -d "$DIM" -N "$N" -f "$FREQ" -e "$NOISE" -s "$FIXTASK" > "$task"
+    taskdesc="fixed task (seed $FIXTASK), search seed varies"
+else
+    taskdesc="fresh task per run"
+fi
+
+printf 'error control: target=%s | task dim=%s samples=%s freq=%s noise=%s%% space=<=%sx%s | %s runs (%s), pop=%s cap=%s gens epochs=%s mut=%s adapt=%s\n\n' \
+    "$TARGET" "$DIM" "$N" "$FREQ" "$NOISE" "$LMAX" "$WMAX" "$RUNS" "$taskdesc" "$POP" "$GENS" "$EPOCHS" "$MUT" "$ADAPT"
 
 run=1
 while [ "$run" -le "$RUNS" ]; do
-    ./gentask -d "$DIM" -N "$N" -f "$FREQ" -e "$NOISE" -s "$run" > "$task"
+    [ -n "$FIXTASK" ] || ./gentask -d "$DIM" -N "$N" -f "$FREQ" -e "$NOISE" -s "$run" > "$task"
     # the TARGET line is machine-readable: ga_gens/ga_evals rand_gens/rand_evals
     # (a gens field of 0 means that method never reached the target by the cap).
     line=$(COMMON="-f $task -i $DIM -o 1 -e $EPOCHS" \
@@ -52,6 +64,9 @@ while [ "$run" -le "$RUNS" ]; do
     ga_s=$([ "$gg" -gt 0 ] 2>/dev/null && echo "gen $gg" || echo "----")
     rd_s=$([ "$rg" -gt 0 ] 2>/dev/null && echo "gen $rg" || echo "----")
     printf 'run %2d (seed %2d):  GA reached %-8s  RAND reached %-8s\n' "$run" "$run" "$ga_s" "$rd_s"
+    # LOG (optional): a durable, per-run progress line for watching a long run
+    # (each append reopens the file, so it lands on disk immediately).
+    [ -z "${LOG:-}" ] || printf 'run %d seed %d ga_gens %s rand_gens %s\n' "$run" "$run" "$gg" "$rg" >> "$LOG"
     run=$((run + 1))
 done
 

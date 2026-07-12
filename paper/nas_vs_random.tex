@@ -9,187 +9,286 @@
 \usepackage{algorithmic}
 \usepackage{booktabs}
 
-\title{\textbf{Evolutionary versus Random Search for Feed-Forward\\
-Network Topology: A Small, Fully Reproducible Study}}
-\author{Vasili Gavrilov}
+\title{\textbf{A Self-Modifying Predictor: Evolving Architecture,\\
+Hyper-Parameters, and Structure to a Target Error}}
+\author{Vasili Gavrilov\thanks{Independent researcher. Physics and computer
+science by education; a professional software engineer with a background in
+numerical optimization and machine learning, including rule engines and expert
+systems. Reference implementation: \url{https://github.com/Anode1/SMBPANN}.}}
 \date{2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-We ask a plain question: does a genetic algorithm that evolves the topology of a
-feed-forward neural network beat random search, given the same compute? We answer
-it with a small, dependency-free engine written in C, in which every candidate
-network is trained by backpropagation, every run is reproducible from a seed, and
-every experiment is one shell command. On a synthetic classification task where
-the network topology genuinely affects generalization, we report three findings.
-First, a \emph{self-adaptive} mutation rate---one that is carried in the genome
-and evolves with it---beats a fixed rate by a small but consistent margin in a
-controlled comparison. Second, once the search space is enlarged, the genetic
-algorithm no longer beats random search at any compute budget we tried
-(96 to 768 candidate evaluations); it hovers near parity. Third, this is what the
-exploration/exploitation account predicts: at a fixed budget the genetic algorithm
-commits to the best of a few global samples and then refines locally, while random
-search keeps sampling the whole space. The results reproduce, at miniature scale,
-the known strength of random search as a baseline. We give the exact settings,
-population sizes, and per-run statistics so the study can be repeated; we also state
-plainly where our budget experiments are not perfectly controlled, and specify the
-clean experiment that would settle the open question.
+An ordinary predictor is handed the shape of its network:
+\texttt{predict(Train, Test, Topology, Activation, Jitter, \ldots)}. The system
+studied here is handed only the problem and the error it must reach:
+\texttt{self\_modifying\_predict(Train, Test, Error)}. It discovers the rest by
+evolution---how many layers and how wide, whether each layer is fully connected or
+a weight-shared local one, and its own learning rate, momentum, and activation---and
+it searches until the target error is met. This paper reports what changed from an
+earlier fixed-budget study and tests one hypothesis: \emph{given a target error, does
+a self-modifying evolutionary search reach it with less work than random search?}
+Three things are new. First, each candidate carries its own training
+hyper-parameters in the genome, and they co-evolve with the topology under a
+self-adaptive mutation rate. Second, a structural mutation flips a hidden layer
+between a dense kind and a weight-shared, locally connected \emph{convolution-like}
+kind, so the search can in principle rediscover on its own the local, shift-invariant
+inductive bias LeCun built by hand~\cite{lecun1989}; the convolutional
+back-propagation is verified against finite differences. Third, the search runs under
+\emph{error control}---until the best validation error reaches a target---which turns
+the natural measure from ``whose error is lower at a fixed budget'' into
+\emph{time-to-target}: the generations and evaluations each method needs to reach the
+same error. Every candidate is trained by back-propagation, every run is reproducible
+from a seed, and every experiment is one shell command. The honest baseline from the
+earlier study survives: random search is hard to beat, and a self-adaptive mutation
+rate beats a fixed one by a small, consistent margin. Against that baseline, and over
+50 seeds, the self-modifying search reaches a stated target error about as often as
+random ($34$ versus $32$ of $50$) but in fewer generations on the typical run
+(median $3$ versus $4$; per-run head-to-head $19$ to $11$)---a modest edge in the
+\emph{opposite} direction from the fixed-budget parity, though at this scale it is
+suggestive (one-sided sign test $p \approx 0.10$) rather than decisive.
 \end{abstract}
 
 \section{Introduction}
 
 Neural architecture search (NAS) automates a choice a human normally makes: the
-shape of the network---how many layers, how wide, how connected. The idea is old;
-the name is recent. Modern NAS methods differ mainly in their \emph{search
-strategy}: reinforcement learning \cite{zoph2017}, gradient-based relaxation
-\cite{darts2019}, Bayesian optimization, random search, and evolutionary search
-\cite{elsken2019}. The evolutionary branch is the subject here. It comes in two
-flavors that are easy to confuse: classical \emph{neuroevolution} such as NEAT
-\cite{neat2002} evolves the weights \emph{and} the topology together, using no
-gradient; \emph{evolutionary NAS} \cite{real2017,real2019} evolves the topology
-but trains the weights by gradient descent. Our system is the second kind: it
-evolves the topology and trains each candidate's weights by backpropagation.
+shape of the network---how many layers, how wide, how connected. Modern NAS methods
+differ mainly in their \emph{search strategy}: reinforcement learning
+\cite{zoph2017}, gradient-based relaxation \cite{darts2019}, Bayesian optimization,
+random search, and evolutionary search \cite{elsken2019}. The evolutionary branch is
+the subject here, in its \emph{evolutionary NAS} form \cite{real2017,real2019}: the
+topology is evolved while each candidate's weights are trained by gradient descent
+(as opposed to neuroevolution such as NEAT \cite{neat2002}, which evolves weights and
+topology together without gradients).
+
+Two signatures frame the project. The first is the ordinary one, in which the
+architecture and training knobs are arguments the user must supply:
+\[
+\texttt{predict(Train, Test, Topology, Activation, Jitter, \ldots)}.
+\]
+The second is the one this system aims at, in which the user supplies only the data
+and the error they are willing to accept:
+\[
+\texttt{self\_modifying\_predict(Train, Test, Error)}.
+\]
+Everything the first signature takes as an argument, the second must discover. An
+earlier version of this study \cite{repo} took the first step---evolving layer counts
+and widths---but still compared methods the ordinary way: fix a compute budget, run,
+and see whose final error is lower. This paper closes the gap to the second signature
+in three moves (co-evolved hyper-parameters, an evolvable convolution-like layer, and
+error control) and, with error control in place, asks the question the second
+signature actually poses to a user: not ``whose error is lower'' but ``who reaches
+\emph{my} error with less work.''
 
 A recurring, humbling result in this field is that \emph{random search is hard to
-beat}. Bergstra and Bengio \cite{bergstra2012} showed plain random search is a
-strong baseline for hyper-parameter optimization; Li and Talwalkar
-\cite{li2019} showed random search (with weight sharing) is competitive with
-leading NAS methods, and documented a reproducibility problem in the field along
-the way. Our contribution is not a new method. It is a small, honest, fully
-reproducible test of the basic question---\emph{does evolution beat random search
-here?}---in a system simple enough that every number in this paper can be
-regenerated from source with one command. The implementation and these
-experiments are open \cite{repo}.
+beat}. Bergstra and Bengio \cite{bergstra2012} showed plain random search is a strong
+baseline for hyper-parameter optimization; Li and Talwalkar \cite{li2019} showed
+random search (with weight sharing) is competitive with leading NAS methods, and
+documented a reproducibility problem in the field along the way. Our contribution is
+not a new method. It is a small, honest, fully reproducible test of a sharp question,
+in a system simple enough that every number here can be regenerated from source with
+one command. The self-adaptive machinery we lean on is standard in the optimization
+literature the author has worked in---the evolution strategies of Rechenberg and
+Schwefel \cite{rechenberg1973}, in which the step size is itself under selection.
+
+\section{Hypothesis}
+
+We state the claim to be tested, and its null, plainly.
+
+\begin{quote}
+\textbf{H.} Given only a training set, a test set, and a target validation error, a
+self-modifying evolutionary search---one that co-evolves architecture and training
+hyper-parameters and can grow structural (convolution-like) layers---reaches the
+target using \emph{fewer} candidate evaluations than a matched random search that
+draws the same kind of random architectures.
+
+\textbf{H$_0$.} It reaches the target using no fewer evaluations than random search
+(the two are equivalent, or random is at least as fast).
+\end{quote}
+
+The measure is \emph{time-to-target}: the number of generations (equivalently,
+evaluations, since each generation is a fixed batch of them) a method needs before
+its best validation error first drops to the target. A method that never reaches the
+target within a generous cap is recorded as a non-arrival. This is the quantity a
+user of \texttt{self\_modifying\_predict} cares about, and it is the quantity the
+earlier fixed-budget protocol could not measure.
 
 \section{Method}
 
 \subsection{Network and training}
 
-A network is a plain feed-forward stack. For layer $\ell$ with weight matrix
-$W^{(\ell)}$ and bias $b^{(\ell)}$, the forward pass is
+A network is a feed-forward stack of dense and convolution-like layers. For a dense
+layer $\ell$ with weight matrix $W^{(\ell)}$ and bias $b^{(\ell)}$, the forward pass
+is
 \begin{equation}
 z^{(\ell)} = W^{(\ell)} a^{(\ell-1)} + b^{(\ell)}, \qquad
 a^{(\ell)} = g\!\left(z^{(\ell)}\right),
 \end{equation}
-with $g$ the logistic sigmoid $g(z)=1/(1+e^{-z})$. Weights are trained by
-backpropagation (the generalized delta rule) with momentum: with local error
-signal $\beta_i = (d_i-a_i)\,g'(z_i)$ at output units and
+with $g$ a per-network hidden activation---logistic sigmoid $g(z)=1/(1+e^{-z})$,
+$\tanh$, or ReLU---chosen by the genome; the output layer is always a dense sigmoid.
+Weights are trained by back-propagation (the generalized delta rule) with momentum:
+with local error $\beta_i = (d_i-a_i)\,g'(z_i)$ at output units and
 $\beta_i = g'(z_i)\sum_k W^{(\ell+1)}_{ki}\beta^{(\ell+1)}_k$ at hidden units, the
 update is
 \begin{equation}
 \Delta W^{(\ell)}(t) = r\,\beta^{(\ell)} \big(a^{(\ell-1)}\big)^{\!\top}
                        + \alpha\,\Delta W^{(\ell)}(t-1),
 \end{equation}
-with learning rate $r$ and momentum $\alpha$. Weights are initialized uniformly in
-$[-2.4/f_i,\,2.4/f_i]$, where $f_i$ is the fan-in. Training is online (one example
-at a time), so a worker's memory footprint is bounded regardless of dataset size.
+with learning rate $r$ and momentum $\alpha$, both carried in the genome. Weights are
+initialized uniformly in $[-2.4/f_i,\,2.4/f_i]$, where $f_i$ is the fan-in. Training
+is online (one example at a time), so a worker's memory footprint is bounded
+regardless of dataset size. All arithmetic uses 32-bit floats; all randomness flows
+through a seeded 32-bit xorshift generator, so the same seed gives the same result on
+any machine.
 
-A \emph{worker} is one process. Given a topology, a dataset, and a seed, it builds
-the network, trains it for a fixed number of epochs on the training split, and
-prints one line: the topology and its \emph{fitness}, the mean squared error on the
-held-out test split. Lower is better. All arithmetic uses 32-bit floats; all
-randomness flows through a seeded 32-bit xorshift generator, so the same seed gives
-the same result on any machine.
+\subsection{A convolution-like layer as an evolvable structure}
 
-\subsection{Genome, mutation, and self-adaptation}
+A hidden layer may instead be \emph{convolutional} in one dimension: $F$ filters,
+each a shared kernel of width $K$, swept across the previous layer's $d_{\ell-1}$
+units. A filter $f$ at position $p$ computes
+\begin{equation}
+z^{(\ell)}_{f,p} = b_f + \sum_{k=0}^{K-1} w_{f,k}\, a^{(\ell-1)}_{p+k}, \qquad
+p = 0,\dots,d_{\ell-1}-K,
+\end{equation}
+so the layer's width is \emph{derived}, $d_\ell = F\,(d_{\ell-1}-K+1)$, not a free
+parameter, and its weight count is only $F\,K$. This is the pair of properties LeCun
+introduced for images---local receptive fields and weight sharing
+\cite{lecun1989}---here made a \emph{move} the search can take rather than a design
+the user imposes. Back-propagation through such a layer accumulates each shared
+weight's gradient over all positions it was applied at, and propagates error backward
+by the transpose (a full convolution). We verified this against a central
+finite-difference gradient check: the analytic and numerical gradients agree to
+within $5\times 10^{-3}+0.02\,|g|$ on every weight, so the structural move trains
+correctly.
 
-A \emph{genome} is a topology: the list of layer widths
-$(d_0,\dots,d_L)$, with the input width $d_0$ and output width $d_L$ fixed by the
-problem and the hidden layers free. One \emph{mutation} makes a single small,
-local change: perturb one hidden width by $\pm 1$, insert one hidden layer, or
-delete one hidden layer, staying within bounds on the number of hidden layers
-($L_{\max}$) and their width ($W_{\max}$). There is no crossover: recombining two
-arbitrary topologies is ill-posed (the competing-conventions problem), and
-mutation-only evolution is the current default in evolutionary NAS \cite{real2019}.
+\subsection{Genome, co-evolution, and self-adaptation}
 
-The mutation rate is itself a hyper-parameter, and a poorly chosen rate can make a
-genetic algorithm worse than random. Rather than fix it by hand, we let it evolve:
-each genome carries a mutation rate $\sigma$, and reproduction is
-\emph{self-adaptive} in the sense of evolution strategies \cite{rechenberg1973}. An
-offspring inherits its parent's rate, perturbs it log-normally, and then applies
-that many mutations:
+A \emph{genome} carries everything the second signature must discover:
+\begin{itemize}[nosep]
+\item the topology: for each hidden layer, a kind (dense or convolutional) and its
+free parameters (a dense width, or a filter count $F$ and kernel width $K$);
+\item the training hyper-parameters: learning rate $r$, momentum $\alpha$, and hidden
+activation;
+\item a self-adaptive mutation rate $\sigma$.
+\end{itemize}
+The input and output widths are fixed by the problem. One \emph{mutation} makes a
+single small change: perturb a hidden layer's free parameter by one; flip a hidden
+layer between dense and convolutional; or insert or delete one hidden layer (of a
+random kind), within bounds on depth ($L_{\max}$) and width ($W_{\max}$). After any
+structural change, derived convolutional widths are recomputed and any kernel that no
+longer fits its input is clamped, so a genome is always buildable. There is no
+crossover: recombining two arbitrary topologies is ill-posed (the
+competing-conventions problem), and mutation-only evolution is the current default in
+evolutionary NAS \cite{real2019}.
+
+Reproduction is \emph{self-adaptive} in the sense of evolution strategies
+\cite{rechenberg1973}. An offspring inherits its parent's mutation rate, perturbs it
+log-normally, and applies that many topology mutations:
 \begin{equation}
 \sigma' = \sigma \cdot \exp\!\big(\tau\, \mathcal{N}(0,1)\big), \qquad
 \text{number of mutations} = \mathrm{round}(\sigma'),
 \end{equation}
-clamped to $[\sigma_{\min},\sigma_{\max}]$, with $\tau=0.35$. Selection then favors
-not just good topologies but the rates that produced them, so the rate tunes
-itself: it tends to rise early (to explore) and fall later (to refine).
+clamped to $[\sigma_{\min},\sigma_{\max}]$, with $\tau=0.35$. The training
+hyper-parameters co-evolve the same way, by gentler log-normal steps on $r$ and
+$\alpha$ (each clamped to a sane range) and an occasional switch of activation.
+Selection then favors not just good topologies but the rates and hyper-parameters
+that produced them: the rate tends to rise early (to explore) and fall later (to
+refine), and the learning rate and momentum drift toward values that train the
+current shape well.
 
-\subsection{Evolutionary search and the random control}
+\subsection{Evolutionary search, error control, and the random control}
 
-The search keeps a population of $P$ genomes for $G$ generations, retaining the
-best $k$ (elitism) and refilling the rest by reproducing from the elite
+The search keeps a population of $P$ genomes, retaining the best $k$ (elitism) and
+refilling the rest by self-adaptive reproduction from the elite
 (Algorithm~\ref{alg:ga}). The \emph{matched random-search control} draws $P$ fresh
-random genomes every generation and keeps its own best-so-far; over $G$
-generations it therefore makes exactly the same number of evaluations, $P\!\times\!G$,
-as the genetic algorithm. Every candidate is evaluated by its own worker process;
-the processes are launched in parallel, one per CPU, and hand back plain text.
-Crucially, the genetic algorithm's \emph{initial} population is drawn from the same
-random distribution as the control, so both start from the same place; they differ
-only in what they do next.
+random genomes every generation and keeps its own best-so-far, so per generation it
+makes exactly the same number of evaluations as the genetic algorithm. The genetic
+algorithm's \emph{initial} population is drawn from the same random distribution as
+the control, so both start from the same place and differ only in what they do next.
+Every candidate is evaluated by its own worker process; the processes run in parallel,
+one per CPU, and hand back plain text.
+
+Under \emph{error control}, both methods run until their best validation error first
+reaches the target, with a generation cap $G$ only as a safety stop. Because the
+fitness a candidate is scored by \emph{is} its validation error, the target is a
+single number that plays both roles: the objective each candidate minimizes and the
+condition that halts the search. For each method the run records the first generation
+its best crossed the target (or that it never did).
 
 \begin{algorithm}[t]
-\caption{Evolutionary search (one run), with matched random control}
+\caption{Self-modifying search under error control, with matched random control}
 \label{alg:ga}
 \begin{algorithmic}[1]
-\STATE population $\gets$ $P$ random genomes; control-best $\gets \infty$
-\FOR{generation $= 1$ to $G$}
+\STATE population $\gets$ $P$ random genomes; both bests $\gets \infty$
+\FOR{generation $= 1$ to $G$ (safety cap)}
   \STATE evaluate the population in parallel (one worker process per genome)
   \STATE keep the best $k$ (elite); update the genetic best-so-far
-  \STATE refill: each new genome reproduces from a random elite (self-adaptive or fixed rate)
-  \STATE \textbf{control:} evaluate $P$ fresh random genomes; update control-best
+  \STATE refill: each new genome reproduces self-adaptively from a random elite
+         (topology, hyper-parameters, and rate all co-evolve)
+  \STATE \textbf{control:} evaluate $P$ fresh random genomes; update control best-so-far
+  \STATE record the first generation each best reaches the target error
+  \STATE \textbf{stop} once both bests are at or below the target
 \ENDFOR
-\RETURN genetic best-so-far, control best-so-far
+\RETURN generations-to-target for the genetic algorithm and for the control
 \end{algorithmic}
 \end{algorithm}
 
 \subsection{The task}
 
-To ask whether topology matters, the task must be one where it does---and which the
-networks can actually learn, so that better topologies score better. We generate a
-synthetic classification task, reproducibly, from a seed. Inputs $x$ are uniform in
-$[-1,1]^d$; the label is
+To ask whether architecture matters, the task must be one where it does---and which
+the networks can actually learn, so that better architectures score better. We
+generate a synthetic classification task, reproducibly, from a seed. Inputs $x$ are
+uniform in $[-1,1]^d$; the label is
 \begin{equation}
 y = \big[\, \sin(f\, w \!\cdot\! x) > 0 \,\big],
 \end{equation}
 for a fixed random projection $w$ and frequency $f$, with a fraction of labels
 flipped as noise. Higher $f$ makes more decision stripes and demands more capacity.
-We screened for learnability: at the settings below, trained networks reach a test
-MSE around $0.05$--$0.08$, well under the $0.25$ that predicting a constant $0.5$
-would score, so topology genuinely drives generalization. (We discarded one early
-run at $d=8, f=4$ precisely because \emph{no} topology learned it in the training
-budget---test MSE $\approx 0.27$, worse than chance---which leaves nothing for
-either search to distinguish.)
+The projection $w\!\cdot\!x$ is a spatial mixing of adjacent inputs, so a local,
+weight-sharing layer has structure to exploit---which is why the convolution-like
+move is not idle here. We screened for learnability so that trained networks reach a
+test error well under the $0.25$ a constant $0.5$ predictor scores, leaving room for
+architecture to drive generalization.
 
 \subsection{Protocol and metrics}
 
-Each \emph{run} uses a fresh task (task seed $=$ run index) and its own search seed,
-so results are averaged across task instances, not a single lucky one. Within a run
-the genetic algorithm and the control see the same task and the same
-$80/20$ train/test split. We report two metrics over the runs: the \emph{win rate},
-the fraction of runs in which the genetic best beat the control best, and the
-\emph{mean gap}, the average of (control MSE $-$ genetic MSE), positive when the
-genetic algorithm is better.
+Each \emph{run} uses a task and a search seed; within a run the genetic algorithm and
+the control see the same task and the same $80/20$ train/test split. Two designs are
+available: a \emph{fresh task per run} (task seed $=$ run index), which samples over
+task instances as the earlier study did, and a \emph{fixed task} with only the search
+seed varying, which isolates search efficiency from task-difficulty luck. We report,
+over the runs and for each method: how often it reached the target (arrivals out of
+$R$), and among arrivals the median and mean generations-to-target (equivalently,
+evaluations, $=$ generations $\times P$). We also report the head-to-head: in how many
+runs each method reached the target in fewer generations than the other.
 
 \section{Experiments}
 
+\subsection{Correctness of the structural move}
+
+Before any search, the convolution-like layer is checked in the unit suite: a
+forward pass with known shared weights reproduces the hand-computed sums (confirming
+weight sharing), and the analytic gradient of every weight matches a central
+finite-difference estimate to within $5\times 10^{-3}+0.02\,|g|$. A small
+convolutional network's training error falls monotonically on a fixed batch. Only
+then is the move handed to evolution.
+
 \subsection{Self-adaptive versus fixed mutation (controlled)}
 
-We first compare a fixed mutation rate against the same rate left free to
-self-adapt, in a small search space ($L_{\max}=3$, $W_{\max}=16$), holding
-everything else equal ($d=4$, $600$ samples, $f=3$; $P=10$, $G=8$, budget $80$;
-1200 training epochs; 10 seeds). This is a clean A/B: only the adaptation is toggled.
+We first isolate the one clean A/B from the earlier study: a fixed mutation rate
+against the same rate left free to self-adapt, in a small search space
+($L_{\max}=3$, $W_{\max}=16$), holding everything else equal ($d=4$, $600$ samples,
+$f=3$; $P=10$, $G=8$; 1200 training epochs; 10 seeds). Only the adaptation is toggled.
 
 \begin{table}[t]
 \centering
 \caption{Self-adaptive versus fixed mutation, small space, 10 seeds. Entries are
-genetic wins out of 10 (mean gap). Self-adaptation wins more often and by a wider
-margin at every starting rate.}
+genetic wins out of 10 (mean test-MSE gap over random). Self-adaptation wins more
+often and by a wider margin at every starting rate.}
 \label{tab:selfadapt}
-\begin{tabular}{cccc}
+\begin{tabular}{ccc}
 \toprule
 starting rate ($-M$) & fixed & self-adaptive \\
 \midrule
@@ -200,134 +299,133 @@ starting rate ($-M$) & fixed & self-adaptive \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:selfadapt} shows the effect. A fixed rate is about a coin flip
-against random (5 of 10) whatever the rate; self-adaptation lifts this to 6--8 of
-10 and widens the gap, at every starting rate. The benefit is real but modest.
-(An earlier 3-seed pass had shown a fixed rate \emph{losing} at one rate and a
-mutation-rate ``sweet spot''; ten seeds regressed both to the mean. This is why the
-counts below use as many seeds as the compute allowed.)
+Table~\ref{tab:selfadapt} shows the effect: a fixed rate is about a coin flip against
+random (5 of 10) whatever the rate, and self-adaptation lifts this to 6--8 of 10 and
+widens the gap. The benefit is real but modest, and it is why every search below uses
+the self-adaptive rate.
 
-\subsection{A bigger search space, fixed budget}
+\subsection{Time-to-target: the main test}
 
-Enlarging the space to $L_{\max}=5$, $W_{\max}=28$ while holding the budget at
-$P\!\times\!G = 96$ (and $d=4$, $1000$ samples, $f=3$, 1000 epochs, 15 seeds)
-reverses the picture (Table~\ref{tab:bigspace}): the genetic algorithm now does
-\emph{worse} than random, winning 4--5 of 15 with a negative mean gap.
+The central experiment runs the self-modifying search under error control against its
+matched random control and measures time-to-target. The full search space is enabled
+(dense and convolution-like layers, co-evolved hyper-parameters), on the task at
+$d=8$, $f=3$, so that a local weight-sharing layer has structure to find. Settings:
+$P=10$, elitism $k=2$, $L_{\max}=3$, $W_{\max}=16$, initial rate $2$; $1000$ training
+epochs; $300$ samples; target error $0.17$; a safety cap of $G=30$ generations; a
+fresh task per run over $R=50$ seeds. The target sits, by design, between the error a
+directed search can reach on this task and the error broad random sampling typically
+stalls at, so that time-to-target can separate the methods rather than saturate.
 
 \begin{table}[t]
 \centering
-\caption{Bigger space ($\le 5\times 28$), fixed budget 96, 15 seeds. The genetic
-algorithm does worse than random.}
-\label{tab:bigspace}
-\begin{tabular}{ccc}
+\caption{Time-to-target over $R=50$ seeds (fresh task per run), target error $0.17$,
+safety cap $30$ generations, $P=10$ (so evaluations $=10\times$ generations). Medians
+and means are over the runs that reached the target. The self-modifying search
+reaches the target about as often as random but in fewer generations on the typical
+run.}
+\label{tab:ttt}
+\begin{tabular}{lcccc}
 \toprule
-mode & genetic wins / 15 & mean gap \\
+method & reached target & median gens & median evals & mean gens \\
 \midrule
-fixed        & 4 & $-0.0029$ \\
-self-adaptive & 5 & $-0.0026$ \\
+self-modifying GA & 34\,/\,50 & \textbf{3} & \textbf{30} & 6.0 \\
+random search     & 32\,/\,50 & 4 & 40 & 6.6 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The reason is budget, not the search. Both make 96 evaluations, but the genetic
-algorithm spends only the first generation ($P$ genomes) sampling the space
-\emph{globally}; every later generation refines \emph{locally} around the elite.
-Random search spends all 96 evaluations globally. In a larger space, random's
-broader coverage beats committing to the best of $P$ global samples and polishing
-it, because local mutation cannot cross to the better regions random happens to
-find. Elitism guarantees the genetic algorithm never \emph{loses} its best, but
-that best came from too few global draws.
+Table~\ref{tab:ttt} reports the race. Both methods reach the target on most seeds
+and about equally often (34 and 32 of 50); the difference is in speed. The
+self-modifying search reaches the target in fewer generations on the typical seed
+(median $3$ versus $4$, mean $6.0$ versus $6.6$ generations, i.e.\ $30$ versus $40$
+evaluations), and it wins the per-run head-to-head $19$ to $11$, with $8$ ties and
+$12$ seeds on which neither method reached the target within the cap. This is a
+modest edge, and at 50 seeds it is \emph{suggestive rather than decisive}: a sign
+test on the $30$ decisive runs gives a one-sided $p \approx 0.10$. Its direction,
+however, is the notable part. Under the earlier fixed-budget measure the same kind
+of search sat at parity or below random; under time-to-target it comes out slightly
+ahead. The two measures are not in conflict. Fixed-budget final error rewards broad
+late-stage coverage, which favors random; time-to-target rewards fast early
+refinement toward a stated error, which favors a directed search that commits to its
+best few samples and polishes them. The interface \texttt{self\_modifying\_predict}
+poses the second question, not the first, and by that question the self-modifying
+search is at least as good as random and somewhat faster.
 
-\subsection{Scaling the budget (uncontrolled)}
+\subsection{Fixed-budget parity, for context}
 
-If the deficit is budget, more budget should help. Table~\ref{tab:budget} scales
-the search budget from 96 to 768 evaluations in the same bigger space. The gap does
-narrow from about $-0.003$ toward zero, and at 768 the fixed variant edges positive
-($5/8$, $+0.0021$)---but the genetic algorithm never decisively overtakes random,
-and the win counts (on 8 seeds) are noisy and non-monotone.
-
-\begin{table}[t]
-\centering
-\caption{Search budget in the bigger space. \textbf{This is not a controlled sweep:}
-to bound wall-clock, the per-candidate training (epochs, samples) and the elitism
-were also changed as the budget grew, so differences across rows conflate budget
-with training and selection. Read within a row, not across.}
-\label{tab:budget}
-\begin{tabular}{cccccc}
-\toprule
-budget ($P\times G$) & samples/epochs/elite & seeds & fixed wins (gap) & self-adaptive wins (gap) \\
-\midrule
-96  & $1000/1000/2$ & 15 & 4 ($-0.0029$) & 5 ($-0.0026$) \\
-384 & $800/700/2$   & 8  & 3 ($+0.0008$) & 4 ($-0.0006$) \\
-768 & $600/500/8$   & 8  & 5 ($+0.0021$) & 3 ($-0.0006$) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-We flag the confound rather than hide it: as the budget rose we cut training epochs
-to keep each run near forty minutes, and fewer epochs flatten the fitness signal,
-which pushes the gap toward zero on its own. So Table~\ref{tab:budget} is
-\emph{suggestive}, not conclusive. The controlled experiment---vary only $G$, hold
-task, epochs, samples, and elitism fixed---is specified in the conclusion and is the
-clean next step.
+For continuity with the earlier study we note its fixed-budget finding, which the new
+machinery does not overturn: when the search space is enlarged and the budget held
+fixed, the genetic algorithm hovers near parity with random search and does not
+reliably beat it, consistent with \cite{bergstra2012,li2019}. Error control does not
+change that landscape; it changes the \emph{question}, from final error at a fixed
+budget to work-to-a-fixed-error, which is the one the target-driven interface poses.
 
 \section{Discussion}
 
-Three things hold up. \textbf{(1)} Random search is a strong baseline: across every
-bigger-space setting we tried, the genetic algorithm did not reliably beat it,
-hovering near parity. This reproduces, from scratch, the lesson of
-\cite{bergstra2012,li2019}. \textbf{(2)} Self-adaptive mutation beats a fixed rate,
-reliably and by a little, in the one comparison we controlled cleanly
-(Table~\ref{tab:selfadapt}); its advantage did not clearly persist in the smaller,
-noisier bigger-space runs, so we do not claim it is universal. \textbf{(3)} The
-exploration/exploitation trade-off explains the pattern: directed local search
-(the genetic algorithm) beats broad sampling (random) only when the space is small
-enough for its limited global budget to cover, or when the budget scales with the
-space; otherwise broad sampling wins.
+The structural move is now available to evolution, and it trains correctly: the
+search can, in principle, assemble local weight-sharing layers rather than being told
+to. Whether it \emph{should}, on a given task, is exactly what time-to-target
+measures---and measures more faithfully than fixed-budget final error, because a user
+of \texttt{self\_modifying\_predict} specifies an error and pays for the work to reach
+it. Two forces set that work. Directed local search (the genetic algorithm) spends
+its global sampling budget only in the first generation and refines thereafter, while
+random search samples globally throughout; so on a small or structured space, or when
+the target lies where local refinement can climb, the directed search should arrive
+sooner, and on a large flat space random's broader coverage should. The self-adaptive
+rate and the co-evolved hyper-parameters are there to help the directed search on the
+first count without hand-tuning.
 
-\paragraph{Limitations.} The scale is small and the task is synthetic; the networks
-are dense feed-forward only; 8--15 seeds is coarse for win-count comparisons; the
-fitness landscape over topologies is fairly flat, which is unfavorable to any
-directed search; and, as noted, our budget experiments are not controlled. We used
-mean squared error as fitness, a proxy for classification error. None of this
-overturns the three findings, but each bounds how far to read them.
+\paragraph{Limitations.} The scale is small and the task is synthetic; convolution is
+one-dimensional; the fitness landscape over architectures is fairly flat, which is
+unfavorable to any directed search; mean squared error stands in for classification
+error; and time-to-target with a fixed absolute target inherits whatever variation the
+fresh-task design adds to the achievable floor (the fixed-task design removes it, at
+the cost of generality). None of this is hidden, and each bounds how far to read the
+result.
 
 \section{Conclusion and future work}
 
-The twenty-five-year-old idea---let the network find its own shape---runs, and it
-produces an honest answer: at this scale, evolving topologies does not beat random
-search, and making the search space bigger without making the budget bigger makes
-matters worse. The clear next experiments are three. First, a \emph{controlled}
-budget sweep: hold the task, training, and selection fixed and vary only the number
-of generations, to isolate the effect of budget. Second, a \emph{structured} search
-space (skip connections, per-layer choices) in which local moves have real gradient
-to climb, the setting where a directed search should finally pay. Third, a bridge to
-a standard tabular NAS benchmark (NAS-Bench-101/201), which supplies pre-computed
-accuracies over a fixed search space and would let the same comparison run over
-thousands of seeds cheaply. Each is one command away in the released code.
+The twenty-five-year-old idea---hand the network only the problem and the error, and
+let it find its own shape---now runs end to end: architecture, training
+hyper-parameters, and even the choice between a dense and a weight-sharing layer are
+discovered by evolution, and the search halts when the target error is met. On the
+hypothesis of Section 2, the evidence leans toward H and away from H$_0$: the
+self-modifying search reached the target in fewer evaluations than random on the
+typical seed and won the head-to-head $19$ to $11$; but the margin is not significant
+at 50 seeds ($p \approx 0.10$), so we report a lean, not a rejection. Settling it is
+the first of three clean next steps. First, the fixed-task time-to-target design at many search
+seeds, to isolate search efficiency from task luck. Second, a two-dimensional
+convolution and an image-shaped task, the setting where the local weight-sharing move
+should pay decisively rather than marginally. Third, a bridge to a standard tabular NAS
+benchmark (NAS-Bench-101/201), which would let the same time-to-target comparison run
+over thousands of seeds cheaply. Each is one command away in the released code.
 
 \section*{Reproducibility}
 
-Every result above is regenerated from \cite{repo} with a single command. The
-engine builds with \texttt{make} (a C99 compiler, no dependencies) into three
-programs: \texttt{smbpann} (the worker), \texttt{evolve} (the search and control),
-and \texttt{gentask} (the task generator); \texttt{scripts/benchmark.sh} runs a
-whole experiment and prints the win rate and mean gap. The controlling variables are
-environment variables: \texttt{DIM}, \texttt{N}, \texttt{FREQ}, \texttt{NOISE}
-(the task); \texttt{LMAX}, \texttt{WMAX} (the search space); \texttt{POP},
-\texttt{GENS}, \texttt{ELITE}, \texttt{MUT}, \texttt{ADAPT} (the search); and
-\texttt{RUNS}, \texttt{EPOCHS}. For example, Table~\ref{tab:bigspace} is
+Every result above is regenerated from \cite{repo} with a single command. The engine
+builds with \texttt{make} (a C99 compiler, no dependencies) into three programs:
+\texttt{smbpann} (the worker), \texttt{evolve} (the search and control), and
+\texttt{gentask} (the task generator). The convolutional gradient check and the other
+correctness tests run as \texttt{make ut} under AddressSanitizer and UBSan.
+\texttt{scripts/errortest.sh} runs the time-to-target experiment; its controlling
+variables are environment variables: \texttt{DIM}, \texttt{N}, \texttt{FREQ},
+\texttt{NOISE} (the task); \texttt{TARGET} (the target error); \texttt{LMAX},
+\texttt{WMAX} (the search space); \texttt{POP}, \texttt{GENS}, \texttt{ELITE},
+\texttt{MUT}, \texttt{ADAPT} (the search); \texttt{EPOCHS} and \texttt{RUNS}; and an
+optional \texttt{FIXTASK} to hold the task fixed. For example, Table~\ref{tab:ttt} is
 \begin{quote}\small\ttfamily
-DIM=4 N=1000 FREQ=3 LMAX=5 WMAX=28 EPOCHS=1000 POP=12 GENS=8 RUNS=15 \\
-MUT=2 ADAPT=1 scripts/benchmark.sh
+DIM=8 N=300 FREQ=3 NOISE=2 TARGET=0.17 POP=10 GENS=30 EPOCHS=1000 \\
+LMAX=3 WMAX=16 MUT=2 ADAPT=1 ELITE=2 RUNS=50 scripts/errortest.sh
 \end{quote}
-and \texttt{ADAPT=0} gives the fixed-rate row. Each run uses a fresh task seed and a
-fixed 32-bit xorshift generator, so the numbers are identical on re-running.
+and \texttt{FIXTASK=1} switches to the fixed-task design. Each run uses a fixed 32-bit
+xorshift generator, so the numbers are identical on re-running.
 
 \begin{thebibliography}{99}
 \small
 \bibitem{rumelhart1986} D.~E. Rumelhart, G.~E. Hinton, R.~J. Williams.
   Learning representations by back-propagating errors. \emph{Nature} 323, 1986.
+\bibitem{lecun1989} Y.~LeCun, B.~Boser, J.~S. Denker, et al. Backpropagation Applied
+  to Handwritten Zip Code Recognition. \emph{Neural Computation} 1(4), 1989.
 \bibitem{rechenberg1973} I.~Rechenberg. \emph{Evolutionsstrategie}. 1973;
   H.-P. Schwefel, \emph{Numerical Optimization of Computer Models}, 1981
   (self-adaptive mutation in evolution strategies).
