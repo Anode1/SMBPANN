@@ -210,16 +210,27 @@ gradient-like convergence settles near its random start while an exhaustive rand
 sampler keeps covering ground. It is the exploration-versus-exploitation trade-off
 in the open, and it confirms the intuition that broad random sampling wins once
 the space outgrows the search's budget. Giving evolution a fair chance in a bigger
-space means scaling the population and generations with it, which is the real next
-experiment.
+space means scaling the population and generations with it.
+
+So that is the next experiment: the same bigger space, but with four times the
+budget (384 evaluations, up from 96), eight fresh-task seeds. The gap closes. The
+GA rises from clearly losing (about a third of runs, mean gap -0.003) to roughly
+even (self-adaptive 4 of 8, mean gap -0.0005; fixed 3 of 8, mean gap +0.0008).
+More budget lets the directed search catch up to random, exactly as the
+exploration-budget account predicts, though it has not yet clearly overtaken it at
+four times the budget. (Eight seeds is coarse on the win count; the steadier signal
+is the mean gap moving about +0.003 toward zero as the budget quadruples.) A
+decisive win would need still more budget, or a search space with enough structure
+for local moves to climb, rather than the near-flat landscape here.
 
 The honest overall tendency: random search is a strong baseline for architecture
 search at this scale; self-adaptation beats a fixed mutation rate reliably by a
-little; and enlarging the search space without enlarging the budget hands the
-advantage back to random. Consistent with the field (Bergstra and Bengio 2012; Li
-and Talwalkar 2019), and reproduced here from scratch, one command at a time. Each
-of these is a one-command, reproducible run (`scripts/benchmark.sh`, with `ADAPT`,
-`LMAX`, `WMAX`, `RUNS`, and the task size as environment variables).
+little; enlarging the search space without enlarging the budget hands the advantage
+to random; and scaling the budget back up with the space closes that gap toward
+even again. Consistent with the field (Bergstra and Bengio 2012; Li and Talwalkar
+2019), and reproduced here from scratch. Each step is a one-command, reproducible
+run (`scripts/benchmark.sh`, with `ADAPT`, `LMAX`, `WMAX`, `POP`, `GENS`, `RUNS`,
+and the task size as environment variables).
 
 ## Roadmap
 
