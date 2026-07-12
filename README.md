@@ -212,25 +212,36 @@ in the open, and it confirms the intuition that broad random sampling wins once
 the space outgrows the search's budget. Giving evolution a fair chance in a bigger
 space means scaling the population and generations with it.
 
-So that is the next experiment: the same bigger space, but with four times the
-budget (384 evaluations, up from 96), eight fresh-task seeds. The gap closes. The
-GA rises from clearly losing (about a third of runs, mean gap -0.003) to roughly
-even (self-adaptive 4 of 8, mean gap -0.0005; fixed 3 of 8, mean gap +0.0008).
-More budget lets the directed search catch up to random, exactly as the
-exploration-budget account predicts, though it has not yet clearly overtaken it at
-four times the budget. (Eight seeds is coarse on the win count; the steadier signal
-is the mean gap moving about +0.003 toward zero as the budget quadruples.) A
-decisive win would need still more budget, or a search space with enough structure
-for local moves to climb, rather than the near-flat landscape here.
+So that is the next experiment: the same bigger space, scaling the budget from 96
+up through 384 to 768 evaluations, eight fresh-task seeds. The gap narrows toward
+zero (from about -0.003 to about -0.0006), and at the largest budget the fixed
+variant even edges positive (5 of 8, +0.0021), but the GA never decisively
+overtakes random, and the 8-seed win counts are noisy and non-monotone. Two things
+keep this honest: the win margin is small and the landscape nearly flat; and these
+budget runs are *not* a controlled sweep, because to bound wall-clock the
+per-candidate training was cut as the budget grew (epochs 1000 to 500), and fewer
+epochs flatten the fitness signal on their own, so the narrowing cannot be credited
+to budget alone. A controlled sweep (vary only the generations) is the clean next
+step.
 
 The honest overall tendency: random search is a strong baseline for architecture
 search at this scale; self-adaptation beats a fixed mutation rate reliably by a
-little; enlarging the search space without enlarging the budget hands the advantage
-to random; and scaling the budget back up with the space closes that gap toward
-even again. Consistent with the field (Bergstra and Bengio 2012; Li and Talwalkar
-2019), and reproduced here from scratch. Each step is a one-command, reproducible
-run (`scripts/benchmark.sh`, with `ADAPT`, `LMAX`, `WMAX`, `POP`, `GENS`, `RUNS`,
-and the task size as environment variables).
+little (the one cleanly controlled comparison); and in a bigger search space the GA
+does not reliably beat random at any budget we tried, hovering near parity.
+Consistent with the field (Bergstra and Bengio 2012; Li and Talwalkar 2019), and
+reproduced here from scratch. Each experiment is a one-command run
+(`scripts/benchmark.sh`, with `ADAPT`, `LMAX`, `WMAX`, `POP`, `GENS`, `ELITE`,
+`MUT`, `RUNS`, and the task size as environment variables).
+
+## Paper
+
+A short write-up of the experiment, in the style of the 1997 thesis, with the full
+method, exact settings, population sizes, metrics, and per-run statistics:
+[`paper/nas_vs_random.pdf`](paper/nas_vs_random.pdf) (source
+[`paper/nas_vs_random.tex`](paper/nas_vs_random.tex)). Its honest bottom line
+matches the field: at this scale random search is hard to beat, self-adaptive
+mutation beats a fixed rate by a little, and enlarging the search space without the
+budget hands the advantage to random.
 
 ## Roadmap
 

@@ -11,3 +11,11 @@
 # -- legacy/java --
 legacy/java/build/
 legacy/java/*.jar
+
+# -- LaTeX build artifacts (keep .tex and .pdf) --
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
