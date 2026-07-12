@@ -12,13 +12,21 @@
 
 #include <stddef.h>
 
+#include "act.h"
 #include "common.h"
 #include "rng.h"
 
+/* A genome carries the topology AND its own training hyper-parameters, so the
+ * search discovers them instead of being told (the self_modifying_predict goal):
+ * network shape, plus learning rate, momentum, and hidden activation. All of them
+ * co-evolve; the mutation rate itself is self-adaptive. */
 typedef struct {
     size_t   n;                     /* layers, input and output included (>= 2) */
     size_t   dim[SMB_MAX_LAYERS];   /* widths; dim[0]=inputs, dim[n-1]=outputs */
     smb_real rate;                  /* self-adaptive mutation rate (moves/child)*/
+    smb_real lrate;                 /* learning rate  (co-evolved)              */
+    smb_real momentum;              /* momentum       (co-evolved)              */
+    int      activation;            /* hidden activation, act.h kind (co-evolved)*/
 } Genome;
 
 /* A random genome: NINPUT inputs, NOUTPUT outputs, and 0..MAXHID hidden layers
@@ -32,16 +40,19 @@ void genome_random(Genome *g, size_t ninput, size_t noutput,
 void genome_mutate(Genome *g, size_t maxhid, size_t maxwidth, Rng *rng);
 
 /* Self-adaptive reproduction: copy PARENT into CHILD, log-normally perturb the
- * inherited mutation rate, then apply round(rate) topology mutations. Selection
- * on the offspring implicitly tunes the rate (the ES self-adaptation idea), so
- * the search needs no hand-set mutation rate. */
+ * inherited mutation rate, apply round(rate) topology mutations, and co-evolve
+ * the hyper-parameters (log-normal steps on learning rate and momentum, an
+ * occasional switch of activation). Selection on the offspring tunes them all. */
 void genome_reproduce(Genome *child, const Genome *parent,
                       size_t maxhid, size_t maxwidth, Rng *rng);
 
-/* Format G as "2,4,1" into BUF. */
+/* Format G as a candidate spec "topology|lrate|momentum|activation" into BUF,
+ * e.g. "2,4,1|0.5|0.9|sigmoid". */
 void genome_format(const Genome *g, char *buf, size_t bufsz);
 
-/* Parse "2,4,1" into G. Returns 0, or -1 on a malformed or too-long list. */
+/* Parse a candidate spec into G. Accepts a bare topology ("2,4,1", with default
+ * hyper-parameters) or the full "2,4,1|lrate|momentum|activation". Returns 0, or
+ * -1 on a malformed or too-long list. */
 int genome_parse(Genome *g, const char *s);
 
 #endif /* SMB_GENOME_H */

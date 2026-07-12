@@ -248,6 +248,33 @@ int main(void)
         CHECK(ok, "genome: self-adaptive reproduce keeps endpoints and a bounded rate");
     }
 
+    /* genome: hyper-parameters start in range, survive the spec, and stay
+     * bounded as they co-evolve */
+    {
+        Rng r;
+        Genome g, g2, c;
+        char buf[256];
+        int i, ok = 1;
+        rng_seed(&r, 11);
+        genome_random(&g, 2, 1, 3, 16, &r);
+        CHECK(g.lrate >= 0.1f && g.lrate < 0.8f
+              && g.momentum >= 0.5f && g.momentum < 0.95f
+              && g.activation >= 0 && g.activation < ACT_COUNT,
+              "genome: random hyper-parameters start in range");
+        genome_format(&g, buf, sizeof buf);
+        CHECK(genome_parse(&g2, buf) == 0 && g2.activation == g.activation,
+              "genome: spec round-trips the activation gene");
+        for (i = 0; i < 300; i++) {
+            genome_reproduce(&c, &g, 3, 16, &r);
+            if (c.lrate < 0.01f || c.lrate > 2.0f
+                || c.momentum < 0.0f || c.momentum > 0.99f
+                || c.activation < 0 || c.activation >= ACT_COUNT)
+                ok = 0;
+            g = c;
+        }
+        CHECK(ok, "genome: co-evolved hyper-parameters stay bounded");
+    }
+
     printf("\n%d checks, %d failed\n", t_run, t_fail);
     return t_fail ? 1 : 0;
 }

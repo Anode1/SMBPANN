@@ -27,12 +27,17 @@ but one handed only the problem, which finds the rest itself:
 self_modifying_predict(TrainingSet, TestingSet, Error)
 ```
 
-A population of networks is searched by mutating layer counts and widths and
-selecting on held-out validation performance; each candidate's weights are
-trained by backpropagation (the 1997 delta rule). The search returns the
-architecture that generalizes best on validation, with the standard caveat that
-the search itself can overfit the validation split, so a final untouched test set
-is needed to judge it.
+A population of networks is searched by mutating layer counts and widths, and by
+co-evolving each candidate's own **training hyper-parameters** (learning rate,
+momentum, and hidden activation function), selecting on held-out validation
+performance; each candidate's weights are trained by backpropagation (the 1997
+delta rule). Those hyper-parameters were arguments of the top signature and are
+now discovered instead of specified, a concrete step toward the bottom one. (On
+XOR the search reliably finds, on its own, that a ReLU hidden layer with high
+momentum solves it near-exactly.) The search returns the architecture that
+generalizes best on validation, with the standard caveat that the search itself
+can overfit the validation split, so a final untouched test set is needed to
+judge it.
 
 Recombining two arbitrary topologies by crossover is a known hard problem (the
 competing-conventions problem, where two networks encode the same function with

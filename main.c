@@ -21,6 +21,7 @@
 
 #include "common.h"
 #include "data.h"
+#include "genome.h"
 #include "net.h"
 #include "rng.h"
 #include "train.h"
@@ -39,6 +40,8 @@ static void usage(const char *prog)
         "Trains a network and prints a RESULT line with its fitness (lower is\n"
         "better). With no -f it trains the built-in XOR problem.\n"
         "  -t topology  comma-separated layer widths, e.g. 2,4,1\n"
+        "  -g spec      genome: topology|lrate|momentum|activation\n"
+        "                 (e.g. 2,4,1|0.5|0.9|tanh); overrides -t/-r/-m\n"
         "  -f file      dataset: each line is `in` inputs then `out` targets\n"
         "  -i in        number of input values per sample   (with -f)\n"
         "  -o out       number of target values per sample  (with -f)\n"
@@ -170,7 +173,8 @@ int main(int argc, char **argv)
     long   epochs = 20000, seed = 1, hidden = 4;
     long   ninput = 0, noutput = 0;
     double rate = 0.5, momentum = 0.9, frac = 0.8;
-    char  *topo_arg = NULL, *file = NULL;
+    char  *topo_arg = NULL, *file = NULL, *spec_arg = NULL;
+    int    activation = ACT_SIGMOID;
     int    quiet = 0, c;
 
     size_t   dims[SMB_MAX_LAYERS];
@@ -182,8 +186,9 @@ int main(int argc, char **argv)
     double   train_err = 0.0, test_err = 0.0, fitness = 0.0;
     int      rc = 0;
 
-    while ((c = getopt(argc, argv, "t:f:i:o:p:e:r:m:s:H:qvh")) != -1) {
+    while ((c = getopt(argc, argv, "g:t:f:i:o:p:e:r:m:s:H:qvh")) != -1) {
         switch (c) {
+        case 'g': spec_arg = optarg; break;
         case 't': topo_arg = optarg; break;
         case 'f': file     = optarg; break;
         case 'i': ninput   = atol(optarg); break;
@@ -205,8 +210,23 @@ int main(int argc, char **argv)
         return 2;
     }
 
-    /* Topology: from -t, else the XOR default 2-hidden-1. */
-    if (topo_arg != NULL) {
+    /* A full candidate spec (-g) carries the topology AND the co-evolved
+     * hyper-parameters, and overrides -t/-r/-m. Else -t gives the topology, else
+     * the XOR default 2-hidden-1. */
+    if (spec_arg != NULL) {
+        Genome gen;
+        size_t i;
+        if (genome_parse(&gen, spec_arg) != 0) {
+            fprintf(stderr, "smbpann: bad spec '%s'\n", spec_arg);
+            return 2;
+        }
+        nlayers = gen.n;
+        for (i = 0; i < nlayers; i++)
+            dims[i] = gen.dim[i];
+        rate       = (double)gen.lrate;
+        momentum   = (double)gen.momentum;
+        activation = gen.activation;
+    } else if (topo_arg != NULL) {
         if (parse_topology(topo_arg, dims, SMB_MAX_LAYERS, &nlayers) != 0) {
             fprintf(stderr, "smbpann: bad topology '%s'\n", topo_arg);
             return 2;
@@ -239,6 +259,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "smbpann: cannot build network\n");
         return 1;
     }
+    net->activation = activation;
     rng_seed(&rng, (uint32_t)seed);
     net_init(net, &rng);
 
@@ -272,9 +293,10 @@ int main(int argc, char **argv)
     }
 
     format_topology(dims, nlayers, topo, sizeof topo);
-    printf("RESULT topology=%s weights=%zu seed=%ld epochs=%ld "
+    printf("RESULT topology=%s spec=%s weights=%zu seed=%ld epochs=%ld "
            "train=%.6g test=%.6g fitness=%.6g\n",
-           topo, net_nweights(net), seed, epochs, train_err, test_err, fitness);
+           topo, (spec_arg != NULL) ? spec_arg : topo,
+           net_nweights(net), seed, epochs, train_err, test_err, fitness);
 
 cleanup:
     trainer_free(t);

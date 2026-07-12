@@ -21,4 +21,16 @@ smb_real act_sigmoid(smb_real z);
 /* Derivative g'(z) expressed via the activation a = g(z): a * (1 - a). */
 smb_real act_sigmoid_deriv(smb_real a);
 
+/* Selectable activations, so a network can carry (and evolve) its own. Applied
+ * to hidden layers; the output layer stays sigmoid, keeping classification
+ * outputs in (0,1). */
+enum { ACT_SIGMOID = 0, ACT_TANH = 1, ACT_RELU = 2, ACT_COUNT = 3 };
+
+/* Apply / differentiate activation KIND. act_deriv takes the activation a=g(z),
+ * as the sigmoid form does (for ReLU, a>0 agrees with z>0). */
+smb_real    act_apply(int kind, smb_real z);
+smb_real    act_deriv(int kind, smb_real a);
+const char *act_name(int kind);              /* "sigmoid" | "tanh" | "relu" */
+int         act_from_name(const char *name); /* kind, or -1 if unknown */
+
 #endif /* SMB_ACT_H */

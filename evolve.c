@@ -80,14 +80,14 @@ static int evaluate(const char *evalcmd, const char *popfile, const char *resfil
     if (f == NULL)
         return -1;
     while (fgets(line, sizeof line, f) != NULL) {
-        char       *tp = strstr(line, "topology=");
+        char       *tp = strstr(line, "spec=");
         const char *fp = strstr(line, "fitness=");
         if (tp == NULL || fp == NULL)
             continue;
         if (got == 0)
             *best = atof(fp + 8);            /* "fitness=" is 8 chars; best first */
-        if (got < k && sscanf(tp + 9, "%255[0-9,]", topos[got]) == 1)
-            got++;                            /* "topology=" is 9 chars */
+        if (got < k && sscanf(tp + 5, "%255[^ \t\n]", topos[got]) == 1)
+            got++;                            /* "spec=" is 5 chars; full genome */
     }
     fclose(f);
     *ntop = got;

@@ -35,6 +35,7 @@ typedef struct {
     smb_real *b[SMB_MAX_LAYERS];     /* b[l]: dim[l] biases                  */
     smb_real *a[SMB_MAX_LAYERS];     /* a[l]: dim[l] activations (a[0]=input)*/
     smb_real *z[SMB_MAX_LAYERS];     /* z[l]: dim[l] pre-activations (l>=1)  */
+    int       activation;            /* hidden-layer activation (act.h kinds)*/
 } Net;
 
 /* Build a network with layer sizes dims[0..nlayers-1] (dims[0] = inputs,

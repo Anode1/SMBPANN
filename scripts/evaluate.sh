@@ -27,10 +27,10 @@ COMMON="${COMMON:-}"
 # --worker: evaluate one candidate topology; emit "<fitness>\t<RESULT line>".
 # The fitness is prefixed as a sort key and stripped again by the coordinator.
 if [ "${1:-}" = "--worker" ]; then
-    topo="$2"
-    line=$($SMB -t "$topo" $COMMON -q 2>/dev/null | grep '^RESULT' || true)
+    spec="$2"
+    line=$($SMB -g "$spec" $COMMON -q 2>/dev/null | grep '^RESULT' || true)
     if [ -z "$line" ]; then
-        printf 'inf\tRESULT topology=%s fitness=inf (worker failed)\n' "$topo"
+        printf 'inf\tRESULT spec=%s fitness=inf (worker failed)\n' "$spec"
     else
         fit=$(printf '%s\n' "$line" | sed -n 's/.*fitness=\([^ ]*\).*/\1/p')
         printf '%s\t%s\n' "$fit" "$line"

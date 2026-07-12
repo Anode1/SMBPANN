@@ -11,6 +11,16 @@
 #define GENOME_RATE_MIN  0.5
 #define GENOME_RATE_MAX  12.0
 
+/* Co-evolution of the training hyper-parameters: a gentler log-normal step for
+ * the learning rate and momentum, clamped to sane ranges; an occasional switch
+ * of the activation. */
+#define GENOME_HP_TAU     0.20
+#define GENOME_LR_MIN     0.01
+#define GENOME_LR_MAX     2.0
+#define GENOME_MOM_MIN    0.0
+#define GENOME_MOM_MAX    0.99
+#define GENOME_ACT_SWITCH 10      /* percent chance to switch activation */
+
 /* uniform integer in [0, m) via the PRNG */
 static size_t below(Rng *rng, size_t m)
 {
@@ -32,6 +42,12 @@ void genome_random(Genome *g, size_t ninput, size_t noutput,
     g->dim[1 + nhid] = noutput;
     g->n = nhid + 2;
     g->rate = 1.0f;                          /* a caller may override the seed */
+
+    /* random starting hyper-parameters, so the population (and the random
+     * control) explore them from the first generation */
+    g->lrate      = rng_uniform(rng, 0.1f, 0.8f);
+    g->momentum   = rng_uniform(rng, 0.5f, 0.95f);
+    g->activation = (int)below(rng, ACT_COUNT);
 }
 
 void genome_reproduce(Genome *child, const Genome *parent,
@@ -53,6 +69,19 @@ void genome_reproduce(Genome *child, const Genome *parent,
         moves = 1;
     for (k = 0; k < moves; k++)
         genome_mutate(child, maxhid, maxwidth, rng);
+
+    /* co-evolve the training hyper-parameters: log-normal steps on the learning
+     * rate and momentum, an occasional switch of activation, all clamped */
+    child->lrate *= (smb_real)exp(GENOME_HP_TAU * (double)rng_gaussian(rng));
+    if (child->lrate < (smb_real)GENOME_LR_MIN) child->lrate = (smb_real)GENOME_LR_MIN;
+    if (child->lrate > (smb_real)GENOME_LR_MAX) child->lrate = (smb_real)GENOME_LR_MAX;
+
+    child->momentum *= (smb_real)exp(GENOME_HP_TAU * (double)rng_gaussian(rng));
+    if (child->momentum < (smb_real)GENOME_MOM_MIN) child->momentum = (smb_real)GENOME_MOM_MIN;
+    if (child->momentum > (smb_real)GENOME_MOM_MAX) child->momentum = (smb_real)GENOME_MOM_MAX;
+
+    if ((rng_u32(rng) % 100u) < (uint32_t)GENOME_ACT_SWITCH)
+        child->activation = (int)below(rng, ACT_COUNT);
 }
 
 void genome_mutate(Genome *g, size_t maxhid, size_t maxwidth, Rng *rng)
@@ -110,9 +139,13 @@ void genome_format(const Genome *g, char *buf, size_t bufsz)
         int w = snprintf(buf + off, bufsz - off, "%s%zu",
                          (i > 0) ? "," : "", g->dim[i]);
         if (w < 0 || (size_t)w >= bufsz - off)
-            break;
+            return;
         off += (size_t)w;
     }
+    /* append the hyper-parameters: |lrate|momentum|activation */
+    if (off < bufsz)
+        snprintf(buf + off, bufsz - off, "|%.4g|%.4g|%s",
+                 (double)g->lrate, (double)g->momentum, act_name(g->activation));
 }
 
 int genome_parse(Genome *g, const char *s)
@@ -120,7 +153,13 @@ int genome_parse(Genome *g, const char *s)
     size_t      n = 0;
     const char *p = s;
 
-    while (*p != '\0') {
+    /* defaults, used for a bare-topology spec and overwritten if present */
+    g->rate       = 1.0f;
+    g->lrate      = 0.5f;
+    g->momentum   = 0.9f;
+    g->activation = ACT_SIGMOID;
+
+    while (*p != '\0' && *p != '|') {
         char *end;
         long  v = strtol(p, &end, 10);
         if (end == p || v <= 0)
@@ -135,6 +174,19 @@ int genome_parse(Genome *g, const char *s)
     if (n < 2)
         return -1;
     g->n = n;
-    g->rate = 1.0f;   /* topology strings carry no rate; default it */
+
+    /* optional hyper-parameters: |lrate|momentum|activation */
+    if (*p == '|') {
+        char   act[32];
+        double lr = 0.0, mom = 0.0;
+        int    got = sscanf(p, "|%lf|%lf|%31[a-z]", &lr, &mom, act);
+        if (got >= 1) g->lrate    = (smb_real)lr;
+        if (got >= 2) g->momentum = (smb_real)mom;
+        if (got >= 3) {
+            int kind = act_from_name(act);
+            if (kind >= 0)
+                g->activation = kind;
+        }
+    }
     return 0;
 }

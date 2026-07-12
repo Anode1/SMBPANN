@@ -29,9 +29,11 @@ git history. This is the operating manual.
 `make ut` is the commit gate; run `make ut-asan` and `make ut-ubsan` before
 committing. A warning is a defect.
 
-The worker: `./smbpann -t 2,4,1 -q` trains a topology and prints a machine-readable
-`RESULT ... fitness=<x>` line (lower is better; a dataset via `-f file -i in -o out`,
-else built-in XOR); `./smbpann -h` for options. The coordinator fans a population
+The worker: `./smbpann -t 2,4,1 -q` (or `-g 2,4,1|0.5|0.9|tanh` to also set the
+co-evolved learning rate, momentum, and activation) trains a topology and prints a
+machine-readable `RESULT ... spec=<genome> ... fitness=<x>` line (lower is better;
+a dataset via `-f file -i in -o out`, else built-in XOR); `./smbpann -h` for
+options. The coordinator fans a population
 of candidates (one topology per line) across `nproc` worker processes:
 
     printf '2,2,1\n2,4,1\n2,8,1\n' | scripts/evaluate.sh          # leaderboard
@@ -59,13 +61,15 @@ MUT). The GA is sensitive to MUT (mutation moves per offspring):
 
     common.h   smb_real (=float), SMB_MAX_LAYERS, SMB_LINE_MAX
     rng        deterministic xorshift PRNG (reproducible init + evolution)
-    act        activation functions (sigmoid + derivative), pure
-    net        the network: flat weight matrices, forward pass, thesis init
+    act        activation functions: sigmoid, tanh, relu (selectable per net)
+    net        the network: flat weight matrices, forward pass, thesis init;
+               hidden layers use net->activation, the output stays sigmoid
     train      backpropagation: the generalized delta rule with momentum
     arena      marker/Mark-Release allocator (the population's heap)
     data       plain-text datasets + train/test split
-    genome     topology genome: random, mutation, self-adaptive reproduction
-               (the mutation rate lives in the genome and evolves, ES-style)
+    genome     topology + co-evolved hyper-parameters (learning rate, momentum,
+               activation); the mutation rate is self-adaptive (ES-style). A
+               candidate spec is "topology|lrate|momentum|activation".
     main.c     the CLI / evaluation worker (getopt); emits a RESULT fitness line
     evolve.c   the evolutionary search driver + matched random-search control
     gentask.c  reproducible synthetic-task generator (a task where topology matters)

@@ -66,7 +66,7 @@ smb_real trainer_learn(Trainer *t, const smb_real *x, const smb_real *d)
             smb_real s = 0;
             for (j = 0; j < nnext; j++)
                 s += net->w[l + 1][j * nthis + i] * t->beta[l + 1][j];
-            t->beta[l][i] = act_sigmoid_deriv(net->a[l][i]) * s;
+            t->beta[l][i] = act_deriv(net->activation, net->a[l][i]) * s;
         }
     }
 

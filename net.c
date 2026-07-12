@@ -81,7 +81,11 @@ const smb_real *net_forward(Net *net, const smb_real *x)
             for (j = 0; j < nprev; j++)
                 s += wi[j] * prev[j];
             net->z[l][i] = s;
-            net->a[l][i] = act_sigmoid(s);
+            /* hidden layers use the net's chosen activation; the output layer
+             * stays sigmoid so classification outputs remain in (0,1) */
+            net->a[l][i] = (l == net->nlayers - 1)
+                         ? act_sigmoid(s)
+                         : act_apply(net->activation, s);
         }
     }
     return net->a[net->nlayers - 1];
