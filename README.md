@@ -246,6 +246,26 @@ reproduced here from scratch. Each experiment is a one-command run
 (`scripts/benchmark.sh`, with `ADAPT`, `LMAX`, `WMAX`, `POP`, `GENS`, `ELITE`,
 `MUT`, `RUNS`, and the task size as environment variables).
 
+## Error control
+
+The comparison above fixes the budget and asks who has the lower error. But the
+top-line signature `self_modifying_predict(TrainingSet, TestingSet, Error)` asks
+the opposite: you hand it the error you want, and it searches UNTIL it gets there.
+`evolve -E error` does exactly that, running until the best validation error
+reaches the target (with `-G` a safety cap) and reporting which generation each
+method arrived. The fitness the search minimizes IS that validation error, so a
+single number is both the objective and the stop.
+
+This turns the question from "whose error is lower at a fixed budget" into "who
+reaches the target with less work", which is what a user of the interface actually
+cares about. `scripts/errortest.sh` runs the time-to-target race over many seeds
+and reports, for each method, how often and in how few generations it reaches the
+target:
+
+```sh
+TARGET=0.12 RUNS=30 GENS=60 scripts/errortest.sh
+```
+
 ## Paper
 
 A short write-up of the experiment, in the style of the 1997 thesis, with the full
@@ -272,6 +292,10 @@ budget hands the advantage to random.
    topology matters, over several seeds, reproducible from a seed with no
    downloads. *(done)* Bridging to the real NAS-Bench-101/201 (a cell-based search
    space shipped as multi-gigabyte PyTorch files) is future work.
+7. **Error control** (`evolve -E` + `scripts/errortest.sh`): the search runs until
+   it reaches a target validation error, realizing the top-line
+   `self_modifying_predict(Train, Test, Error)` signature, and the time-to-target
+   race replaces fixed-budget fitness as the measure. *(done)*
 
 See [`AGENTS.md`](AGENTS.md) for the developer contract and module map.
 

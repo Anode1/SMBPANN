@@ -29,11 +29,14 @@ static void usage(const char *prog)
 {
     fprintf(stderr,
         "usage: %s -i in -o out [-P pop] [-G gens] [-k elite] [-s seed]\n"
-        "          [-L maxhidden] [-W maxwidth] [-M rate] [-A 0|1]\n"
+        "          [-L maxhidden] [-W maxwidth] [-M rate] [-A 0|1] [-E error]\n"
         "\n"
         "Evolves network topologies and races the GA against random search.\n"
         "Fitness comes from scripts/evaluate.sh (set COMMON for a dataset; with\n"
-        "none it trains XOR, so use -i 2 -o 1).\n", prog);
+        "none it trains XOR, so use -i 2 -o 1).\n"
+        "  -E error  stop when the GA's best validation error reaches this target\n"
+        "            (self_modifying_predict: search until good enough); -G is then\n"
+        "            the safety cap. Default 0 = run the full -G generations.\n", prog);
 }
 
 /* uniform index in [0, m) */
@@ -100,6 +103,9 @@ int main(int argc, char **argv)
     long   pop = 8, gens = 10, elite = 2, seed = 1, maxhid = 3, maxwidth = 16;
     long   mutations = 1;   /* the mutation rate (initial, if self-adaptive) */
     long   adapt = 1;       /* 1 = self-adaptive rate, 0 = fixed rate         */
+    double target = 0.0;    /* stop when GA best <= this; 0 = disabled        */
+    int    ga_hit = 0, rand_hit = 0;
+    long   ga_hit_gen = 0, rand_hit_gen = 0;   /* gen each first met the target */
     int    c;
     long   gen, total_evals = 0;
     size_t i;
@@ -114,7 +120,7 @@ int main(int argc, char **argv)
     char        ga_topo[256] = "", rand_topo[256] = "";
     int         have_ga = 0, have_rand = 0;
 
-    while ((c = getopt(argc, argv, "i:o:P:G:k:s:L:W:M:A:h")) != -1) {
+    while ((c = getopt(argc, argv, "i:o:P:G:k:s:L:W:M:A:E:h")) != -1) {
         switch (c) {
         case 'i': ninput    = atol(optarg); break;
         case 'o': noutput   = atol(optarg); break;
@@ -126,6 +132,7 @@ int main(int argc, char **argv)
         case 'W': maxwidth  = atol(optarg); break;
         case 'M': mutations = atol(optarg); break;
         case 'A': adapt     = atol(optarg); break;
+        case 'E': target    = atof(optarg); break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 2;
         }
@@ -160,10 +167,16 @@ int main(int argc, char **argv)
         gapop[i].rate = (smb_real)mutations;   /* seed the self-adaptive rate */
     }
 
-    printf("evolving %ld topologies over %ld generations "
-           "(elite %ld, %s rate %ld, seed %ld)\n",
-           pop, gens, elite, adapt ? "initial self-adaptive" : "fixed",
-           mutations, seed);
+    if (target > 0.0)
+        printf("evolving %ld topologies until error <= %g "
+               "(cap %ld generations; elite %ld, %s rate %ld, seed %ld)\n",
+               pop, target, gens, elite,
+               adapt ? "initial self-adaptive" : "fixed", mutations, seed);
+    else
+        printf("evolving %ld topologies over %ld generations "
+               "(elite %ld, %s rate %ld, seed %ld)\n",
+               pop, gens, elite, adapt ? "initial self-adaptive" : "fixed",
+               mutations, seed);
 
     for (gen = 1; gen <= gens; gen++) {
         size_t ne, e;
@@ -240,8 +253,28 @@ int main(int argc, char **argv)
 
         printf("gen %3ld   GA best=%.6g (%s) rate=%.2f   RAND best=%.6g (%s)\n",
                gen, ga_best, ga_topo, (double)ga_rate, rand_best, rand_topo);
+
+        /* error control: note the first generation each method reaches the target
+         * (the Error argument of self_modifying_predict). Recording both lets one
+         * run measure the time-to-target race. Stop once both are good enough (or
+         * at the -G safety cap). */
+        if (target > 0.0) {
+            if (!ga_hit && ga_best <= target) { ga_hit = 1; ga_hit_gen = gen; }
+            if (!rand_hit && rand_best <= target) { rand_hit = 1; rand_hit_gen = gen; }
+            if (ga_hit && rand_hit)
+                break;
+        }
     }
 
+    if (target > 0.0) {
+        /* one machine-readable line per run for the multi-seed benchmark:
+         * evals-to-target = gens-to-target * pop; 0 gens means never reached. */
+        printf("\nTARGET error=%g seed=%ld ga_gens=%ld ga_evals=%ld "
+               "rand_gens=%ld rand_evals=%ld\n",
+               target, seed,
+               ga_hit ? ga_hit_gen : 0, ga_hit ? ga_hit_gen * pop : 0,
+               rand_hit ? rand_hit_gen : 0, rand_hit ? rand_hit_gen * pop : 0);
+    }
     printf("\nfinal:  GA %.6g (%s) rate=%.2f  vs  RAND %.6g (%s)   "
            "[%ld evaluations each]\n",
            ga_best, ga_topo, (double)ga_rate, rand_best, rand_topo, total_evals);

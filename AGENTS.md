@@ -57,6 +57,17 @@ MUT). The GA is sensitive to MUT (mutation moves per offspring):
     scripts/benchmark.sh                           # default settings
     MUT=3 RUNS=5 scripts/benchmark.sh              # try a higher mutation rate
 
+Error control (`evolve -E error`) realizes the `self_modifying_predict(Train, Test,
+Error)` signature: the search runs UNTIL the best validation error reaches the
+target, with `-G` the safety cap, and reports which generation each method got
+there. The fitness we minimize IS that validation error, so one number is both the
+objective and the stop. `scripts/errortest.sh` runs this over many seeds and
+reports the time-to-target race (how often, and in how few generations, the GA
+reaches the target versus random) -- a fairer measure than final fitness at a
+fixed budget (env adds TARGET; a long, many-seed run is the intended use):
+
+    TARGET=0.12 RUNS=30 GENS=60 scripts/errortest.sh
+
 ## Module map
 
     common.h   smb_real (=float), SMB_MAX_LAYERS, SMB_LINE_MAX
@@ -78,7 +89,8 @@ MUT). The GA is sensitive to MUT (mutation moves per offspring):
     gentask.c  reproducible synthetic-task generator (a task where topology matters)
     tests.c    -DUNIT_TEST unit suite: rng act net xor arena data genome
     scripts/evaluate.sh    the parallel coordinator (one worker process/candidate)
-    scripts/benchmark.sh   the reproducible GA-vs-random benchmark (step 6)
+    scripts/benchmark.sh   the reproducible GA-vs-random benchmark (fixed budget)
+    scripts/errortest.sh   the time-to-target benchmark (error control, many seeds)
 
 Three binaries share the engine objects: `smbpann` (worker, main.o), `evolve`
 (search, evolve.o), and `gentask` (gentask.o); the Makefile filters out the other
