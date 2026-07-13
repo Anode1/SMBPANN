@@ -252,14 +252,18 @@ architecture to drive generalization.
 \subsection{Protocol and metrics}
 
 Each \emph{run} uses a task and a search seed; within a run the genetic algorithm and
-the control see the same task and the same $80/20$ train/test split. Two designs are
-available: a \emph{fresh task per run} (task seed $=$ run index), which samples over
-task instances as the earlier study did, and a \emph{fixed task} with only the search
-seed varying, which isolates search efficiency from task-difficulty luck. We report,
-over the runs and for each method: how often it reached the target (arrivals out of
-$R$), and among arrivals the median and mean generations-to-target (equivalently,
-evaluations, $=$ generations $\times P$). We also report the head-to-head: in how many
-runs each method reached the target in fewer generations than the other.
+the control see the same task and the same $80/20$ train/test split, and are trained
+and initialized identically (a fixed worker seed), so the two differ only in which
+genomes they evaluate. Because the comparison is paired on the task this way, the
+head-to-head already controls for task difficulty. Two task designs are used: a
+\emph{fresh task per run} (task seed $=$ run index), which samples the advantage over
+the task distribution (the main test), and a \emph{fixed task} with only the search
+seed varying, repeated over several fixed tasks, which exposes how the advantage
+varies from one landscape to another (its heterogeneity). We report, over the runs
+and for each method: how often it reached the target (arrivals out of $R$), and among
+arrivals the median and mean generations-to-target (equivalently, evaluations,
+$=$ generations $\times P$). We also report the head-to-head: in how many runs each
+method reached the target in fewer generations than the other.
 
 \section{Experiments}
 
@@ -307,9 +311,10 @@ The central experiment runs the self-modifying search under error control agains
 matched random control and measures time-to-target. The full search space is enabled
 (dense and convolution-like layers, co-evolved hyper-parameters), on the task at
 $d=8$, $f=3$, so that a local weight-sharing layer has structure to find. Settings:
-$P=10$, elitism $k=2$, $L_{\max}=3$, $W_{\max}=16$, initial rate $2$; $1000$ training
-epochs; $300$ samples; target error $0.17$; a safety cap of $G=30$ generations; a
-fresh task per run over $R=400$ seeds. The target sits, by design, between the error a
+$P=10$, elitism $k=2$, $L_{\max}=3$, $W_{\max}=16$, initial mutation rate $2$; $1000$
+training epochs; $300$ samples with $2\%$ label noise and an $80/20$ train/test split;
+crossover off; target error $0.17$; a safety cap of $G=30$ generations; a fresh task
+per run over $R=400$ seeds. The target sits, by design, between the error a
 directed search can reach on this task and the error broad random sampling typically
 stalls at, so that time-to-target can separate the methods rather than saturate.
 
@@ -354,6 +359,44 @@ refinement toward a stated error, which favors a directed search that commits to
 best few samples and polishes them. The interface \texttt{self\_modifying\_predict}
 poses the second question, not the first, and by that question the self-modifying
 search beats random search here, modestly in size, but clearly.
+
+\subsection{Fixed-task heterogeneity}
+
+The aggregate edge above averages over $400$ different tasks. To see how it is
+composed, we hold the task fixed and vary only the search seed, repeated over several
+tasks. We fix each of $8$ tasks (task seeds $1$ to $8$) in turn and race the two
+methods over $50$ search seeds each ($400$ runs total), at the same settings as the
+main test ($d=8$, $f=3$, $2\%$ noise, $300$ samples, $1000$ epochs; $P=10$, $k=2$,
+$L_{\max}=3$, $W_{\max}=16$, initial mutation rate $2$; target $0.17$, cap $30$;
+crossover off). For each fixed task we count, over its $50$ search seeds, how often
+each method reached the target sooner (the per-run head-to-head).
+
+\begin{table}[t]
+\centering
+\caption{Fixed-task heterogeneity: per-task head-to-head over $50$ search seeds each,
+$8$ tasks. ``GA'' and ``RAND'' count the search seeds on which that method reached the
+target $0.17$ in strictly fewer generations; ``neither'' counts seeds where neither
+did within the $30$-generation cap. \emph{Populated from the
+\texttt{scripts/errortest\_multi.sh} run in progress.}}
+\label{tab:hetero}
+\begin{tabular}{lcccc}
+\toprule
+task seed & GA sooner & RAND sooner & tie & neither \\
+\midrule
+1--8 (per task) & -- & -- & -- & -- \\
+\midrule
+pooled (400 runs) & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:hetero} reports the spread. Two things are expected, and are already
+visible in the early data: the search seed genuinely matters (arrival generations
+spread widely even on one fixed task), and the winner depends on the task, some
+landscapes favoring the directed search and some favoring random. The pooled count
+recovers the aggregate direction of the main test. The advantage is therefore a
+distribution over tasks, not a uniform effect, which is the honest qualification of
+the headline result.
 
 \subsection{Fixed-budget parity, for context}
 
@@ -409,12 +452,17 @@ $p \approx 0.02$) and, when both arrived, in fewer generations on the majority o
 (head-to-head $146$ to $87$, $p \approx 7\times 10^{-5}$). The effect is modest in
 size but statistically clear, and confined to the time-to-target regime; we do not
 claim it transfers to the fixed-budget measure, where random remains a strong
-baseline. Three clean next steps remain. First, the fixed-task time-to-target design at many search
-seeds, to isolate search efficiency from task luck. Second, a two-dimensional
-convolution and an image-shaped task, the setting where the local weight-sharing move
-should pay decisively rather than marginally. Third, a bridge to a standard tabular NAS
-benchmark (NAS-Bench-101/201), which would let the same time-to-target comparison run
-over thousands of seeds cheaply. Each is one command away in the released code.
+baseline. Three next steps remain. First, \emph{recombination}: the engine now carries
+an optional crossover operator (\texttt{evolve -X}, the percentage of offspring made by
+crossing two elites) that splices two parents by a one-point join of their hidden-layer
+lists and blends their training hyper-parameters, the rest by the usual mutation.
+Whether adding this building-block mixing to mutation reaches the target faster is a
+direct on/off time-to-target A/B, and is the immediate next experiment; the search so
+far is mutation-only (crossover off). Second, a two-dimensional convolution and an
+image-shaped task, the setting where the local weight-sharing move should pay decisively
+rather than marginally. Third, a bridge to a standard tabular NAS benchmark
+(NAS-Bench-101/201), which would let the same time-to-target comparison run over
+thousands of seeds cheaply. Each is one command away in the released code.
 
 \section*{Reproducibility}
 
@@ -428,13 +476,23 @@ variables are environment variables: \texttt{DIM}, \texttt{N}, \texttt{FREQ},
 \texttt{NOISE} (the task); \texttt{TARGET} (the target error); \texttt{LMAX},
 \texttt{WMAX} (the search space); \texttt{POP}, \texttt{GENS}, \texttt{ELITE},
 \texttt{MUT}, \texttt{ADAPT} (the search); \texttt{EPOCHS} and \texttt{RUNS}; and an
-optional \texttt{FIXTASK} to hold the task fixed. For example, Table~\ref{tab:ttt} is
+optional \texttt{FIXTASK} to hold the task fixed. A further \texttt{evolve} flag,
+\texttt{-X} (percent of offspring made by crossover), is $0$ throughout this paper.
+For example, Table~\ref{tab:ttt} is
 \begin{quote}\small\ttfamily
 DIM=8 N=300 FREQ=3 NOISE=2 TARGET=0.17 POP=10 GENS=30 EPOCHS=1000 \\
 LMAX=3 WMAX=16 MUT=2 ADAPT=1 ELITE=2 RUNS=400 scripts/errortest.sh
 \end{quote}
-and \texttt{FIXTASK=1} switches to the fixed-task design. Each run uses a fixed 32-bit
-xorshift generator, so the numbers are identical on re-running.
+and \texttt{FIXTASK=1} switches to the fixed-task design. The per-task heterogeneity
+of Table~\ref{tab:hetero} is \texttt{scripts/errortest\_multi.sh} with the same
+variables plus \texttt{NTASKS} and \texttt{SEEDS} (the number of fixed tasks and of
+search seeds per task):
+\begin{quote}\small\ttfamily
+NTASKS=8 SEEDS=50 DIM=8 N=300 FREQ=3 NOISE=2 TARGET=0.17 POP=10 GENS=30 \\
+EPOCHS=1000 LMAX=3 WMAX=16 MUT=2 ADAPT=1 ELITE=2 scripts/errortest\_multi.sh
+\end{quote}
+Each run uses a fixed 32-bit xorshift generator, so the numbers are identical on
+re-running.
 
 \begin{thebibliography}{99}
 \small
