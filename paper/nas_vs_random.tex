@@ -76,10 +76,12 @@ and the error they are willing to accept:
 \[
 \texttt{self\_modifying\_predict(Train, Test, Error)}.
 \]
-Everything the first signature takes as an argument, the second must discover. An
-earlier version of this study \cite{repo} took the first step---evolving layer counts
-and widths---but still compared methods the ordinary way: fix a compute budget, run,
-and see whose final error is lower. This paper closes the gap to the second signature
+Everything the first signature takes as an argument, the second must discover. The
+engine grew out of the author's 1997 seminar thesis, which derived the general
+multi-layer delta rule the training still uses \cite{thesis1997}; an earlier version
+of this study \cite{repo} took the first step toward the second signature---evolving
+layer counts and widths---but still compared methods the ordinary way: fix a compute
+budget, run, and see whose final error is lower. This paper closes the gap to the second signature
 in three moves (co-evolved hyper-parameters, an evolvable convolution-like layer, and
 error control) and, with error control in place, asks the question the second
 signature actually poses to a user: not ``whose error is lower'' but ``who reaches
@@ -139,8 +141,11 @@ update is
 \Delta W^{(\ell)}(t) = r\,\beta^{(\ell)} \big(a^{(\ell-1)}\big)^{\!\top}
                        + \alpha\,\Delta W^{(\ell)}(t-1),
 \end{equation}
-with learning rate $r$ and momentum $\alpha$, both carried in the genome. Weights are
-initialized uniformly in $[-2.4/f_i,\,2.4/f_i]$, where $f_i$ is the fan-in. Training
+with learning rate $r$ and momentum $\alpha$, both carried in the genome. This is the
+generalized multi-layer delta rule, momentum, and sigmoid the author derived in a
+1997 seminar thesis \cite{thesis1997}; the engine executes exactly that mathematics.
+Weights are initialized uniformly in $[-2.4/f_i,\,2.4/f_i]$, where $f_i$ is the fan-in
+(also from the thesis). Training
 is online (one example at a time), so a worker's memory footprint is bounded
 regardless of dataset size. All arithmetic uses 32-bit floats; all randomness flows
 through a seeded 32-bit xorshift generator, so the same seed gives the same result on
@@ -436,6 +441,8 @@ xorshift generator, so the numbers are identical on re-running.
 \small
 \bibitem{rumelhart1986} D.~E. Rumelhart, G.~E. Hinton, R.~J. Williams.
   Learning representations by back-propagating errors. \emph{Nature} 323, 1986.
+\bibitem{thesis1997} V.~Gavrilov. \emph{Backpropagation Feed-Forward Neural
+  Networks}. Seminar in Artificial Intelligence, Open University of Israel, 1997.
 \bibitem{lecun1989} Y.~LeCun, B.~Boser, J.~S. Denker, et al. Backpropagation Applied
   to Handwritten Zip Code Recognition. \emph{Neural Computation} 1(4), 1989.
 \bibitem{rechenberg1973} I.~Rechenberg. \emph{Evolutionsstrategie}. 1973;
