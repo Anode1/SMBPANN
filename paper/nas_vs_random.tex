@@ -25,8 +25,8 @@ An ordinary predictor is handed the shape of its network,
 \texttt{predict(Train, Test, Topology, Activation, \ldots)}; the system studied here
 is handed only the problem and the error it must reach,
 \texttt{self\_modifying\_predict(Train, Test, Error)}, and discovers the rest by
-evolution---depth, width, dense-versus-convolutional layer type, and its own learning
-rate, momentum, and activation---searching until the target error is met. Beyond an
+evolution: depth, width, dense-versus-convolutional layer type, and its own learning
+rate, momentum, and activation, searching until the target error is met. Beyond an
 earlier fixed-budget study, three things are new: training hyper-parameters that
 co-evolve with the topology under a self-adaptive mutation rate; a structural mutation
 between a dense and a weight-shared \emph{convolution-like} layer, so the search can
@@ -35,7 +35,7 @@ back-propagation verified against finite differences); and \emph{error control},
 replaces ``whose error is lower at a fixed budget'' with \emph{time-to-target}, the
 work each method needs to reach the same error. We test one hypothesis: given a target
 error, does the self-modifying search reach it with less work than random? Over $400$
-seeds it does---reaching the target more often ($270$ versus $251$; paired McNemar
+seeds it does: reaching the target more often ($270$ versus $251$; paired McNemar
 $p \approx 0.02$) and, when both reach it, sooner on more runs than not (head-to-head
 $146$ to $87$; sign test $p \approx 7\times 10^{-5}$). The edge is modest ($\approx
 63\%$ of decided runs) but statistically clear, and points \emph{opposite} to the
@@ -45,7 +45,7 @@ fixed-budget parity, where random search remains hard to beat.
 \section{Introduction}
 
 Neural architecture search (NAS) automates a choice a human normally makes: the
-shape of the network---how many layers, how wide, how connected. Modern NAS methods
+shape of the network: how many layers, how wide, how connected. Modern NAS methods
 differ mainly in their \emph{search strategy}: reinforcement learning
 \cite{zoph2017}, gradient-based relaxation \cite{darts2019}, Bayesian optimization,
 random search, and evolutionary search \cite{elsken2019}. The evolutionary branch is
@@ -67,8 +67,8 @@ and the error they are willing to accept:
 Everything the first signature takes as an argument, the second must discover. The
 engine grew out of the author's 1997 seminar thesis, which derived the general
 multi-layer delta rule the training still uses \cite{thesis1997}; an earlier version
-of this study \cite{repo} took the first step toward the second signature---evolving
-layer counts and widths---but still compared methods the ordinary way: fix a compute
+of this study \cite{repo} took the first step toward the second signature (evolving
+layer counts and widths) but still compared methods the ordinary way: fix a compute
 budget, run, and see whose final error is lower. This paper closes the gap to the second signature
 in three moves (co-evolved hyper-parameters, an evolvable convolution-like layer, and
 error control) and, with error control in place, asks the question the second
@@ -83,7 +83,7 @@ documented a reproducibility problem in the field along the way. Our contributio
 not a new method. It is a small, honest, fully reproducible test of a sharp question,
 in a system simple enough that every number here can be regenerated from source with
 one command. The self-adaptive machinery we lean on is standard in the optimization
-literature the author has worked in---the evolution strategies of Rechenberg and
+literature the author has worked in, the evolution strategies of Rechenberg and
 Schwefel \cite{rechenberg1973}, in which the step size is itself under selection.
 
 \section{Hypothesis}
@@ -92,8 +92,8 @@ We state the claim to be tested, and its null, plainly.
 
 \begin{quote}
 \textbf{H.} Given only a training set, a test set, and a target validation error, a
-self-modifying evolutionary search---one that co-evolves architecture and training
-hyper-parameters and can grow structural (convolution-like) layers---reaches the
+self-modifying evolutionary search, one that co-evolves architecture and training
+hyper-parameters and can grow structural (convolution-like) layers, reaches the
 target using \emph{fewer} candidate evaluations than a matched random search that
 draws the same kind of random architectures.
 
@@ -119,8 +119,8 @@ is
 z^{(\ell)} = W^{(\ell)} a^{(\ell-1)} + b^{(\ell)}, \qquad
 a^{(\ell)} = g\!\left(z^{(\ell)}\right),
 \end{equation}
-with $g$ a per-network hidden activation---logistic sigmoid $g(z)=1/(1+e^{-z})$,
-$\tanh$, or ReLU---chosen by the genome; the output layer is always a dense sigmoid.
+with $g$ a per-network hidden activation (logistic sigmoid $g(z)=1/(1+e^{-z})$,
+$\tanh$, or ReLU) chosen by the genome; the output layer is always a dense sigmoid.
 Weights are trained by back-propagation (the generalized delta rule) with momentum:
 with local error $\beta_i = (d_i-a_i)\,g'(z_i)$ at output units and
 $\beta_i = g'(z_i)\sum_k W^{(\ell+1)}_{ki}\beta^{(\ell+1)}_k$ at hidden units, the
@@ -150,8 +150,8 @@ p = 0,\dots,d_{\ell-1}-K,
 \end{equation}
 so the layer's width is \emph{derived}, $d_\ell = F\,(d_{\ell-1}-K+1)$, not a free
 parameter, and its weight count is only $F\,K$. This is the pair of properties LeCun
-introduced for images---local receptive fields and weight sharing
-\cite{lecun1989}---here made a \emph{move} the search can take rather than a design
+introduced for images (local receptive fields and weight sharing
+\cite{lecun1989}), here made a \emph{move} the search can take rather than a design
 the user imposes. Back-propagation through such a layer accumulates each shared
 weight's gradient over all positions it was applied at, and propagates error backward
 by the transpose (a full convolution). We verified this against a central
@@ -233,7 +233,7 @@ its best crossed the target (or that it never did).
 
 \subsection{The task}
 
-To ask whether architecture matters, the task must be one where it does---and which
+To ask whether architecture matters, the task must be one where it does, and which
 the networks can actually learn, so that better architectures score better. We
 generate a synthetic classification task, reproducibly, from a seed. Inputs $x$ are
 uniform in $[-1,1]^d$; the label is
@@ -243,7 +243,7 @@ y = \big[\, \sin(f\, w \!\cdot\! x) > 0 \,\big],
 for a fixed random projection $w$ and frequency $f$, with a fraction of labels
 flipped as noise. Higher $f$ makes more decision stripes and demands more capacity.
 The projection $w\!\cdot\!x$ is a spatial mixing of adjacent inputs, so a local,
-weight-sharing layer has structure to exploit---which is why the convolution-like
+weight-sharing layer has structure to exploit, which is why the convolution-like
 move is not idle here. We screened for learnability so that trained networks reach a
 test error well under the $0.25$ a constant $0.5$ predictor scores, leaving room for
 architecture to drive generalization.
@@ -335,8 +335,8 @@ random search     & 251\,/\,400 & 6.1 & 3 & 87 \\
 Table~\ref{tab:ttt} reports the race. The self-modifying search reaches the target
 on more seeds ($270$ versus $251$ of $400$); because the seeds are paired (each run
 gives both methods the same task), this is a McNemar comparison on the $59$ runs
-where exactly one method arrived---$39$ for the genetic algorithm against $20$ for
-random---which is significant at $p \approx 0.02$. When both methods reach the
+where exactly one method arrived ($39$ for the genetic algorithm against $20$ for
+random), which is significant at $p \approx 0.02$. When both methods reach the
 target, the genetic algorithm gets there in fewer generations on more runs than not:
 the per-run head-to-head is $146$ to $87$ (with $57$ ties and $110$ runs on which
 neither arrived within the cap), and a one-sided sign test on the $233$ decisive runs
@@ -352,7 +352,7 @@ late-stage coverage, which favors random; time-to-target rewards fast early
 refinement toward a stated error, which favors a directed search that commits to its
 best few samples and polishes them. The interface \texttt{self\_modifying\_predict}
 poses the second question, not the first, and by that question the self-modifying
-search beats random search here---modestly in size, but clearly.
+search beats random search here, modestly in size, but clearly.
 
 \subsection{Fixed-budget parity, for context}
 
@@ -368,7 +368,7 @@ budget to work-to-a-fixed-error, which is the one the target-driven interface po
 In one line: under time-to-target and over $400$ paired seeds, the self-modifying
 search reaches a stated target error more often than random search ($270$ versus
 $251$, $p \approx 0.02$) and sooner on the majority of the runs both solve
-(head-to-head $146$ to $87$, $p \approx 7\times 10^{-5}$)---a modest but statistically
+(head-to-head $146$ to $87$, $p \approx 7\times 10^{-5}$), a modest but statistically
 clear edge that reverses the fixed-budget parity. Every candidate is trained by
 back-propagation, the convolutional gradient is verified against finite differences,
 and each figure is regenerable from the source with a single command.
@@ -378,7 +378,7 @@ and each figure is regenerable from the source with a single command.
 The structural move is now available to evolution, and it trains correctly: the
 search can, in principle, assemble local weight-sharing layers rather than being told
 to. Whether it \emph{should}, on a given task, is exactly what time-to-target
-measures---and measures more faithfully than fixed-budget final error, because a user
+measures, and measures more faithfully than fixed-budget final error, because a user
 of \texttt{self\_modifying\_predict} specifies an error and pays for the work to reach
 it. Two forces set that work. Directed local search (the genetic algorithm) spends
 its global sampling budget only in the first generation and refines thereafter, while
@@ -398,8 +398,8 @@ result.
 
 \section{Conclusion and future work}
 
-The twenty-five-year-old idea---hand the network only the problem and the error, and
-let it find its own shape---now runs end to end: architecture, training
+The twenty-five-year-old idea (hand the network only the problem and the error, and
+let it find its own shape) now runs end to end: architecture, training
 hyper-parameters, and even the choice between a dense and a weight-sharing layer are
 discovered by evolution, and the search halts when the target error is met. On the
 hypothesis of Section 2, the $400$-seed evidence supports H and rejects H$_0$: the
