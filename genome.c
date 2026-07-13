@@ -94,13 +94,15 @@ void genome_random(Genome *g, size_t ninput, size_t noutput,
     g->activation = (int)below(rng, ACT_COUNT);
 }
 
-void genome_reproduce(Genome *child, const Genome *parent,
-                      size_t maxhid, size_t maxwidth, Rng *rng)
+/* The self-adaptive step shared by asexual reproduction and crossover: perturb
+ * the (already-set) mutation rate log-normally, apply round(rate) topology
+ * mutations, and co-evolve the training hyper-parameters. Operates in place on a
+ * child whose genes are already filled in. */
+static void selfadapt(Genome *child, size_t maxhid, size_t maxwidth, Rng *rng)
 {
     long moves, k;
 
-    *child = *parent;
-    /* log-normal self-adaptation of the inherited rate, then clamp */
+    /* log-normal self-adaptation of the mutation rate, then clamp */
     child->rate *= (smb_real)exp(GENOME_TAU * (double)rng_gaussian(rng));
     if (child->rate < (smb_real)GENOME_RATE_MIN)
         child->rate = (smb_real)GENOME_RATE_MIN;
@@ -126,6 +128,58 @@ void genome_reproduce(Genome *child, const Genome *parent,
 
     if ((rng_u32(rng) % 100u) < (uint32_t)GENOME_ACT_SWITCH)
         child->activation = (int)below(rng, ACT_COUNT);
+}
+
+void genome_reproduce(Genome *child, const Genome *parent,
+                      size_t maxhid, size_t maxwidth, Rng *rng)
+{
+    *child = *parent;
+    selfadapt(child, maxhid, maxwidth, rng);
+}
+
+void genome_crossover(Genome *child, const Genome *a, const Genome *b,
+                      size_t maxhid, size_t maxwidth, Rng *rng)
+{
+    size_t ahid = a->n - 2, bhid = b->n - 2;    /* hidden-layer counts */
+    size_t ca = below(rng, ahid + 1);           /* take hidden 1..ca from A */
+    size_t cb = below(rng, bhid + 1);           /* then hidden cb.. from B  */
+    size_t nhid, l, i;
+
+    if (maxhid > SMB_MAX_LAYERS - 2)
+        maxhid = SMB_MAX_LAYERS - 2;
+    nhid = ca + (bhid - cb);                     /* one-point spliced depth */
+    if (nhid > maxhid)
+        nhid = maxhid;
+
+    child->dim[0]  = a->dim[0];                  /* input fixed by the problem */
+    child->kind[0] = LAYER_DENSE;
+    l = 1;
+    for (i = 0; i < ca && (l - 1) < nhid; i++, l++) {         /* prefix of A */
+        child->kind[l]  = a->kind[1 + i];
+        child->dim[l]   = a->dim[1 + i];
+        child->nfilt[l] = a->nfilt[1 + i];
+        child->ksize[l] = a->ksize[1 + i];
+    }
+    for (i = 0; (cb + i) < bhid && (l - 1) < nhid; i++, l++) { /* suffix of B */
+        size_t src = 1 + cb + i;
+        child->kind[l]  = b->kind[src];
+        child->dim[l]   = b->dim[src];
+        child->nfilt[l] = b->nfilt[src];
+        child->ksize[l] = b->ksize[src];
+    }
+    child->kind[l] = LAYER_DENSE;                /* output fixed by the problem */
+    child->dim[l]  = a->dim[a->n - 1];
+    child->n = l + 1;
+    genome_recompute(child);                     /* derive any conv widths */
+
+    /* blend the training hyper-parameters: geometric mean for the positive
+     * scale ones, arithmetic for momentum, one parent's activation gene */
+    child->rate       = (smb_real)sqrt((double)a->rate * (double)b->rate);
+    child->lrate      = (smb_real)sqrt((double)a->lrate * (double)b->lrate);
+    child->momentum   = (smb_real)(0.5 * ((double)a->momentum + (double)b->momentum));
+    child->activation = ((rng_u32(rng) & 1u) != 0u) ? a->activation : b->activation;
+
+    selfadapt(child, maxhid, maxwidth, rng);
 }
 
 /* shift all four per-layer arrays right by one from index POS (for a grow). */

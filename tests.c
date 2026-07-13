@@ -284,6 +284,39 @@ int main(void)
         CHECK(ok, "genome: co-evolved hyper-parameters stay bounded");
     }
 
+    /* genome: crossover splices two parents into a buildable child that keeps the
+     * problem's fixed endpoints, respects the depth bound, and stays in range */
+    {
+        Rng r;
+        Genome a, b, c;
+        int i, ok = 1;
+        rng_seed(&r, 21);
+        for (i = 0; i < 300; i++) {
+            Net *nn;
+            genome_random(&a, 3, 1, 3, 16, &r);
+            genome_random(&b, 3, 1, 3, 16, &r);
+            genome_crossover(&c, &a, &b, 3, 16, &r);
+            if (c.n < 2 || c.n > 5 || c.dim[0] != 3 || c.dim[c.n - 1] != 1)
+                ok = 0;
+            if (!(c.rate > 0.0f) || c.lrate < 0.01f || c.lrate > 2.0f
+                || c.momentum < 0.0f || c.momentum > 0.99f
+                || c.activation < 0 || c.activation >= ACT_COUNT)
+                ok = 0;
+            /* the spliced child must build a net whose widths match its genes */
+            nn = net_build(c.dim, c.kind, c.nfilt, c.ksize, c.n);
+            if (nn == NULL) {
+                ok = 0;
+            } else {
+                size_t j;
+                for (j = 0; j < c.n; j++)
+                    if (nn->dim[j] != c.dim[j])
+                        ok = 0;
+                net_free(nn);
+            }
+        }
+        CHECK(ok, "genome: crossover splices a valid, buildable child");
+    }
+
     /* conv1d: forward (weight sharing), gradient correctness, and learning */
     {
         Rng r;

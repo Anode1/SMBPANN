@@ -30,6 +30,7 @@ static void usage(const char *prog)
     fprintf(stderr,
         "usage: %s -i in -o out [-P pop] [-G gens] [-k elite] [-s seed]\n"
         "          [-L maxhidden] [-W maxwidth] [-M rate] [-A 0|1] [-E error]\n"
+        "          [-X crossover%%]\n"
         "\n"
         "Evolves network topologies and races the GA against random search.\n"
         "Fitness comes from scripts/evaluate.sh (set COMMON for a dataset; with\n"
@@ -103,6 +104,7 @@ int main(int argc, char **argv)
     long   pop = 8, gens = 10, elite = 2, seed = 1, maxhid = 3, maxwidth = 16;
     long   mutations = 1;   /* the mutation rate (initial, if self-adaptive) */
     long   adapt = 1;       /* 1 = self-adaptive rate, 0 = fixed rate         */
+    long   xover = 0;       /* percent of offspring made by crossover (0=off) */
     double target = 0.0;    /* stop when GA best <= this; 0 = disabled        */
     int    ga_hit = 0, rand_hit = 0;
     long   ga_hit_gen = 0, rand_hit_gen = 0;   /* gen each first met the target */
@@ -120,7 +122,7 @@ int main(int argc, char **argv)
     char        ga_topo[256] = "", rand_topo[256] = "";
     int         have_ga = 0, have_rand = 0;
 
-    while ((c = getopt(argc, argv, "i:o:P:G:k:s:L:W:M:A:E:h")) != -1) {
+    while ((c = getopt(argc, argv, "i:o:P:G:k:s:L:W:M:A:E:X:h")) != -1) {
         switch (c) {
         case 'i': ninput    = atol(optarg); break;
         case 'o': noutput   = atol(optarg); break;
@@ -133,6 +135,7 @@ int main(int argc, char **argv)
         case 'M': mutations = atol(optarg); break;
         case 'A': adapt     = atol(optarg); break;
         case 'E': target    = atof(optarg); break;
+        case 'X': xover     = atol(optarg); break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 2;
         }
@@ -143,9 +146,10 @@ int main(int argc, char **argv)
     }
     if (pop < 2 || pop > EV_MAX_POP || elite < 1 || elite >= pop
         || gens < 1 || maxwidth < 1 || mutations < 1
-        || (adapt != 0 && adapt != 1)) {
+        || (adapt != 0 && adapt != 1) || xover < 0 || xover > 100) {
         fprintf(stderr, "evolve: need 2 <= pop <= %d, 1 <= elite < pop, "
-                        "gens >= 1, maxwidth >= 1, mutations >= 1, A in {0,1}\n",
+                        "gens >= 1, maxwidth >= 1, mutations >= 1, A in {0,1}, "
+                        "0 <= X <= 100\n",
                 EV_MAX_POP);
         return 2;
     }
@@ -177,6 +181,8 @@ int main(int argc, char **argv)
                "(elite %ld, %s rate %ld, seed %ld)\n",
                pop, gens, elite, adapt ? "initial self-adaptive" : "fixed",
                mutations, seed);
+    if (xover > 0)
+        printf("  crossover: %ld%% of offspring recombine two elites\n", xover);
 
     for (gen = 1; gen <= gens; gen++) {
         size_t ne, e;
@@ -226,16 +232,27 @@ int main(int argc, char **argv)
         for (i = 0; i < ne; i++)
             gapop[i] = eliteg[i];
         for (i = ne; i < (size_t)pop; i++) {
-            const Genome *parent = &eliteg[below_pop(&ga_rng, ne)];
-            if (adapt) {
-                genome_reproduce(&gapop[i], parent,
+            /* a fraction of offspring are made by crossover of two elites; the
+             * rest by asexual (self-adaptive or fixed) reproduction. With xover=0
+             * the first test short-circuits without drawing, so behaviour and the
+             * PRNG stream are identical to the mutation-only search. */
+            if (xover > 0 && (rng_u32(&ga_rng) % 100u) < (uint32_t)xover) {
+                const Genome *pa = &eliteg[below_pop(&ga_rng, ne)];
+                const Genome *pb = &eliteg[below_pop(&ga_rng, ne)];
+                genome_crossover(&gapop[i], pa, pb,
                                  (size_t)maxhid, (size_t)maxwidth, &ga_rng);
             } else {
-                long mv;
-                gapop[i] = *parent;
-                for (mv = 0; mv < mutations; mv++)
-                    genome_mutate(&gapop[i], (size_t)maxhid, (size_t)maxwidth,
-                                  &ga_rng);
+                const Genome *parent = &eliteg[below_pop(&ga_rng, ne)];
+                if (adapt) {
+                    genome_reproduce(&gapop[i], parent,
+                                     (size_t)maxhid, (size_t)maxwidth, &ga_rng);
+                } else {
+                    long mv;
+                    gapop[i] = *parent;
+                    for (mv = 0; mv < mutations; mv++)
+                        genome_mutate(&gapop[i], (size_t)maxhid, (size_t)maxwidth,
+                                      &ga_rng);
+                }
             }
         }
 
