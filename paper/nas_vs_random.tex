@@ -21,12 +21,13 @@ systems. Reference implementation: \url{https://github.com/Anode1/SMBPANN}.}}
 \maketitle
 
 \begin{abstract}
-An ordinary predictor is handed the shape of its network,
-\texttt{predict(Train, Test, Topology, Activation, \ldots)}; the system studied here
-is handed only the problem and the error it must reach,
-\texttt{self\_modifying\_predict(Train, Test, Error)}, and discovers the rest by
-evolution: depth, width, dense-versus-convolutional layer type, and its own learning
-rate, momentum, and activation, searching until the target error is met. Beyond an
+Ordinarily a neural network must be handed its shape before it can learn: how many
+layers, how wide, which activation, and so on. The system studied here is handed only
+the training data and a target error, and finds the rest itself by evolution: its
+depth and width, whether each layer is fully connected or a weight-sharing local one,
+and its own learning rate, momentum, and activation, training until it reaches the
+target. It turns the usual \textbf{predict(topology, activation, \ldots)} into
+\textbf{self\_modifying\_predict(data, error)}. Beyond an
 earlier fixed-budget study, three things are new: training hyper-parameters that
 co-evolve with the topology under a self-adaptive mutation rate; a structural mutation
 between a dense and a weight-shared \emph{convolution-like} layer, so the search can
