@@ -44,11 +44,14 @@ same error. Every candidate is trained by back-propagation, every run is reprodu
 from a seed, and every experiment is one shell command. The honest baseline from the
 earlier study survives: random search is hard to beat, and a self-adaptive mutation
 rate beats a fixed one by a small, consistent margin. Against that baseline, and over
-50 seeds, the self-modifying search reaches a stated target error about as often as
-random ($34$ versus $32$ of $50$) but in fewer generations on the typical run
-(median $3$ versus $4$; per-run head-to-head $19$ to $11$)---a modest edge in the
-\emph{opposite} direction from the fixed-budget parity, though at this scale it is
-suggestive (one-sided sign test $p \approx 0.10$) rather than decisive.
+$400$ seeds, the self-modifying search reaches a stated target error more often than
+random ($270$ versus $251$ of $400$; paired McNemar $p \approx 0.02$) and, when both
+reach it, in fewer generations on more runs than not (per-run head-to-head $146$ to
+$87$; one-sided sign test $p \approx 7\times 10^{-5}$). The edge is modest in size
+(it wins about $63\%$ of the runs that are decided) but statistically clear, and it
+points in the \emph{opposite} direction from the fixed-budget parity---because
+time-to-target rewards the fast early refinement of a directed search, whereas
+fixed-budget final error rewards the broad late coverage of random sampling.
 \end{abstract}
 
 \section{Introduction}
@@ -312,44 +315,51 @@ matched random control and measures time-to-target. The full search space is ena
 $d=8$, $f=3$, so that a local weight-sharing layer has structure to find. Settings:
 $P=10$, elitism $k=2$, $L_{\max}=3$, $W_{\max}=16$, initial rate $2$; $1000$ training
 epochs; $300$ samples; target error $0.17$; a safety cap of $G=30$ generations; a
-fresh task per run over $R=50$ seeds. The target sits, by design, between the error a
+fresh task per run over $R=400$ seeds. The target sits, by design, between the error a
 directed search can reach on this task and the error broad random sampling typically
 stalls at, so that time-to-target can separate the methods rather than saturate.
 
 \begin{table}[t]
 \centering
-\caption{Time-to-target over $R=50$ seeds (fresh task per run), target error $0.17$,
-safety cap $30$ generations, $P=10$ (so evaluations $=10\times$ generations). Medians
-and means are over the runs that reached the target. The self-modifying search
-reaches the target about as often as random but in fewer generations on the typical
-run.}
+\caption{Time-to-target over $R=400$ seeds (fresh task per run), target error $0.17$,
+safety cap $30$ generations, $P=10$ (so evaluations $=10\times$ generations). Means
+and medians are over the runs that reached the target; ``head-to-head wins'' counts
+the runs in which that method reached the target in strictly fewer generations than
+the other (with $57$ ties and $110$ runs on which neither reached it). The
+self-modifying search reaches the target more often, and wins the paired race on more
+runs than random does.}
 \label{tab:ttt}
 \begin{tabular}{lcccc}
 \toprule
-method & reached target & median gens & median evals & mean gens \\
+method & reached target & mean gens & median gens & head-to-head wins \\
 \midrule
-self-modifying GA & 34\,/\,50 & \textbf{3} & \textbf{30} & 6.0 \\
-random search     & 32\,/\,50 & 4 & 40 & 6.6 \\
+self-modifying GA & \textbf{270\,/\,400} & \textbf{5.8} & 3 & \textbf{146} \\
+random search     & 251\,/\,400 & 6.1 & 3 & 87 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ttt} reports the race. Both methods reach the target on most seeds
-and about equally often (34 and 32 of 50); the difference is in speed. The
-self-modifying search reaches the target in fewer generations on the typical seed
-(median $3$ versus $4$, mean $6.0$ versus $6.6$ generations, i.e.\ $30$ versus $40$
-evaluations), and it wins the per-run head-to-head $19$ to $11$, with $8$ ties and
-$12$ seeds on which neither method reached the target within the cap. This is a
-modest edge, and at 50 seeds it is \emph{suggestive rather than decisive}: a sign
-test on the $30$ decisive runs gives a one-sided $p \approx 0.10$. Its direction,
-however, is the notable part. Under the earlier fixed-budget measure the same kind
-of search sat at parity or below random; under time-to-target it comes out slightly
+Table~\ref{tab:ttt} reports the race. The self-modifying search reaches the target
+on more seeds ($270$ versus $251$ of $400$); because the seeds are paired (each run
+gives both methods the same task), this is a McNemar comparison on the $59$ runs
+where exactly one method arrived---$39$ for the genetic algorithm against $20$ for
+random---which is significant at $p \approx 0.02$. When both methods reach the
+target, the genetic algorithm gets there in fewer generations on more runs than not:
+the per-run head-to-head is $146$ to $87$ (with $57$ ties and $110$ runs on which
+neither arrived within the cap), and a one-sided sign test on the $233$ decisive runs
+gives $p \approx 7\times 10^{-5}$. The typical times are close (median $3$ generations
+for both, mean $5.8$ versus $6.1$): the effect is not that the winner is far faster,
+but that the genetic algorithm is the faster of the two on about $63\%$ of the runs
+that are decided, consistently enough over $400$ seeds to be clear.
+
+The direction is the point. Under the earlier fixed-budget measure the same kind of
+search sat at parity with random or below it; under time-to-target it comes out
 ahead. The two measures are not in conflict. Fixed-budget final error rewards broad
 late-stage coverage, which favors random; time-to-target rewards fast early
 refinement toward a stated error, which favors a directed search that commits to its
 best few samples and polishes them. The interface \texttt{self\_modifying\_predict}
 poses the second question, not the first, and by that question the self-modifying
-search is at least as good as random and somewhat faster.
+search beats random search here---modestly in size, but clearly.
 
 \subsection{Fixed-budget parity, for context}
 
@@ -389,11 +399,13 @@ The twenty-five-year-old idea---hand the network only the problem and the error,
 let it find its own shape---now runs end to end: architecture, training
 hyper-parameters, and even the choice between a dense and a weight-sharing layer are
 discovered by evolution, and the search halts when the target error is met. On the
-hypothesis of Section 2, the evidence leans toward H and away from H$_0$: the
-self-modifying search reached the target in fewer evaluations than random on the
-typical seed and won the head-to-head $19$ to $11$; but the margin is not significant
-at 50 seeds ($p \approx 0.10$), so we report a lean, not a rejection. Settling it is
-the first of three clean next steps. First, the fixed-task time-to-target design at many search
+hypothesis of Section 2, the $400$-seed evidence supports H and rejects H$_0$: the
+self-modifying search reached the target more often than random (paired
+$p \approx 0.02$) and, when both arrived, in fewer generations on the majority of runs
+(head-to-head $146$ to $87$, $p \approx 7\times 10^{-5}$). The effect is modest in
+size but statistically clear, and confined to the time-to-target regime; we do not
+claim it transfers to the fixed-budget measure, where random remains a strong
+baseline. Three clean next steps remain. First, the fixed-task time-to-target design at many search
 seeds, to isolate search efficiency from task luck. Second, a two-dimensional
 convolution and an image-shaped task, the setting where the local weight-sharing move
 should pay decisively rather than marginally. Third, a bridge to a standard tabular NAS
@@ -415,7 +427,7 @@ variables are environment variables: \texttt{DIM}, \texttt{N}, \texttt{FREQ},
 optional \texttt{FIXTASK} to hold the task fixed. For example, Table~\ref{tab:ttt} is
 \begin{quote}\small\ttfamily
 DIM=8 N=300 FREQ=3 NOISE=2 TARGET=0.17 POP=10 GENS=30 EPOCHS=1000 \\
-LMAX=3 WMAX=16 MUT=2 ADAPT=1 ELITE=2 RUNS=50 scripts/errortest.sh
+LMAX=3 WMAX=16 MUT=2 ADAPT=1 ELITE=2 RUNS=400 scripts/errortest.sh
 \end{quote}
 and \texttt{FIXTASK=1} switches to the fixed-task design. Each run uses a fixed 32-bit
 xorshift generator, so the numbers are identical on re-running.
