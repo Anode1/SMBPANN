@@ -21,37 +21,25 @@ systems. Reference implementation: \url{https://github.com/Anode1/SMBPANN}.}}
 \maketitle
 
 \begin{abstract}
-An ordinary predictor is handed the shape of its network:
-\texttt{predict(Train, Test, Topology, Activation, Jitter, \ldots)}. The system
-studied here is handed only the problem and the error it must reach:
-\texttt{self\_modifying\_predict(Train, Test, Error)}. It discovers the rest by
-evolution---how many layers and how wide, whether each layer is fully connected or
-a weight-shared local one, and its own learning rate, momentum, and activation---and
-it searches until the target error is met. This paper reports what changed from an
-earlier fixed-budget study and tests one hypothesis: \emph{given a target error, does
-a self-modifying evolutionary search reach it with less work than random search?}
-Three things are new. First, each candidate carries its own training
-hyper-parameters in the genome, and they co-evolve with the topology under a
-self-adaptive mutation rate. Second, a structural mutation flips a hidden layer
-between a dense kind and a weight-shared, locally connected \emph{convolution-like}
-kind, so the search can in principle rediscover on its own the local, shift-invariant
-inductive bias LeCun built by hand~\cite{lecun1989}; the convolutional
-back-propagation is verified against finite differences. Third, the search runs under
-\emph{error control}---until the best validation error reaches a target---which turns
-the natural measure from ``whose error is lower at a fixed budget'' into
-\emph{time-to-target}: the generations and evaluations each method needs to reach the
-same error. Every candidate is trained by back-propagation, every run is reproducible
-from a seed, and every experiment is one shell command. The honest baseline from the
-earlier study survives: random search is hard to beat, and a self-adaptive mutation
-rate beats a fixed one by a small, consistent margin. Against that baseline, and over
-$400$ seeds, the self-modifying search reaches a stated target error more often than
-random ($270$ versus $251$ of $400$; paired McNemar $p \approx 0.02$) and, when both
-reach it, in fewer generations on more runs than not (per-run head-to-head $146$ to
-$87$; one-sided sign test $p \approx 7\times 10^{-5}$). The edge is modest in size
-(it wins about $63\%$ of the runs that are decided) but statistically clear, and it
-points in the \emph{opposite} direction from the fixed-budget parity---because
-time-to-target rewards the fast early refinement of a directed search, whereas
-fixed-budget final error rewards the broad late coverage of random sampling.
+An ordinary predictor is handed the shape of its network,
+\texttt{predict(Train, Test, Topology, Activation, \ldots)}; the system studied here
+is handed only the problem and the error it must reach,
+\texttt{self\_modifying\_predict(Train, Test, Error)}, and discovers the rest by
+evolution---depth, width, dense-versus-convolutional layer type, and its own learning
+rate, momentum, and activation---searching until the target error is met. Beyond an
+earlier fixed-budget study, three things are new: training hyper-parameters that
+co-evolve with the topology under a self-adaptive mutation rate; a structural mutation
+between a dense and a weight-shared \emph{convolution-like} layer, so the search can
+rediscover LeCun's local inductive bias on its own~\cite{lecun1989} (its
+back-propagation verified against finite differences); and \emph{error control}, which
+replaces ``whose error is lower at a fixed budget'' with \emph{time-to-target}, the
+work each method needs to reach the same error. We test one hypothesis: given a target
+error, does the self-modifying search reach it with less work than random? Over $400$
+seeds it does---reaching the target more often ($270$ versus $251$; paired McNemar
+$p \approx 0.02$) and, when both reach it, sooner on more runs than not (head-to-head
+$146$ to $87$; sign test $p \approx 7\times 10^{-5}$). The edge is modest ($\approx
+63\%$ of decided runs) but statistically clear, and points \emph{opposite} to the
+fixed-budget parity, where random search remains hard to beat.
 \end{abstract}
 
 \section{Introduction}
@@ -374,6 +362,16 @@ fixed, the genetic algorithm hovers near parity with random search and does not
 reliably beat it, consistent with \cite{bergstra2012,li2019}. Error control does not
 change that landscape; it changes the \emph{question}, from final error at a fixed
 budget to work-to-a-fixed-error, which is the one the target-driven interface poses.
+
+\subsection{Result}
+
+In one line: under time-to-target and over $400$ paired seeds, the self-modifying
+search reaches a stated target error more often than random search ($270$ versus
+$251$, $p \approx 0.02$) and sooner on the majority of the runs both solve
+(head-to-head $146$ to $87$, $p \approx 7\times 10^{-5}$)---a modest but statistically
+clear edge that reverses the fixed-budget parity. Every candidate is trained by
+back-propagation, the convolutional gradient is verified against finite differences,
+and each figure is regenerable from the source with a single command.
 
 \section{Discussion}
 
