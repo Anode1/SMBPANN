@@ -237,11 +237,15 @@ carry, the trained solution, and in a modular network the advantage returns in f
 abstract, but that it is exactly as useful as the genome is a carrier of separable
 building blocks.
 
-\paragraph{Limitations.} Scale is small and tasks synthetic; the modular
-weight-inheritance result is a controlled probe with a fixed per-component task and a
-fixed number of modules, not yet the full self-modifying engine, which retrains each
-candidate and would need weight inheritance wired through its process-isolated worker
-model. Mean squared error stands in for classification error. None of this is hidden.
+\paragraph{Limitations.} Scale is small and tasks synthetic; Table~\ref{tab:modevo}
+is a controlled probe with a fixed per-component task and a fixed module count.
+Weight inheritance is now also wired through the full engine (\texttt{evolve -w}): a
+checkpoint of each candidate's trained weights crosses the worker boundary as a
+plain-text file, and a child warm-starts from its parent's checkpoint over the layers
+the mutation left unchanged; on a small dataset at a low per-candidate epoch budget
+this lowered the search's final error by about a third at equal compute, with the
+random control unaffected. A full engine-scale study of that gain is left as future
+work. Mean squared error stands in for classification error. None of this is hidden.
 
 \section{Conclusion and future work}
 
@@ -249,12 +253,12 @@ Handed only the problem and a target error, the search discovers architecture, l
 type, and training hyper-parameters. Recombination does not speed the architecture
 search while the genome carries only shape, and we now understand exactly why and
 exactly when it does: crossover needs building blocks that carry a solution, and weight
-inheritance supplies them (Table~\ref{tab:modevo}). The clear next step is engineering
-rather than science: carry trained weights through the engine's worker model so the
-full self-modifying search inherits and recombines learned state, not only
-architecture. Two further steps remain: a two-dimensional convolution and an image
-task, where architecture is decisive rather than fungible; and a bridge to a standard
-tabular NAS benchmark.
+inheritance supplies them (Table~\ref{tab:modevo}). That inheritance is now wired
+through the engine as well (\texttt{evolve -w}): children warm-start from their
+parents' checkpointed weights, and the search reaches a lower error at equal compute.
+Two further steps remain: a two-dimensional convolution and an image task, where
+architecture is decisive rather than fungible; and a bridge to a standard tabular NAS
+benchmark.
 
 \section*{Reproducibility}
 
@@ -266,8 +270,9 @@ AddressSanitizer and UBSan. The three validation probes are standalone: \texttt{
 bbtest} (Table~\ref{tab:bb}, building-block traps), \texttt{make modnas} (the
 parallel-branch gradient check), and \texttt{make modevo} (Table~\ref{tab:modevo},
 weight-inheriting crossover; run \texttt{./modevo G freq}). The neural crossover A/B is
-\texttt{scripts/xover\_ab.sh}. Each run uses a fixed 32-bit xorshift generator, so the
-numbers are identical on re-running.
+\texttt{scripts/xover\_ab.sh}; weight inheritance in the engine is \texttt{evolve -w 1}
+(the worker's \texttt{-W}/\texttt{-w} save and warm-start checkpoints). Each run uses a
+fixed 32-bit xorshift generator, so the numbers are identical on re-running.
 
 \begin{thebibliography}{99}
 \small
