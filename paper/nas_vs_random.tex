@@ -4,7 +4,6 @@
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,amssymb}
 \usepackage{hyperref}
-\usepackage{enumitem}
 \usepackage{booktabs}
 
 \title{\textbf{Recombination in a Self-Modifying Network Search:\\
@@ -19,190 +18,130 @@ systems. Reference implementation: \url{https://github.com/Anode1/SMBPANN}.}}
 \maketitle
 
 \begin{abstract}
-Ordinarily a neural network must be handed its shape before it can learn: how many
-layers, how wide, which activation. The system studied here is handed only the
-training data and a target error, and finds the rest itself by evolution: its depth
-and width, whether each layer is dense or a weight-sharing convolutional one, and its
-own learning rate, momentum, and activation. Onto that mutation-driven search we add
-\emph{crossover}, recombination of two parents, following the intuition that mixing
-building blocks should reach a good architecture faster than mutating one lineage.
-The paper follows that intuition to a resolved conclusion, in three experiments.
-First, on a problem with genuine separable building blocks, concatenated deceptive
-trap functions, our one-point crossover beats mutation decisively, its advantage
-\emph{growing} with the number of blocks, the textbook fingerprint of recombination.
-Second, on the neural architecture search, crossover is on-par with mutation, no
-better; we diagnose why, with measurements, and the reason is structural. The
-architecture does have a heritable fitness, how fast it trains to the target, but on
-this task that trainability is a single entangled property, fungible in capacity and
-co-adapted with the hyper-parameters, with no independent sub-parts, so there are no
-building blocks for recombination to combine even though there is a trait to inherit. Third, we supply the missing ingredient, \emph{weight
-inheritance}: a candidate is a modular set of sub-networks that carry their trained
-weights across generations, so a solved part is a self-contained transferable block.
-Now crossover wins again, and by a wide margin: on a task of several hard components
-it reaches the solution in about twelve generations regardless of component count,
-while mutation is several times slower and often fails outright. The building-block
-intuition holds for neural architecture search exactly when the genome carries the
-solution, not only its shape. \textbf{What is new here is not a method}: weight
-inheritance is the Lamarckian evolution of LEMONADE \cite{lemonade2019}, modular
-crossover is that of He et al.\ \cite{modxover2021}, and the random-search baseline is
-Li and Talwalkar \cite{li2019}. The contribution is a single, minimal, dependency-free,
-fully-reproducible implementation that unifies these under one through-line, with a
-concatenated-trap positive control that isolates precisely when recombination helps. It
-is a reproduction and synthesis, offered as such.
+Ordinarily a neural network is handed its shape before it learns; the system here is
+handed only the data and a target error and evolves the rest, its depth and width,
+whether each layer is dense or convolutional, and its own learning rate, momentum, and
+activation. Onto that mutation-driven search we add \emph{crossover}, and ask, across
+four small controlled experiments, when recombining two parents beats mutating one.
+The answer is a single rule. On concatenated deceptive trap functions, where the
+solution splits into independent blocks, our crossover beats mutation decisively and
+its advantage grows with the number of blocks. On the neural architecture search it
+does nothing: an architecture's only heritable trait is its trainability, a single
+entangled quantity with no separable sub-parts to recombine. Give the genome the
+missing piece, \emph{weight inheritance}, so a candidate carries its trained modules
+across generations, and crossover wins again by a wide margin. Crossover helps exactly
+insofar as the genome carries separable, transferable building blocks. On a real NAS
+benchmark (NAS-Bench-201) that rule is harder to see: the cell space is small and
+crossover's benefit is tiny and not predicted by separability, a limit we report
+honestly. \textbf{None of these mechanisms is new}: weight inheritance is the
+Lamarckian evolution of LEMONADE \cite{lemonade2019}, modular crossover is that of He
+et al.\ \cite{modxover2021}, and random search as a strong baseline is Li and Talwalkar
+\cite{li2019}. The contribution is a single minimal dependency-free implementation that
+reproduces and unifies them under one through-line with a trap-function positive
+control, every figure regenerable from one command. It is a reproduction and synthesis,
+offered as such.
 \end{abstract}
 
 \section{Introduction}
 
-Neural architecture search (NAS) automates a choice a human normally makes: the shape
-of the network. Its methods differ mainly in the search strategy: reinforcement
-learning \cite{zoph2017}, gradient-based relaxation \cite{darts2019}, Bayesian
-optimization, random search, and evolutionary search \cite{elsken2019}. Ours is
-evolutionary: the topology is evolved while each candidate's weights are trained by
-back-propagation \cite{real2019}. Ordinarily the architecture and training knobs are
-arguments the user supplies, \textbf{predict(topology, activation, \ldots)}; the
-system here is handed only the data and a target error, \textbf{self\_modifying\_predict(data,
-error)}, and discovers the rest. The engine grew out of the author's 1997 seminar
-thesis, which derived the general multi-layer delta rule the training still uses
-\cite{thesis1997}.
+Neural architecture search (NAS) automates the choice of a network's shape; methods
+differ mainly in the search strategy, reinforcement learning \cite{zoph2017},
+gradient relaxation \cite{darts2019}, Bayesian optimization, random search, and
+evolution \cite{elsken2019}. Ours is evolutionary: the topology is evolved while each
+candidate's weights are trained by back-propagation \cite{real2019}. The ordinary
+signature \textbf{predict(topology, activation, \ldots)} becomes
+\textbf{self\_modifying\_predict(data, error)}, and the rest is discovered. The engine
+grew out of the author's 1997 seminar thesis, which derived the multi-layer delta rule
+the training still uses \cite{thesis1997}.
 
-A recurring result in this field is that \emph{random search is hard to beat}
-\cite{bergstra2012,li2019}. This paper asks whether \emph{recombination} beats
-mutation at architecture search, and reaches a two-sided answer that resolves cleanly:
-crossover needs building blocks that carry a solution, standard NAS does not provide
-them, and adding weight inheritance does. The self-adaptive machinery and the
-evolution-strategy view we lean on are standard in the optimization literature the
-author has worked in \cite{rechenberg1973}.
+A recurring result is that random search is hard to beat \cite{bergstra2012,li2019}.
+We ask whether \emph{recombination} beats mutation at this search, and reach a clean
+rule: crossover needs building blocks that carry a solution; standard NAS does not
+provide them; weight inheritance does. The self-adaptive machinery is standard in the
+evolution-strategy literature \cite{rechenberg1973}.
 
 \section{Method}
 
-\subsection{The self-modifying search}
-
-A network is a feed-forward stack of dense and convolution-like layers. For a dense
-layer $\ell$ the forward pass is $a^{(\ell)} = g(W^{(\ell)}a^{(\ell-1)} + b^{(\ell)})$,
-with $g$ a per-network hidden activation (logistic sigmoid, $\tanh$, or ReLU) chosen
-by the genome; the output layer is a dense sigmoid. A convolutional layer applies $F$
-shared kernels of width $K$ across the previous layer, so its width is derived,
-$d_\ell = F(d_{\ell-1}-K+1)$: the local, weight-sharing structure LeCun introduced for
-images \cite{lecun1989}, here a move the search can take. Weights are trained by
-back-propagation with momentum (the multi-layer delta rule of the 1997 thesis
-\cite{thesis1997}), initialized uniformly in $[-2.4/f_i,\,2.4/f_i]$. All arithmetic is
-32-bit float; all randomness flows through a seeded xorshift generator.
-
-A \emph{genome} carries the topology (per hidden layer: dense or convolutional, and
-its free parameters) and its own training hyper-parameters (learning rate, momentum,
-activation), plus a self-adaptive mutation rate. One \emph{mutation} makes a single
-small change: perturb a layer, flip a layer dense$\leftrightarrow$conv, or add or
-remove a layer. Reproduction is self-adaptive in the sense of evolution strategies
-\cite{rechenberg1973}. The search keeps a population, retains the best few (elitism),
-and refills by reproduction, against a matched random-search control.
-
-\subsection{The crossover operator}
-
-To the mutation-only search we add optional \emph{crossover} (\texttt{evolve -X}): a
-child is built from two elite parents by a one-point splice of their hidden-layer
-lists, a prefix of one and a suffix of the other, with a blend of their
-hyper-parameters, then mutated as usual. With \texttt{-X 0} the operator is inert and
-the run is byte-identical to the mutation-only search.
+A network is a feed-forward stack of dense and convolutional layers; $g$ is a
+per-network hidden activation (sigmoid, $\tanh$, or ReLU) chosen by the genome, the
+output a dense sigmoid. A convolutional layer applies $F$ shared kernels of width $K$,
+so its width is derived, $d_\ell = F(d_{\ell-1}-K+1)$, the local weight-sharing bias
+LeCun introduced \cite{lecun1989}, here a move the search can take. Weights train by
+back-propagation with momentum (the 1997 thesis's delta rule \cite{thesis1997}),
+initialized in $[-2.4/f_i,\,2.4/f_i]$; all arithmetic is 32-bit float, all randomness a
+seeded xorshift. A \emph{genome} carries the topology, its training hyper-parameters,
+and a self-adaptive mutation rate \cite{rechenberg1973}; one mutation perturbs, flips,
+adds, or removes a layer. The search keeps a population, retains the best few, and
+refills by reproduction, against a matched random-search control. Optional
+\emph{crossover} (\texttt{evolve -X}) builds a child by a one-point splice of two
+parents' hidden-layer lists plus a blend of hyper-parameters; with \texttt{-X 0} the
+run is byte-identical to the mutation-only search.
 
 \section{Experiments}
 
-\subsection{The operator works: a building-block validation}
+\subsection{The operator works: a building-block control}
 
-We first check that the operator does what crossover should, on a problem built to
-have separable building blocks: concatenated deceptive trap functions, a genome of $M$
-blocks of $K$ bits, where a block scores $K$ only if all its bits are one, else $K-1$
-minus its number of ones, a deceptive gradient luring a bit-flipping search toward
-all-zero. The global optimum (all ones) is reachable only by assembling
-correctly-solved blocks. We race the same GA (tournament selection, elitism) with
-one-point crossover against mutation-only, over 200 seeds, scanning the block count
-(\texttt{make bbtest}).
+We first confirm the operator does what crossover should, on concatenated deceptive
+trap functions: $M$ blocks of $K$ bits, a block scoring $K$ only if all its bits are
+one and otherwise $K-1$ minus its number of ones, a deceptive gradient toward all-zero.
+The optimum is reachable only by assembling solved blocks. We race the same GA with
+one-point crossover against mutation-only over 200 seeds (\texttt{make bbtest}).
 
 \begin{table}[t]
 \centering
-\caption{Crossover versus mutation on concatenated deceptive traps ($K=4$-bit blocks,
-population 1000, tournament 3, 200 seeds). As the number of building blocks grows,
-crossover's advantage grows: mutation's cost explodes and it begins to fail while
-crossover keeps solving.}
+\caption{Crossover versus mutation on concatenated deceptive traps ($K=4$, population
+1000, tournament 3, 200 seeds). Crossover's advantage grows with the number of blocks;
+by sixteen, mutation mostly fails while crossover still solves.}
 \label{tab:bb}
 \begin{tabular}{lccc}
 \toprule
-blocks $M$ (genome) & mutation-only & crossover $+$ mutation & speedup \\
+blocks $M$ & mutation-only & crossover $+$ mutation & speedup \\
 \midrule
-4  (16 bits) & 9.2 gens, 200/200  & 5.1 gens, 200/200  & $1.8\times$ \\
-8  (32 bits) & 70.8 gens, 200/200 & 14.2 gens, 200/200 & $5\times$ \\
-12 (48 bits) & 257 gens, 185/200  & 22.6 gens, 200/200 & $11\times$, more reliable \\
-16 (64 bits) & 363 gens, \textbf{28/200} & 42.3 gens, \textbf{199/200} & mutation fails \\
+4  & 9.2 gens, 200/200  & 5.1 gens, 200/200  & $1.8\times$ \\
+8  & 70.8 gens, 200/200 & 14.2 gens, 200/200 & $5\times$ \\
+12 & 257 gens, 185/200  & 22.6 gens, 200/200 & $11\times$ \\
+16 & 363 gens, \textbf{28/200} & 42.3 gens, \textbf{199/200} & mutation fails \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:bb} is decisive: at sixteen blocks mutation reaches the optimum on
-$28$ of $200$ seeds, crossover on $199$. The operator and methodology are sound; when
-separable building blocks exist, crossover finds and combines them, and its advantage
-scales with the amount of structure.
+The operator is sound: when separable building blocks exist, crossover finds and
+combines them, and its advantage scales with the amount of structure (Table~\ref{tab:bb}).
 
-\subsection{On the architecture search, crossover does not help}
+\subsection{On the architecture search, crossover does not help, and why}
 
-We then run the same on/off comparison on the architecture search: for each seed, a
-fresh synthetic classification task ($d=8$ inputs, a random-projection sine label),
-the self-modifying search run twice from the identical initial population, once
-mutation-only and once with crossover, each until its best validation error reaches a
-target. Over the paired runs, crossover and mutation are indistinguishable: the same
-fraction reached the target, the same median generations, an even head-to-head.
-Adding recombination did nothing, and not because the operator is weak
-(Table~\ref{tab:bb}).
-
-\subsection{Why: the genome carries architecture, not the solution}
-
-Two measurements explain it. First, architecture alone does not solve the task:
-trained with default hyper-parameters, every topology, dense or convolutional,
-scored $0.25$--$0.59$ test-MSE, at or worse than chance. The \emph{hyper-parameters}
-do the work, brittly: holding a small $8,4,1$ topology and varying only the learning
-rate, momentum, and activation swings the error from $0.09$ to $0.65$; with a good
-hyper-parameter set fixed, varying the topology is narrow and non-monotone
-($8,4,1 \to 0.09$ while $8,8,1 \to 0.37$). The two dimensions are entangled and the
-landscape rugged, and crossover of a topology block breaks the co-adaptation that made
-it good. Second, a parallel-branch probe (\texttt{make modnas}, gradient-checked)
-shows that even a purpose-built modular architecture does not decompose, because
-\emph{neural capacity is fungible}: one sufficiently-wide branch does what several
-specialised ones would, so there are no independent modules to recombine.
-
-It is worth being precise about what the genome does carry, because it is not
-nothing. The architecture has a real, heritable fitness, namely how well it trains:
-how fast it reaches a target error, or the error it reaches in a fixed budget. That
-trainability is exactly what selection scores and what crossover could in principle
-recombine. The difference from the trap is not that the architecture genome is empty,
-it is that its one heritable trait does not \emph{decompose}. In the trap the bits
-\emph{were} the solution and split into independent blocks, so crossover combined
-solved blocks. Here the trainable-ness of a network is a single entangled property,
-fungible in capacity and co-adapted with the hyper-parameters, with no independent
-sub-parts each carrying their own share of it, so there are no building blocks to
-combine even though there is a trait to inherit. Weight inheritance changes this by
-giving the genome a \emph{second} thing to carry, the trained solution itself, which
-in a modular network does split into transferable parts.
+We run the same on/off comparison on the neural search: for each seed a fresh synthetic
+task ($d=8$, a random-projection sine label), the search run twice from an identical
+initial population, mutation-only and with crossover, to a target error. The two are
+indistinguishable; adding recombination does nothing, and not because the operator is
+weak (Table~\ref{tab:bb}). Two measurements say why. Architecture alone does not solve
+the task, every topology scores at or below chance ($0.25$--$0.59$ test-MSE) with
+default hyper-parameters; the \emph{hyper-parameters} do the work, and brittly, holding
+a $8,4,1$ topology and varying only them swings the error from $0.09$ to $0.65$, while
+with good hyper-parameters fixed the topology matters narrowly and non-monotonically
+($8,4,1 \to 0.09$, $8,8,1 \to 0.37$). A parallel-branch probe (\texttt{make modnas},
+gradient-checked) adds that even a purpose-built modular architecture does not
+decompose, because neural capacity is fungible: one wide branch does what several
+specialised ones would. So the architecture has a heritable trait, its trainability,
+but that trait is a single entangled quantity with no independent sub-parts; there are
+no building blocks to recombine, even though there is something to inherit.
 
 \subsection{Weight inheritance restores the building blocks}
 
-That diagnosis names its own fix: let the genome carry the learned state, not only the
-shape. We test it in a modular setting (\texttt{make modevo}, back-propagation
-gradient-checked). A candidate is $G$ independent sub-networks, one per output
-component; each component is a hard, high-frequency sine of its own input group, so
-training a sub-network from a random start succeeds only sometimes, a lottery. A
-candidate \emph{carries its sub-networks' trained weights across generations} and
-fine-tunes them further, so a solved component is a self-contained, transferable
-block. Crossover recombines whole sub-networks (with their weights) from two parents;
-mutation must re-roll the initialization lottery for a stuck component within one
-lineage. We count generations to solve all components (mean validation
-MSE $< 0.08$), over 60 search seeds, scanning the number of components at fixed
-per-component difficulty.
+The fix is to let the genome carry the learned state, not only the shape. We test it in
+a modular setting (\texttt{make modevo}, gradient-checked): a candidate is $G$
+independent sub-networks, one per output component, each a hard sine of its own input
+group so that training from a random start succeeds only sometimes. A candidate
+\emph{carries its sub-networks' trained weights across generations}; crossover
+recombines whole solved sub-networks from two parents, while mutation must re-roll the
+initialization lottery for a stuck component within one lineage.
 
 \begin{table}[t]
 \centering
-\caption{Weight-inheriting crossover versus mutation on the modular task (population
-30, fine-tune 300 steps/generation, 60 search seeds, cap 120 generations). Crossover
-solves every task in about twelve generations whatever the component count; mutation
-is several times slower and, as components accumulate, frequently fails to solve at
-all within the cap.}
+\caption{Weight-inheriting crossover versus mutation on the modular task (population 30,
+300 fine-tune steps/generation, 60 seeds, cap 120 generations). Crossover solves every
+task in about twelve generations whatever the count; mutation is several times slower
+and, as components accumulate, often fails.}
 \label{tab:modevo}
 \begin{tabular}{lcc}
 \toprule
@@ -216,229 +155,140 @@ components $G$ & mutation (re-init) & crossover (inherit) \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:modevo} is the resolution. With weights inherited, crossover wins
-again and by a wide margin: it solves $60/60$ tasks in roughly twelve generations
-independent of the number of components, while mutation is $2.7$ to $6.7\times$ slower
-when it succeeds and unreliable when components accumulate (at $G=3$ it solves only a
-third). The same recombination that did nothing to an architecture-only genome
-(Section 3.2) is decisive once the genome carries the solution, exactly as it was on
-the trap bits. This is the author's intuition made concrete: a useful combination that
-evolution has found is inherited and keeps evolving, rather than being retrained from
-zero, which is both what gives recombination a solution to transfer and what makes the
-search converge faster.
+With weights inherited (Table~\ref{tab:modevo}) crossover wins again, solving $60/60$ in
+roughly twelve generations independent of the count while mutation is $2.7$ to
+$6.7\times$ slower and unreliable. The recombination that did nothing to an
+architecture-only genome is decisive once the genome carries the solution, exactly as
+on the trap bits.
 
-\subsection{Weight inheritance in the full engine, and its budget dependence}
+Wired through the full engine (\texttt{evolve -w}), a checkpoint of each candidate's
+trained weights crosses the worker boundary and a child warm-starts from its parent
+over the layers a mutation left unchanged. A $300$-seed-per-cell sweep
+(\texttt{scripts/inherit\_sweep.sh}) shows inheritance lowers the search's final error
+at equal compute in every cell (exact sign test $p<10^{-3}$), by a relative $21\%$ at a
+$20$-epoch budget down to $6\%$ at $160$: warm-starting helps most when training is
+scarce and there is discarded training to reclaim, and fades as candidates converge on
+their own. With inheritance off the run is byte-identical to before, and the random
+control, having no lineage, is identical in both arms.
 
-Table~\ref{tab:modevo} is a controlled modular probe. We also wired weight inheritance
-through the full self-modifying engine (\texttt{evolve -w}): a checkpoint of each
-candidate's trained weights crosses the worker boundary as a plain-text file, and a
-child warm-starts from its parent's checkpoint over the layers a mutation left
-unchanged, while the elite resume their own training each generation. With inheritance
-off the run is byte-identical to before; the matched random control, which has no
-lineage to inherit from, is identical in both arms. Because warm-starting saves training
-a from-scratch search discards, the gain should be largest when the per-candidate epoch
-budget is small, and fade as candidates converge on their own. We sweep it
-(\texttt{scripts/inherit\_sweep.sh}): a paired A/B over $300$ fresh-task seeds per cell,
-the search run once from scratch and once with inheritance at a fixed budget.
+\subsection{Where architecture is decisive, the search finds convolution}
 
-\begin{table}[t]
-\centering
-\caption{Weight inheritance in the engine: mean final validation error, from scratch
-versus inherited, over $300$ paired seeds per cell ($d=6$, pop 10, $\le\!3$ layers of
-width $\le\!12$). Inheritance wins significantly in every cell (exact sign test
-$p<10^{-3}$), but the relative error reduction shrinks monotonically as the per-candidate
-epoch budget grows, from $21\%$ at 20 epochs to $6\%$ at 160: warm-starting helps most
-when training is scarce.}
-\label{tab:sweep}
-\begin{tabular}{ccccc}
-\toprule
-epochs & generations & from scratch & inherit & inherit wins (/300) \\
-\midrule
-20  & 8  & 0.0730 & 0.0609 & 242 \\
-20  & 20 & 0.0660 & 0.0518 & 251 \\
-40  & 8  & 0.0646 & 0.0569 & 218 \\
-40  & 20 & 0.0576 & 0.0474 & 239 \\
-80  & 8  & 0.0603 & 0.0539 & 207 \\
-80  & 20 & 0.0527 & 0.0464 & 218 \\
-160 & 8  & 0.0568 & 0.0534 & 176 \\
-160 & 20 & 0.0499 & 0.0454 & 199 \\
-\bottomrule
-\end{tabular}
-\end{table}
+Our tasks make architecture fungible; the opposite regime exists. On a
+translation-invariant image task (\texttt{make conv2d}, a $3\times3$ diagonal motif at a
+random position in a noisy $8\times8$ image, label its orientation) a 2D convolution
+that detects the motif anywhere reaches $0.1\%$ test error from $2000$ images while a
+same-size dense network is near chance ($39\%$), catching up only with an order of
+magnitude more data. Here the right structure carries the solution. Giving the search a
+native 2D convolution front-end ($F$ filters of $K\times K$ with global max-pool,
+\texttt{conv2f}, gradient-checked) and running it on this task
+(\texttt{gentask -I 8}), over $40$ seeds it discovers the convolution in \emph{every
+one}, reaching a median test-MSE of $2\times10^{-7}$, five orders of magnitude below the
+dense architectures it can equally build. On the fungible tasks it never preferred
+convolution; given a task where structure is decisive and reachable, the search finds
+the local weight-sharing bias LeCun designed by hand.
 
-Table~\ref{tab:sweep} shows the predicted gradient cleanly: inheritance lowers the
-search's final error at equal compute across the board, but the effect falls from about
-a fifth of the error at a $20$-epoch budget to a few percent at $160$, where each
-candidate largely trains to convergence on its own and there is little discarded
-training to reclaim. More generations help as well, since an elite lineage accumulates
-training over more rounds. The engine result and the modular probe agree: carrying the
-learned state, not only the architecture, is what lets an evolutionary search stop
-paying to relearn what it already found.
+\subsection{On a real benchmark, the rule is harder to see}
 
-\subsection{Where architecture is decisive}
-
-The whole account rests on architecture being fungible on our tasks; it is worth
-showing the opposite regime exists, where architecture is decisive and a search would
-have real structure to find. We built a translation-invariant image task (\texttt{make
-conv2d}): a small diagonal motif, ``\textbackslash'' or ``/'', placed at a random
-position in a noisy $8\times8$ image, the label being its orientation. A single
-2D convolution that detects the motif wherever it sits (gradient-checked, $0/40$
-finite-difference mismatches) generalizes; a dense network of similar size, which must
-relearn the motif at every position, does not, until it is given far more data.
-
-\begin{table}[t]
-\centering
-\caption{An image task where architecture is decisive: test error rate on the
-translation-invariant motif task, a 2D convolution ($6$ filters) versus a dense
-network ($24$ hidden), mean of $8$ seeds. With limited data the convolution
-generalizes and the dense network is near chance; only with an order of magnitude more
-data does the dense network catch up.}
-\label{tab:conv2d}
-\begin{tabular}{ccc}
-\toprule
-training images & 2D convolution & dense network \\
-\midrule
-2000  & \textbf{0.001} & 0.388 \\
-6000  & \textbf{0.000} & 0.192 \\
-20000 & 0.000 & 0.002 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:conv2d} shows the contrast: at $2000$ images the convolution is at
-$0.1\%$ error and the dense network near chance ($39\%$). Here architecture is not
-fungible, the right structure carries the solution and the wrong one cannot reach it
-with limited data. This is the regime in which architecture search should pay.
-
-Running the engine's own search on this task closes the loop, and the project's arc.
-The genome's search space includes a \emph{native 2D convolution} front-end,
-$F$ filters of $K\times K$ swept over the $S\times S$ image with a global max-pool per
-filter (\texttt{conv2f}, its back-propagation gradient-checked against finite
-differences), the operation LeCun designed for images, which the search may switch on
-and tune. We generate the motif task as a dataset (\texttt{gentask -I 8}) and run the
-self-modifying search on it at a low per-candidate epoch budget. Over $40$ fresh image
-seeds the search discovers the 2D convolution in \emph{every one}, reaching a median
-test-MSE of $2\times10^{-7}$, roughly five orders of magnitude below the dense
-architectures it can equally build ($\approx 2\times10^{-2}$). On the earlier fungible
-tasks the search had no reason to prefer convolution and did not; handed a task where
-structure is decisive, and given that structure as a reachable move, it finds it every
-time, the local weight-sharing inductive bias LeCun introduced by hand, discovered by a
-network handed only the problem. That is the top-line goal this project set out from.
+The trap control is clean by construction; a real NAS space is not. On NAS-Bench-201
+\cite{li2019} (its topology cell, $15{,}625$ architectures with precomputed
+CIFAR-10/100 and ImageNet16 accuracies, so fitness is a table lookup, \texttt{make
+nasxover}) crossover yields only a small early-convergence gain over mutation (at most a
+few tenths of a percent accuracy, and none at a generous budget, both operators nearly
+reaching the optimum because the cell has only six genes). More tellingly, additive
+separability does \emph{not} predict crossover's benefit: over $120$ sub-spaces per
+dataset (fixed size, varying which operations are allowed) the correlation between the
+additive-model $R^2$ and crossover's benefit is null ($r = -0.06, -0.03, -0.11$, none
+significant). The building-block rule is clean on designed problems but does not
+straightforwardly transfer to real NAS cell spaces, which are small and do not decompose
+in a way separability captures. We report this rather than tune a predictor until one
+correlates.
 
 \section{Relation to prior work}
 
-None of the mechanisms here is new, and it is important to say so plainly. Random
-search as a strong NAS baseline is Bergstra and Bengio \cite{bergstra2012} and Li and
-Talwalkar \cite{li2019}. Mutation-only evolutionary NAS with aging is Real et al.\
-\cite{real2019}. Weight inheritance, a child warm-started from its trained parent, is
-exactly the Lamarckian inheritance of LEMONADE \cite{lemonade2019}, built on the
-function-preserving weight transfer of Net2Net \cite{net2net2016} and Network Morphism
-\cite{netmorph2016}, and related to the parameter sharing of ENAS \cite{enas2018}.
-Crossover that inherits trained modules from two parents is the modular inheritable
-crossover of He et al.\ \cite{modxover2021}, and the alignment that makes topology
-crossover meaningful is NEAT's historical marking \cite{neat2002}. This work
-contributes no method beyond these. What it offers is a single, minimal, dependency-free
-implementation that reproduces and \emph{unifies} them under one honest through-line, a
-recombination operator helps exactly insofar as the genome carries separable,
-transferable building blocks, with a concatenated-trap positive control
-(Table~\ref{tab:bb}) isolating that condition, and every figure regenerable from one
-command. It is a reproduction and synthesis, not a discovery.
+None of the mechanisms here is new. Random search as a strong NAS baseline is
+\cite{bergstra2012,li2019}; mutation-only evolutionary NAS with aging is \cite{real2019};
+weight inheritance, a child warm-started from its trained parent, is exactly the
+Lamarckian inheritance of LEMONADE \cite{lemonade2019}, built on the function-preserving
+transfer of Net2Net \cite{net2net2016} and Network Morphism \cite{netmorph2016} and
+related to ENAS parameter sharing \cite{enas2018}; crossover that inherits trained
+modules is He et al.'s modular inheritable crossover \cite{modxover2021}; and the
+alignment that makes topology crossover meaningful is NEAT's historical marking
+\cite{neat2002}. This work contributes no method beyond these. It offers a single,
+minimal, dependency-free implementation that reproduces and unifies them under one
+through-line, recombination helps insofar as the genome carries separable transferable
+building blocks, with a trap-function positive control (Table~\ref{tab:bb}) isolating
+that condition and every figure regenerable from one command. It is a reproduction and
+synthesis, not a discovery.
 
-\section{Discussion}
+\section{Discussion and conclusion}
 
-The three experiments compose into one statement. Crossover's building-block advantage
-is real and provable (Table~\ref{tab:bb}), but it applies only when the genome carries
-a heritable trait that \emph{decomposes} into independent parts. Standard neural
-architecture search does have a heritable trait, an architecture's trainability, which
-selection scores as time-to-target or limited-budget error; but on a fungible-capacity,
-hyper-parameter-entangled landscape that trait is a single entangled quantity with no
-independent sub-parts, so recombination has no blocks to combine, which is a structural
-reason random search is a strong NAS baseline and the field \cite{real2019} routinely
-drops crossover. Weight inheritance gives the genome a second, decomposable thing to
-carry, the trained solution, and in a modular network the advantage returns in full
-(Table~\ref{tab:modevo}). The lesson is not that crossover is weak or strong in the
-abstract, but that it is exactly as useful as the genome is a carrier of separable
-building blocks.
-
-\paragraph{Limitations.} Scale is small and tasks synthetic; Table~\ref{tab:modevo}
-is a controlled probe with a fixed per-component task and a fixed module count, and the
-engine sweep (Table~\ref{tab:sweep}) is a $6$-input problem with shallow networks.
-Mean squared error stands in for classification error. None of this is hidden.
-
-\section{Conclusion and future work}
-
-Handed only the problem and a target error, the search discovers architecture, layer
-type, and training hyper-parameters. Recombination does not speed the architecture
-search while the genome carries only shape, and we now understand exactly why and
-exactly when it does: crossover needs building blocks that carry a solution, and weight
-inheritance supplies them (Table~\ref{tab:modevo}). That inheritance is now wired
-through the engine as well (\texttt{evolve -w}): children warm-start from their
-parents' checkpointed weights, and the search reaches a lower error at equal compute.
-We also showed the regime these methods are built for exists, and that the search
-works in it: on a translation-invariant image task a convolution is decisive where a
-dense network fails (Table~\ref{tab:conv2d}), and the engine's search, given a native
-2D convolution as a reachable move, discovers it there in every one of $40$ seeds,
-reaching an error five orders of magnitude below the dense alternative. The clear
-remaining step is a bridge to a standard tabular NAS benchmark, to run the same
-comparisons over thousands of seeds cheaply.
+The experiments compose into one rule: crossover is exactly as useful as the genome is a
+carrier of separable building blocks. An architecture genome carries only trainability, a
+single entangled quantity, so recombination has nothing to combine, which is a
+structural reason random search is strong in NAS and the field \cite{real2019} drops
+crossover; weight inheritance gives the genome a second, decomposable thing to carry, the
+trained solution, and the advantage returns (Table~\ref{tab:modevo}). The same search,
+given a decisive and reachable structure, rediscovers 2D convolution on an image task
+unaided. On a real tabular benchmark the rule is muted, its cell space too small and too
+entangled for separability to bite. \textbf{Limitations:} scale is small and tasks are
+mostly synthetic, mean squared error stands in for classification error, and the
+building-block predictor does not carry to real NAS (Section 3.5), all reported openly.
+The natural next step is the same comparison on larger, hierarchical search spaces where
+recombination has more room to matter.
 
 \section*{Reproducibility}
 
-Every result is regenerated from \cite{repo} with a single command. The engine builds
-with \texttt{make} (C99, no dependencies) into \texttt{smbpann} (worker),
-\texttt{evolve} (search and control, with \texttt{-X} for crossover), and
-\texttt{gentask}; \texttt{make ut} runs the unit and gradient-check suite under
-AddressSanitizer and UBSan. The three validation probes are standalone: \texttt{make
-bbtest} (Table~\ref{tab:bb}, building-block traps), \texttt{make modnas} (the
-parallel-branch gradient check), and \texttt{make modevo} (Table~\ref{tab:modevo},
-weight-inheriting crossover; run \texttt{./modevo G freq}); and \texttt{make conv2d}
-(Table~\ref{tab:conv2d}, the image task where architecture is decisive). The neural crossover A/B is
-\texttt{scripts/xover\_ab.sh}; weight inheritance in the engine is \texttt{evolve -w 1}
-(the worker's \texttt{-W}/\texttt{-w} save and warm-start checkpoints), its A/B is
-\texttt{scripts/inherit\_ab.sh} and the budget sweep of Table~\ref{tab:sweep} is
-\texttt{scripts/inherit\_sweep.sh}. Each run uses a fixed 32-bit xorshift generator, so
-the numbers are identical on re-running.
+Every result regenerates from \cite{repo} with one command. The engine builds with
+\texttt{make} (C99, no dependencies) into \texttt{smbpann}, \texttt{evolve} (with
+\texttt{-X} crossover and \texttt{-w} weight inheritance), and \texttt{gentask};
+\texttt{make ut} runs the unit and gradient-check suite under AddressSanitizer and UBSan.
+Standalone probes: \texttt{make bbtest} (Table~\ref{tab:bb}), \texttt{make modnas},
+\texttt{make modevo} (Table~\ref{tab:modevo}), \texttt{make conv2d}, and
+\texttt{make nasxover} (Section 3.5). Search A/Bs are \texttt{scripts/xover\_ab.sh},
+\texttt{scripts/inherit\_ab.sh}, and \texttt{scripts/inherit\_sweep.sh}. Each run uses a
+fixed 32-bit xorshift generator, so the numbers reproduce exactly.
 
 \begin{thebibliography}{99}
 \small
-\bibitem{rumelhart1986} D.~E. Rumelhart, G.~E. Hinton, R.~J. Williams.
-  Learning representations by back-propagating errors. \emph{Nature} 323, 1986.
-\bibitem{thesis1997} V.~Gavrilov. \emph{Backpropagation Feed-Forward Neural
-  Networks}. Seminar in Artificial Intelligence, Open University of Israel, 1997
-  (revised digital edition, Zenodo 2026). \url{https://doi.org/10.5281/zenodo.20450526}
+\bibitem{rumelhart1986} D.~E. Rumelhart, G.~E. Hinton, R.~J. Williams. Learning
+  representations by back-propagating errors. \emph{Nature} 323, 1986.
+\bibitem{thesis1997} V.~Gavrilov. \emph{Backpropagation Feed-Forward Neural Networks}.
+  Seminar in Artificial Intelligence, Open University of Israel, 1997 (revised digital
+  edition, Zenodo 2026). \url{https://doi.org/10.5281/zenodo.20450526}
 \bibitem{rechenberg1973} I.~Rechenberg. \emph{Evolutionsstrategie}. 1973;
   H.-P. Schwefel, \emph{Numerical Optimization of Computer Models}, 1981.
 \bibitem{holland1975} J.~H. Holland. \emph{Adaptation in Natural and Artificial
-  Systems}. University of Michigan Press, 1975 (schemata and building blocks).
+  Systems}. University of Michigan Press, 1975.
 \bibitem{deb1993} K.~Deb, D.~E. Goldberg. Analyzing Deception in Trap Functions.
   \emph{Foundations of Genetic Algorithms} 2, 1993.
-\bibitem{lecun1989} Y.~LeCun, B.~Boser, J.~S. Denker, et al. Backpropagation Applied
-  to Handwritten Zip Code Recognition. \emph{Neural Computation} 1(4), 1989.
+\bibitem{lecun1989} Y.~LeCun, B.~Boser, J.~S. Denker, et al. Backpropagation Applied to
+  Handwritten Zip Code Recognition. \emph{Neural Computation} 1(4), 1989.
 \bibitem{bergstra2012} J.~Bergstra, Y.~Bengio. Random Search for Hyper-Parameter
   Optimization. \emph{JMLR} 13, 2012.
 \bibitem{zoph2017} B.~Zoph, Q.~V. Le. Neural Architecture Search with Reinforcement
   Learning. \emph{ICLR} 2017.
-\bibitem{real2019} E.~Real, A.~Aggarwal, Y.~Huang, Q.~V. Le. Regularized Evolution
-  for Image Classifier Architecture Search. \emph{AAAI} 2019.
+\bibitem{real2019} E.~Real, A.~Aggarwal, Y.~Huang, Q.~V. Le. Regularized Evolution for
+  Image Classifier Architecture Search. \emph{AAAI} 2019.
 \bibitem{darts2019} H.~Liu, K.~Simonyan, Y.~Yang. DARTS: Differentiable Architecture
   Search. \emph{ICLR} 2019.
 \bibitem{li2019} L.~Li, A.~Talwalkar. Random Search and Reproducibility for Neural
-  Architecture Search. \emph{UAI} 2019.
-\bibitem{elsken2019} T.~Elsken, J.~H. Metzen, F.~Hutter. Neural Architecture Search:
-  A Survey. \emph{JMLR} 20, 2019.
+  Architecture Search. \emph{UAI} 2019 (see also NAS-Bench-201, Dong and Yang,
+  \emph{ICLR} 2020).
+\bibitem{elsken2019} T.~Elsken, J.~H. Metzen, F.~Hutter. Neural Architecture Search: A
+  Survey. \emph{JMLR} 20, 2019.
 \bibitem{neat2002} K.~O. Stanley, R.~Miikkulainen. Evolving Neural Networks through
   Augmenting Topologies. \emph{Evolutionary Computation} 10(2), 2002.
 \bibitem{lemonade2019} T.~Elsken, J.~H. Metzen, F.~Hutter. Efficient Multi-objective
   Neural Architecture Search via Lamarckian Evolution. \emph{ICLR} 2019.
-\bibitem{net2net2016} T.~Chen, I.~Goodfellow, J.~Shlens. Net2Net: Accelerating
-  Learning via Knowledge Transfer. \emph{ICLR} 2016.
+\bibitem{net2net2016} T.~Chen, I.~Goodfellow, J.~Shlens. Net2Net: Accelerating Learning
+  via Knowledge Transfer. \emph{ICLR} 2016.
 \bibitem{netmorph2016} T.~Wei, C.~Wang, Y.~Rui, C.~W. Chen. Network Morphism.
   \emph{ICML} 2016.
 \bibitem{enas2018} H.~Pham, M.~Y. Guan, B.~Zoph, Q.~V. Le, J.~Dean. Efficient Neural
   Architecture Search via Parameter Sharing. \emph{ICML} 2018.
-\bibitem{modxover2021} C.~He, H.~Tan, S.~Huang, R.~Cheng. Efficient evolutionary
-  neural architecture search by modular inheritable crossover. \emph{Swarm and
-  Evolutionary Computation} 64, 2021.
+\bibitem{modxover2021} C.~He, H.~Tan, S.~Huang, R.~Cheng. Efficient evolutionary neural
+  architecture search by modular inheritable crossover. \emph{Swarm and Evolutionary
+  Computation} 64, 2021.
 \bibitem{repo} V.~Gavrilov. SMBPANN: a self-modifying backpropagation feed-forward
   neural network. Source code, \url{https://github.com/Anode1/SMBPANN}.
 \end{thebibliography}
