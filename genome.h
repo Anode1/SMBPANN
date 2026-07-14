@@ -51,6 +51,13 @@ void genome_mutate(Genome *g, size_t maxhid, size_t maxwidth, Rng *rng);
 void genome_reproduce(Genome *child, const Genome *parent,
                       size_t maxhid, size_t maxwidth, Rng *rng);
 
+/* Sexual reproduction: recombine two parents into CHILD by a one-point splice of
+ * their hidden layers (a prefix of A, a suffix of B, so depth is inherited too)
+ * and a blend of the training hyper-parameters, then the same self-adaptive step
+ * as genome_reproduce. The input and output widths stay fixed by the problem. */
+void genome_crossover(Genome *child, const Genome *a, const Genome *b,
+                      size_t maxhid, size_t maxwidth, Rng *rng);
+
 /* Format G as a candidate spec "topology|lrate|momentum|activation" into BUF,
  * e.g. "2,4,1|0.5|0.9|sigmoid". */
 void genome_format(const Genome *g, char *buf, size_t bufsz);
