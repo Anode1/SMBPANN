@@ -31,10 +31,11 @@ First, on a problem with genuine separable building blocks, concatenated decepti
 trap functions, our one-point crossover beats mutation decisively, its advantage
 \emph{growing} with the number of blocks, the textbook fingerprint of recombination.
 Second, on the neural architecture search, crossover is on-par with mutation, no
-better; we diagnose why, with measurements, and the reason is structural: neural
-capacity is fungible, and because each candidate is trained from scratch, the genome
-carries architecture but not the learned solution, so there is nothing for
-recombination to transfer. Third, we supply the missing ingredient, \emph{weight
+better; we diagnose why, with measurements, and the reason is structural. The
+architecture does have a heritable fitness, how fast it trains to the target, but on
+this task that trainability is a single entangled property, fungible in capacity and
+co-adapted with the hyper-parameters, with no independent sub-parts, so there are no
+building blocks for recombination to combine even though there is a trait to inherit. Third, we supply the missing ingredient, \emph{weight
 inheritance}: a candidate is a modular set of sub-networks that carry their trained
 weights across generations, so a solved part is a self-contained transferable block.
 Now crossover wins again, and by a wide margin: on a task of several hard components
@@ -160,11 +161,19 @@ shows that even a purpose-built modular architecture does not decompose, because
 \emph{neural capacity is fungible}: one sufficiently-wide branch does what several
 specialised ones would, so there are no independent modules to recombine.
 
-Underneath both is one fact. In the trap problem the bits \emph{were} the solution, so
-crossover transferred solutions. In architecture search the genome is architecture and
-the solution is \emph{weights}, retrained from scratch for every candidate, so the
-genome carries no solution to transfer. There is nothing for recombination to
-recombine.
+It is worth being precise about what the genome does carry, because it is not
+nothing. The architecture has a real, heritable fitness, namely how well it trains:
+how fast it reaches a target error, or the error it reaches in a fixed budget. That
+trainability is exactly what selection scores and what crossover could in principle
+recombine. The difference from the trap is not that the architecture genome is empty,
+it is that its one heritable trait does not \emph{decompose}. In the trap the bits
+\emph{were} the solution and split into independent blocks, so crossover combined
+solved blocks. Here the trainable-ness of a network is a single entangled property,
+fungible in capacity and co-adapted with the hyper-parameters, with no independent
+sub-parts each carrying their own share of it, so there are no building blocks to
+combine even though there is a trait to inherit. Weight inheritance changes this by
+giving the genome a \emph{second} thing to carry, the trained solution itself, which
+in a modular network does split into transferable parts.
 
 \subsection{Weight inheritance restores the building blocks}
 
@@ -216,13 +225,17 @@ search converge faster.
 
 The three experiments compose into one statement. Crossover's building-block advantage
 is real and provable (Table~\ref{tab:bb}), but it applies only when the genome carries
-a transferable solution. Standard neural architecture search does not: capacity is
-fungible and solutions live in weights that a retrain-from-scratch search discards, so
-recombination has nothing to work with, which is a structural reason random search is a
-strong NAS baseline and the field \cite{real2019} routinely drops crossover. Restore
-the missing piece, weight inheritance, and the advantage returns in full
+a heritable trait that \emph{decomposes} into independent parts. Standard neural
+architecture search does have a heritable trait, an architecture's trainability, which
+selection scores as time-to-target or limited-budget error; but on a fungible-capacity,
+hyper-parameter-entangled landscape that trait is a single entangled quantity with no
+independent sub-parts, so recombination has no blocks to combine, which is a structural
+reason random search is a strong NAS baseline and the field \cite{real2019} routinely
+drops crossover. Weight inheritance gives the genome a second, decomposable thing to
+carry, the trained solution, and in a modular network the advantage returns in full
 (Table~\ref{tab:modevo}). The lesson is not that crossover is weak or strong in the
-abstract, but that it is exactly as useful as the genome is a carrier of solutions.
+abstract, but that it is exactly as useful as the genome is a carrier of separable
+building blocks.
 
 \paragraph{Limitations.} Scale is small and tasks synthetic; the modular
 weight-inheritance result is a controlled probe with a fixed per-component task and a
