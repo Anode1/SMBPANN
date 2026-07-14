@@ -42,7 +42,13 @@ Now crossover wins again, and by a wide margin: on a task of several hard compon
 it reaches the solution in about twelve generations regardless of component count,
 while mutation is several times slower and often fails outright. The building-block
 intuition holds for neural architecture search exactly when the genome carries the
-solution, not only its shape.
+solution, not only its shape. \textbf{What is new here is not a method}: weight
+inheritance is the Lamarckian evolution of LEMONADE \cite{lemonade2019}, modular
+crossover is that of He et al.\ \cite{modxover2021}, and the random-search baseline is
+Li and Talwalkar \cite{li2019}. The contribution is a single, minimal, dependency-free,
+fully-reproducible implementation that unifies these under one through-line, with a
+concatenated-trap positive control that isolates precisely when recombination helps. It
+is a reproduction and synthesis, offered as such.
 \end{abstract}
 
 \section{Introduction}
@@ -319,6 +325,25 @@ structure is decisive, and given that structure as a reachable move, it finds it
 time, the local weight-sharing inductive bias LeCun introduced by hand, discovered by a
 network handed only the problem. That is the top-line goal this project set out from.
 
+\section{Relation to prior work}
+
+None of the mechanisms here is new, and it is important to say so plainly. Random
+search as a strong NAS baseline is Bergstra and Bengio \cite{bergstra2012} and Li and
+Talwalkar \cite{li2019}. Mutation-only evolutionary NAS with aging is Real et al.\
+\cite{real2019}. Weight inheritance, a child warm-started from its trained parent, is
+exactly the Lamarckian inheritance of LEMONADE \cite{lemonade2019}, built on the
+function-preserving weight transfer of Net2Net \cite{net2net2016} and Network Morphism
+\cite{netmorph2016}, and related to the parameter sharing of ENAS \cite{enas2018}.
+Crossover that inherits trained modules from two parents is the modular inheritable
+crossover of He et al.\ \cite{modxover2021}, and the alignment that makes topology
+crossover meaningful is NEAT's historical marking \cite{neat2002}. This work
+contributes no method beyond these. What it offers is a single, minimal, dependency-free
+implementation that reproduces and \emph{unifies} them under one honest through-line, a
+recombination operator helps exactly insofar as the genome carries separable,
+transferable building blocks, with a concatenated-trap positive control
+(Table~\ref{tab:bb}) isolating that condition, and every figure regenerable from one
+command. It is a reproduction and synthesis, not a discovery.
+
 \section{Discussion}
 
 The three experiments compose into one statement. Crossover's building-block advantage
@@ -401,6 +426,17 @@ the numbers are identical on re-running.
   Architecture Search. \emph{UAI} 2019.
 \bibitem{elsken2019} T.~Elsken, J.~H. Metzen, F.~Hutter. Neural Architecture Search:
   A Survey. \emph{JMLR} 20, 2019.
+\bibitem{lemonade2019} T.~Elsken, J.~H. Metzen, F.~Hutter. Efficient Multi-objective
+  Neural Architecture Search via Lamarckian Evolution. \emph{ICLR} 2019.
+\bibitem{net2net2016} T.~Chen, I.~Goodfellow, J.~Shlens. Net2Net: Accelerating
+  Learning via Knowledge Transfer. \emph{ICLR} 2016.
+\bibitem{netmorph2016} T.~Wei, C.~Wang, Y.~Rui, C.~W. Chen. Network Morphism.
+  \emph{ICML} 2016.
+\bibitem{enas2018} H.~Pham, M.~Y. Guan, B.~Zoph, Q.~V. Le, J.~Dean. Efficient Neural
+  Architecture Search via Parameter Sharing. \emph{ICML} 2018.
+\bibitem{modxover2021} C.~He, H.~Tan, S.~Huang, R.~Cheng. Efficient evolutionary
+  neural architecture search by modular inheritable crossover. \emph{Swarm and
+  Evolutionary Computation} 64, 2021.
 \bibitem{repo} V.~Gavrilov. SMBPANN: a self-modifying backpropagation feed-forward
   neural network. Source code, \url{https://github.com/Anode1/SMBPANN}.
 \end{thebibliography}
