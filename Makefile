@@ -64,9 +64,14 @@ release  : CFLAGS   = -O2
 %.o: %.c
 	$(CC) $(SMB_CFLAGS) $(SMB_VERDEF) $(CPPFLAGS) $(CFLAGS) -MMD -c $< -o $@
 
-.PHONY: all release debug pedantic clean ut ut-asan ut-ubsan check
+.PHONY: all release debug pedantic clean ut ut-asan ut-ubsan check bbtest
 
 all release debug pedantic: $(BIN) $(EVOLVE) $(GENTASK)
+
+# bbtest: a standalone building-block validation (validation/bbtest.c), separate
+# from the engine (its own PRNG, its own main). See its header and the paper.
+bbtest:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o bbtest validation/bbtest.c
 
 $(BIN): $(SMBPANN_OBJS)
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(SMBPANN_OBJS) $(LDLIBS) $(SMB_MATH)
@@ -98,6 +103,6 @@ ut-ubsan:
 	./$(TESTBIN)_ubsan
 
 clean:
-	-rm -f $(BIN) $(EVOLVE) $(GENTASK) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan $(OBJS) $(OBJS:.o=.d)
+	-rm -f $(BIN) $(EVOLVE) $(GENTASK) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan bbtest $(OBJS) $(OBJS:.o=.d)
 
 -include $(OBJS:.o=.d)
