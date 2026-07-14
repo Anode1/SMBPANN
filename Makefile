@@ -68,10 +68,13 @@ release  : CFLAGS   = -O2
 
 all release debug pedantic: $(BIN) $(EVOLVE) $(GENTASK)
 
-# bbtest: a standalone building-block validation (validation/bbtest.c), separate
-# from the engine (its own PRNG, its own main). See its header and the paper.
+# bbtest / modnas: standalone validation probes (validation/*.c), separate from
+# the engine (own PRNG, own main). bbtest = building-block crossover on trap
+# functions; modnas = a parallel-branch net (gradient-checked). See the paper.
 bbtest:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o bbtest validation/bbtest.c
+modnas:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o modnas validation/modular_nas.c $(SMB_MATH)
 
 $(BIN): $(SMBPANN_OBJS)
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $(BIN) $(SMBPANN_OBJS) $(LDLIBS) $(SMB_MATH)
