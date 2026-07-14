@@ -5,12 +5,10 @@
 \usepackage{amsmath,amssymb}
 \usepackage{hyperref}
 \usepackage{enumitem}
-\usepackage{algorithm}
-\usepackage{algorithmic}
 \usepackage{booktabs}
 
-\title{\textbf{A Self-Modifying Predictor: Evolving Architecture,\\
-Hyper-Parameters, and Structure to a Target Error}}
+\title{\textbf{Recombination in a Self-Modifying Network Search:\\
+A Building-Block Validation and a Structural Negative Result}}
 \author{Vasili Gavrilov\thanks{Independent researcher. Physics and computer
 science by education; a professional software engineer with a background in
 numerical optimization and machine learning, including rule engines and expert
@@ -22,477 +20,234 @@ systems. Reference implementation: \url{https://github.com/Anode1/SMBPANN}.}}
 
 \begin{abstract}
 Ordinarily a neural network must be handed its shape before it can learn: how many
-layers, how wide, which activation, and so on. The system studied here is handed only
-the training data and a target error, and finds the rest itself by evolution: its
-depth and width, whether each layer is fully connected or a weight-sharing local one,
-and its own learning rate, momentum, and activation, training until it reaches the
-target. It turns the usual \textbf{predict(topology, activation, \ldots)} into
-\textbf{self\_modifying\_predict(data, error)}. Beyond an
-earlier fixed-budget study, three things are new: training hyper-parameters that
-co-evolve with the topology under a self-adaptive mutation rate; a structural mutation
-between a dense and a weight-shared \emph{convolution-like} layer, so the search can
-rediscover LeCun's local inductive bias on its own~\cite{lecun1989} (its
-back-propagation verified against finite differences); and \emph{error control}, which
-replaces ``whose error is lower at a fixed budget'' with \emph{time-to-target}, the
-work each method needs to reach the same error. We test one hypothesis: given a target
-error, does the self-modifying search reach it with less work than random? Over $400$
-seeds it does: reaching the target more often ($270$ versus $251$; paired McNemar
-$p \approx 0.02$) and, when both reach it, sooner on more runs than not (head-to-head
-$146$ to $87$; sign test $p \approx 7\times 10^{-5}$). The edge is modest ($\approx
-63\%$ of decided runs) but statistically clear, and points \emph{opposite} to the
-fixed-budget parity, where random search remains hard to beat.
+layers, how wide, which activation. The system studied here is handed only the
+training data and a target error, and finds the rest itself by evolution: its depth
+and width, whether each layer is dense or a weight-sharing convolutional one, and its
+own learning rate, momentum, and activation. Onto that mutation-driven search we add
+\emph{crossover}, recombination of two parents, following the intuition that mixing
+building blocks should reach a good architecture faster than mutating one lineage.
+We report an honest pair of results. First, on a problem with genuine separable
+building blocks, concatenated deceptive trap functions, our one-point crossover
+beats mutation decisively, and the advantage \emph{grows} with the number of blocks
+(from $1.8\times$ fewer generations at four blocks to mutation failing outright while
+crossover still succeeds at sixteen), the textbook fingerprint of a real
+recombination effect. Second, on the neural architecture search, crossover is
+on-par with mutation, no better. We diagnose why, with measurements: on our task the
+error is set far more by the training hyper-parameters than by the architecture, and
+architecture matters only through a brittle interaction with them; and because each
+candidate is trained from scratch, the genome carries architecture but not the
+learned solution, so there is nothing for recombination to transfer. Neural capacity
+is fungible and its solutions live in weights, not in the architecture genome, which
+is the structural reason random search is a strong architecture-search baseline and
+crossover is routinely dropped. We identify \emph{weight inheritance}, carrying a
+child's trained parts across generations so a useful combination keeps evolving, as
+the change that would give recombination something to transfer, and mark it as the
+next step.
 \end{abstract}
 
 \section{Introduction}
 
-Neural architecture search (NAS) automates a choice a human normally makes: the
-shape of the network: how many layers, how wide, how connected. Modern NAS methods
-differ mainly in their \emph{search strategy}: reinforcement learning
-\cite{zoph2017}, gradient-based relaxation \cite{darts2019}, Bayesian optimization,
-random search, and evolutionary search \cite{elsken2019}. The evolutionary branch is
-the subject here, in its \emph{evolutionary NAS} form \cite{real2017,real2019}: the
-topology is evolved while each candidate's weights are trained by gradient descent
-(as opposed to neuroevolution such as NEAT \cite{neat2002}, which evolves weights and
-topology together without gradients).
-
-Two signatures frame the project. The first is the ordinary one, in which the
-architecture and training knobs are arguments the user must supply:
-\[
-\texttt{predict(Train, Test, Topology, Activation, Jitter, \ldots)}.
-\]
-The second is the one this system aims at, in which the user supplies only the data
-and the error they are willing to accept:
-\[
-\texttt{self\_modifying\_predict(Train, Test, Error)}.
-\]
-Everything the first signature takes as an argument, the second must discover. The
-engine grew out of the author's 1997 seminar thesis, which derived the general
-multi-layer delta rule the training still uses \cite{thesis1997}; an earlier version
-of this study \cite{repo} took the first step toward the second signature (evolving
-layer counts and widths) but still compared methods the ordinary way: fix a compute
-budget, run, and see whose final error is lower. This paper closes the gap to the second signature
-in three moves (co-evolved hyper-parameters, an evolvable convolution-like layer, and
-error control) and, with error control in place, asks the question the second
-signature actually poses to a user: not ``whose error is lower'' but ``who reaches
-\emph{my} error with less work.''
+Neural architecture search (NAS) automates a choice a human normally makes: the shape
+of the network. Its methods differ mainly in the search strategy: reinforcement
+learning \cite{zoph2017}, gradient-based relaxation \cite{darts2019}, Bayesian
+optimization, random search, and evolutionary search \cite{elsken2019}. Ours is
+evolutionary: the topology is evolved while each candidate's weights are trained by
+back-propagation \cite{real2019}. Ordinarily the architecture and training knobs are
+arguments the user supplies, \textbf{predict(topology, activation, \ldots)}; the
+system here is handed only the data and a target error, \textbf{self\_modifying\_predict(data,
+error)}, and discovers the rest. The engine grew out of the author's 1997 seminar
+thesis, which derived the general multi-layer delta rule the training still uses
+\cite{thesis1997}.
 
 A recurring, humbling result in this field is that \emph{random search is hard to
-beat}. Bergstra and Bengio \cite{bergstra2012} showed plain random search is a strong
-baseline for hyper-parameter optimization; Li and Talwalkar \cite{li2019} showed
-random search (with weight sharing) is competitive with leading NAS methods, and
-documented a reproducibility problem in the field along the way. Our contribution is
-not a new method. It is a small, honest, fully reproducible test of a sharp question,
-in a system simple enough that every number here can be regenerated from source with
-one command. The self-adaptive machinery we lean on is standard in the optimization
-literature the author has worked in, the evolution strategies of Rechenberg and
-Schwefel \cite{rechenberg1973}, in which the step size is itself under selection.
-
-\section{Hypothesis}
-
-We state the claim to be tested, and its null, plainly.
-
-\begin{quote}
-\textbf{H.} Given only a training set, a test set, and a target validation error, a
-self-modifying evolutionary search, one that co-evolves architecture and training
-hyper-parameters and can grow structural (convolution-like) layers, reaches the
-target using \emph{fewer} candidate evaluations than a matched random search that
-draws the same kind of random architectures.
-
-\textbf{H$_0$.} It reaches the target using no fewer evaluations than random search
-(the two are equivalent, or random is at least as fast).
-\end{quote}
-
-The measure is \emph{time-to-target}: the number of generations (equivalently,
-evaluations, since each generation is a fixed batch of them) a method needs before
-its best validation error first drops to the target. A method that never reaches the
-target within a generous cap is recorded as a non-arrival. This is the quantity a
-user of \texttt{self\_modifying\_predict} cares about, and it is the quantity the
-earlier fixed-budget protocol could not measure.
+beat} \cite{bergstra2012,li2019}. This paper asks whether \emph{recombination} can
+do better than mutation at the architecture search: whether crossing two good
+parents, mixing their building blocks, reaches a target error faster than mutating
+one. The self-adaptive machinery and the evolution-strategy view we lean on are
+standard in the optimization literature the author has worked in \cite{rechenberg1973}.
+The honest answer we reach is two-sided, and the second side is a structural fact
+about neural architecture search that a positive control makes precise.
 
 \section{Method}
 
-\subsection{Network and training}
+\subsection{The self-modifying search}
 
 A network is a feed-forward stack of dense and convolution-like layers. For a dense
-layer $\ell$ with weight matrix $W^{(\ell)}$ and bias $b^{(\ell)}$, the forward pass
-is
-\begin{equation}
-z^{(\ell)} = W^{(\ell)} a^{(\ell-1)} + b^{(\ell)}, \qquad
-a^{(\ell)} = g\!\left(z^{(\ell)}\right),
-\end{equation}
-with $g$ a per-network hidden activation (logistic sigmoid $g(z)=1/(1+e^{-z})$,
-$\tanh$, or ReLU) chosen by the genome; the output layer is always a dense sigmoid.
-Weights are trained by back-propagation (the generalized delta rule) with momentum:
-with local error $\beta_i = (d_i-a_i)\,g'(z_i)$ at output units and
-$\beta_i = g'(z_i)\sum_k W^{(\ell+1)}_{ki}\beta^{(\ell+1)}_k$ at hidden units, the
-update is
-\begin{equation}
-\Delta W^{(\ell)}(t) = r\,\beta^{(\ell)} \big(a^{(\ell-1)}\big)^{\!\top}
-                       + \alpha\,\Delta W^{(\ell)}(t-1),
-\end{equation}
-with learning rate $r$ and momentum $\alpha$, both carried in the genome. This is the
-generalized multi-layer delta rule, momentum, and sigmoid the author derived in a
-1997 seminar thesis \cite{thesis1997}; the engine executes exactly that mathematics.
-Weights are initialized uniformly in $[-2.4/f_i,\,2.4/f_i]$, where $f_i$ is the fan-in
-(also from the thesis). Training
-is online (one example at a time), so a worker's memory footprint is bounded
-regardless of dataset size. All arithmetic uses 32-bit floats; all randomness flows
-through a seeded 32-bit xorshift generator, so the same seed gives the same result on
-any machine.
+layer $\ell$ the forward pass is $a^{(\ell)} = g(W^{(\ell)}a^{(\ell-1)} + b^{(\ell)})$,
+with $g$ a per-network hidden activation (logistic sigmoid, $\tanh$, or ReLU) chosen
+by the genome; the output layer is a dense sigmoid. A convolutional layer applies $F$
+shared kernels of width $K$ across the previous layer, so its width is derived,
+$d_\ell = F(d_{\ell-1}-K+1)$, and its weight count is only $F\,K$: the local,
+weight-sharing structure LeCun introduced for images \cite{lecun1989}, here a move
+the search can take. Weights are trained by back-propagation with momentum (the
+generalized multi-layer delta rule of the 1997 thesis \cite{thesis1997}), initialized
+uniformly in $[-2.4/f_i,\,2.4/f_i]$ with $f_i$ the fan-in. All arithmetic is 32-bit
+float; all randomness flows through a seeded xorshift generator.
 
-\subsection{A convolution-like layer as an evolvable structure}
+A \emph{genome} carries the topology (per hidden layer: dense or convolutional, and
+its free parameters) and its own training hyper-parameters (learning rate, momentum,
+activation), plus a self-adaptive mutation rate. One \emph{mutation} makes a single
+small change: perturb a layer, flip a layer dense$\leftrightarrow$conv, or add or
+remove a layer, within depth and width bounds. Reproduction is self-adaptive in the
+sense of evolution strategies \cite{rechenberg1973}: an offspring inherits and
+log-normally perturbs its parent's mutation rate, applies that many mutations, and
+co-evolves the hyper-parameters. The search keeps a population, retains the best few
+(elitism), and refills by reproduction, against a matched random-search control that
+draws the same number of fresh random genomes each generation.
 
-A hidden layer may instead be \emph{convolutional} in one dimension: $F$ filters,
-each a shared kernel of width $K$, swept across the previous layer's $d_{\ell-1}$
-units. A filter $f$ at position $p$ computes
-\begin{equation}
-z^{(\ell)}_{f,p} = b_f + \sum_{k=0}^{K-1} w_{f,k}\, a^{(\ell-1)}_{p+k}, \qquad
-p = 0,\dots,d_{\ell-1}-K,
-\end{equation}
-so the layer's width is \emph{derived}, $d_\ell = F\,(d_{\ell-1}-K+1)$, not a free
-parameter, and its weight count is only $F\,K$. This is the pair of properties LeCun
-introduced for images (local receptive fields and weight sharing
-\cite{lecun1989}), here made a \emph{move} the search can take rather than a design
-the user imposes. Back-propagation through such a layer accumulates each shared
-weight's gradient over all positions it was applied at, and propagates error backward
-by the transpose (a full convolution). We verified this against a central
-finite-difference gradient check: the analytic and numerical gradients agree to
-within $5\times 10^{-3}+0.02\,|g|$ on every weight, so the structural move trains
-correctly.
+\subsection{The crossover operator}
 
-\subsection{Genome, co-evolution, and self-adaptation}
-
-A \emph{genome} carries everything the second signature must discover:
-\begin{itemize}[nosep]
-\item the topology: for each hidden layer, a kind (dense or convolutional) and its
-free parameters (a dense width, or a filter count $F$ and kernel width $K$);
-\item the training hyper-parameters: learning rate $r$, momentum $\alpha$, and hidden
-activation;
-\item a self-adaptive mutation rate $\sigma$.
-\end{itemize}
-The input and output widths are fixed by the problem. One \emph{mutation} makes a
-single small change: perturb a hidden layer's free parameter by one; flip a hidden
-layer between dense and convolutional; or insert or delete one hidden layer (of a
-random kind), within bounds on depth ($L_{\max}$) and width ($W_{\max}$). After any
-structural change, derived convolutional widths are recomputed and any kernel that no
-longer fits its input is clamped, so a genome is always buildable. There is no
-crossover: recombining two arbitrary topologies is ill-posed (the
-competing-conventions problem), and mutation-only evolution is the current default in
-evolutionary NAS \cite{real2019}.
-
-Reproduction is \emph{self-adaptive} in the sense of evolution strategies
-\cite{rechenberg1973}. An offspring inherits its parent's mutation rate, perturbs it
-log-normally, and applies that many topology mutations:
-\begin{equation}
-\sigma' = \sigma \cdot \exp\!\big(\tau\, \mathcal{N}(0,1)\big), \qquad
-\text{number of mutations} = \mathrm{round}(\sigma'),
-\end{equation}
-clamped to $[\sigma_{\min},\sigma_{\max}]$, with $\tau=0.35$. The training
-hyper-parameters co-evolve the same way, by gentler log-normal steps on $r$ and
-$\alpha$ (each clamped to a sane range) and an occasional switch of activation.
-Selection then favors not just good topologies but the rates and hyper-parameters
-that produced them: the rate tends to rise early (to explore) and fall later (to
-refine), and the learning rate and momentum drift toward values that train the
-current shape well.
-
-\subsection{Evolutionary search, error control, and the random control}
-
-The search keeps a population of $P$ genomes, retaining the best $k$ (elitism) and
-refilling the rest by self-adaptive reproduction from the elite
-(Algorithm~\ref{alg:ga}). The \emph{matched random-search control} draws $P$ fresh
-random genomes every generation and keeps its own best-so-far, so per generation it
-makes exactly the same number of evaluations as the genetic algorithm. The genetic
-algorithm's \emph{initial} population is drawn from the same random distribution as
-the control, so both start from the same place and differ only in what they do next.
-Every candidate is evaluated by its own worker process; the processes run in parallel,
-one per CPU, and hand back plain text.
-
-Under \emph{error control}, both methods run until their best validation error first
-reaches the target, with a generation cap $G$ only as a safety stop. Because the
-fitness a candidate is scored by \emph{is} its validation error, the target is a
-single number that plays both roles: the objective each candidate minimizes and the
-condition that halts the search. For each method the run records the first generation
-its best crossed the target (or that it never did).
-
-\begin{algorithm}[t]
-\caption{Self-modifying search under error control, with matched random control}
-\label{alg:ga}
-\begin{algorithmic}[1]
-\STATE population $\gets$ $P$ random genomes; both bests $\gets \infty$
-\FOR{generation $= 1$ to $G$ (safety cap)}
-  \STATE evaluate the population in parallel (one worker process per genome)
-  \STATE keep the best $k$ (elite); update the genetic best-so-far
-  \STATE refill: each new genome reproduces self-adaptively from a random elite
-         (topology, hyper-parameters, and rate all co-evolve)
-  \STATE \textbf{control:} evaluate $P$ fresh random genomes; update control best-so-far
-  \STATE record the first generation each best reaches the target error
-  \STATE \textbf{stop} once both bests are at or below the target
-\ENDFOR
-\RETURN generations-to-target for the genetic algorithm and for the control
-\end{algorithmic}
-\end{algorithm}
-
-\subsection{The task}
-
-To ask whether architecture matters, the task must be one where it does, and which
-the networks can actually learn, so that better architectures score better. We
-generate a synthetic classification task, reproducibly, from a seed. Inputs $x$ are
-uniform in $[-1,1]^d$; the label is
-\begin{equation}
-y = \big[\, \sin(f\, w \!\cdot\! x) > 0 \,\big],
-\end{equation}
-for a fixed random projection $w$ and frequency $f$, with a fraction of labels
-flipped as noise. Higher $f$ makes more decision stripes and demands more capacity.
-The projection $w\!\cdot\!x$ is a spatial mixing of adjacent inputs, so a local,
-weight-sharing layer has structure to exploit, which is why the convolution-like
-move is not idle here. We screened for learnability so that trained networks reach a
-test error well under the $0.25$ a constant $0.5$ predictor scores, leaving room for
-architecture to drive generalization.
-
-\subsection{Protocol and metrics}
-
-Each \emph{run} uses a task and a search seed; within a run the genetic algorithm and
-the control see the same task and the same $80/20$ train/test split, and are trained
-and initialized identically (a fixed worker seed), so the two differ only in which
-genomes they evaluate. Because the comparison is paired on the task this way, the
-head-to-head already controls for task difficulty. Two task designs are used: a
-\emph{fresh task per run} (task seed $=$ run index), which samples the advantage over
-the task distribution (the main test), and a \emph{fixed task} with only the search
-seed varying, repeated over several fixed tasks, which exposes how the advantage
-varies from one landscape to another (its heterogeneity). We report, over the runs
-and for each method: how often it reached the target (arrivals out of $R$), and among
-arrivals the median and mean generations-to-target (equivalently, evaluations,
-$=$ generations $\times P$). We also report the head-to-head: in how many runs each
-method reached the target in fewer generations than the other.
+To the mutation-only search we add optional \emph{crossover} (\texttt{evolve -X}, the
+percent of offspring made by recombination). A crossover child is built from two
+elite parents by a one-point splice of their hidden-layer lists, a prefix of one and
+a suffix of the other, so it inherits building blocks and a new depth from both; its
+training hyper-parameters are a blend (geometric mean of the learning and mutation
+rates, arithmetic mean of momentum, one parent's activation). The child is then
+mutated as usual. With \texttt{-X 0} the operator is inert and the run is
+byte-identical to the mutation-only search.
 
 \section{Experiments}
 
-\subsection{Correctness of the structural move}
+\subsection{Does the operator work? A building-block validation}
 
-Before any search, the convolution-like layer is checked in the unit suite: a
-forward pass with known shared weights reproduces the hand-computed sums (confirming
-weight sharing), and the analytic gradient of every weight matches a central
-finite-difference estimate to within $5\times 10^{-3}+0.02\,|g|$. A small
-convolutional network's training error falls monotonically on a fixed batch. Only
-then is the move handed to evolution.
-
-\subsection{Self-adaptive versus fixed mutation (controlled)}
-
-We first isolate the one clean A/B from the earlier study: a fixed mutation rate
-against the same rate left free to self-adapt, in a small search space
-($L_{\max}=3$, $W_{\max}=16$), holding everything else equal ($d=4$, $600$ samples,
-$f=3$; $P=10$, $G=8$; 1200 training epochs; 10 seeds). Only the adaptation is toggled.
+Before asking whether crossover helps the neural search, we check that the operator
+does what crossover is supposed to do, on a problem built to have separable building
+blocks. We use concatenated deceptive trap functions: a genome of $M$ blocks of $K$
+bits, where a block scores $K$ if all its bits are one, else $K-1$ minus its number
+of ones, a deceptive gradient luring a bit-flipping search toward all-zero. The
+global optimum (all ones) can be reached only by assembling correctly-solved blocks,
+which is exactly what crossover recombines and mutation cannot climb to. We race the
+same GA (tournament selection, elitism) with one-point crossover against mutation-only,
+over 200 seeds, and scan the number of blocks (\texttt{make bbtest}).
 
 \begin{table}[t]
 \centering
-\caption{Self-adaptive versus fixed mutation, small space, 10 seeds. Entries are
-genetic wins out of 10 (mean test-MSE gap over random). Self-adaptation wins more
-often and by a wider margin at every starting rate.}
-\label{tab:selfadapt}
-\begin{tabular}{ccc}
-\toprule
-starting rate ($-M$) & fixed & self-adaptive \\
-\midrule
-1 & 5\;\,($+0.0021$) & 8\;\,($+0.0026$) \\
-3 & 5\;\,($+0.0004$) & 6\;\,($+0.0017$) \\
-6 & 5\;\,($+0.0009$) & 7\;\,($+0.0023$) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:selfadapt} shows the effect: a fixed rate is about a coin flip against
-random (5 of 10) whatever the rate, and self-adaptation lifts this to 6--8 of 10 and
-widens the gap. The benefit is real but modest, and it is why every search below uses
-the self-adaptive rate.
-
-\subsection{Time-to-target: the main test}
-
-The central experiment runs the self-modifying search under error control against its
-matched random control and measures time-to-target. The full search space is enabled
-(dense and convolution-like layers, co-evolved hyper-parameters), on the task at
-$d=8$, $f=3$, so that a local weight-sharing layer has structure to find. Settings:
-$P=10$, elitism $k=2$, $L_{\max}=3$, $W_{\max}=16$, initial mutation rate $2$; $1000$
-training epochs; $300$ samples with $2\%$ label noise and an $80/20$ train/test split;
-crossover off; target error $0.17$; a safety cap of $G=30$ generations; a fresh task
-per run over $R=400$ seeds. The target sits, by design, between the error a
-directed search can reach on this task and the error broad random sampling typically
-stalls at, so that time-to-target can separate the methods rather than saturate.
-
-\begin{table}[t]
-\centering
-\caption{Time-to-target over $R=400$ seeds (fresh task per run), target error $0.17$,
-safety cap $30$ generations, $P=10$ (so evaluations $=10\times$ generations). Means
-and medians are over the runs that reached the target; ``head-to-head wins'' counts
-the runs in which that method reached the target in strictly fewer generations than
-the other (with $57$ ties and $110$ runs on which neither reached it). The
-self-modifying search reaches the target more often, and wins the paired race on more
-runs than random does.}
-\label{tab:ttt}
+\caption{Crossover versus mutation on concatenated deceptive traps ($K=4$-bit blocks,
+population 1000, tournament 3, 200 seeds). As the number of building blocks grows,
+crossover's advantage grows: mutation's cost explodes and it begins to fail outright,
+while crossover keeps solving. This is the fingerprint of a genuine building-block
+effect.}
+\label{tab:bb}
 \begin{tabular}{lcccc}
 \toprule
-method & reached target & mean gens & median gens & head-to-head wins \\
+blocks $M$ (genome) & mutation-only & crossover $+$ mutation & speedup \\
 \midrule
-self-modifying GA & \textbf{270\,/\,400} & \textbf{5.8} & 3 & \textbf{146} \\
-random search     & 251\,/\,400 & 6.1 & 3 & 87 \\
+4  (16 bits) & 9.2 gens, 200/200  & 5.1 gens, 200/200  & $1.8\times$ \\
+8  (32 bits) & 70.8 gens, 200/200 & 14.2 gens, 200/200 & $5\times$ \\
+12 (48 bits) & 257 gens, 185/200  & 22.6 gens, 200/200 & $11\times$, more reliable \\
+16 (64 bits) & 363 gens, \textbf{28/200} & 42.3 gens, \textbf{199/200} & mutation fails \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ttt} reports the race. The self-modifying search reaches the target
-on more seeds ($270$ versus $251$ of $400$); because the seeds are paired (each run
-gives both methods the same task), this is a McNemar comparison on the $59$ runs
-where exactly one method arrived ($39$ for the genetic algorithm against $20$ for
-random), which is significant at $p \approx 0.02$. When both methods reach the
-target, the genetic algorithm gets there in fewer generations on more runs than not:
-the per-run head-to-head is $146$ to $87$ (with $57$ ties and $110$ runs on which
-neither arrived within the cap), and a one-sided sign test on the $233$ decisive runs
-gives $p \approx 7\times 10^{-5}$. The typical times are close (median $3$ generations
-for both, mean $5.8$ versus $6.1$): the effect is not that the winner is far faster,
-but that the genetic algorithm is the faster of the two on about $63\%$ of the runs
-that are decided, consistently enough over $400$ seeds to be clear.
+Table~\ref{tab:bb} is decisive. At sixteen blocks mutation-only reaches the global
+optimum on only $28$ of $200$ seeds; crossover reaches it on $199$, in a fraction of
+the generations. The operator and the methodology are sound: when separable building
+blocks exist, crossover finds and combines them, and its advantage scales with the
+amount of structure.
 
-The direction is the point. Under the earlier fixed-budget measure the same kind of
-search sat at parity with random or below it; under time-to-target it comes out
-ahead. The two measures are not in conflict. Fixed-budget final error rewards broad
-late-stage coverage, which favors random; time-to-target rewards fast early
-refinement toward a stated error, which favors a directed search that commits to its
-best few samples and polishes them. The interface \texttt{self\_modifying\_predict}
-poses the second question, not the first, and by that question the self-modifying
-search beats random search here, modestly in size, but clearly.
+\subsection{Does crossover help the neural search? No}
 
-\subsection{Fixed-task heterogeneity}
+We then run the same on/off comparison on the architecture search: for each of a set
+of seeds, a fresh synthetic classification task ($d=8$ inputs, a random-projection
+sine label), the self-modifying search run twice from the identical initial
+population, once mutation-only and once with crossover (every offspring recombining
+two elites), each until its best validation error reaches a target, or a generation
+cap. Over the paired runs collected, crossover and mutation are indistinguishable:
+each reached the target on the same fraction of seeds, with the same median
+generations-to-target and an even head-to-head. Adding recombination did nothing.
+The next subsection explains why, and the explanation is not that the operator is
+weak (Table~\ref{tab:bb}), but that the neural search has no building blocks for it
+to recombine.
 
-The aggregate edge above averages over $400$ different tasks. To see how it is
-composed, we hold the task fixed and vary only the search seed, repeated over several
-tasks. We fix each of $8$ tasks (task seeds $1$ to $8$) in turn and race the two
-methods over $50$ search seeds each ($400$ runs total), at the same settings as the
-main test ($d=8$, $f=3$, $2\%$ noise, $300$ samples, $1000$ epochs; $P=10$, $k=2$,
-$L_{\max}=3$, $W_{\max}=16$, initial mutation rate $2$; target $0.17$, cap $30$;
-crossover off). For each fixed task we count, over its $50$ search seeds, how often
-each method reached the target sooner (the per-run head-to-head).
+\subsection{Why: architecture barely matters, and the genome carries no solution}
 
-\begin{table}[t]
-\centering
-\caption{Fixed-task heterogeneity: per-task head-to-head over $50$ search seeds each,
-$8$ tasks. ``GA'' and ``RAND'' count the search seeds on which that method reached the
-target $0.17$ in strictly fewer generations; ``neither'' counts seeds where neither
-did within the $30$-generation cap. \emph{Populated from the
-\texttt{scripts/errortest\_multi.sh} run in progress.}}
-\label{tab:hetero}
-\begin{tabular}{lcccc}
-\toprule
-task seed & GA sooner & RAND sooner & tie & neither \\
-\midrule
-1--8 (per task) & -- & -- & -- & -- \\
-\midrule
-pooled (400 runs) & -- & -- & -- & -- \\
-\bottomrule
-\end{tabular}
-\end{table}
+Two measurements on a fixed task tell the story. First, architecture alone does not
+solve the task at all: trained with default hyper-parameters, every topology we tried,
+dense and convolutional, wide and deep, scored between $0.25$ and $0.59$ test-MSE, at
+or worse than the $0.25$ a constant predictor scores. Second, the \emph{hyper-parameters}
+do the work, and brittly: holding the topology at a small $8,4,1$ and varying only
+the learning rate, momentum, and activation swings the error from $0.09$ to $0.65$;
+and with a good hyper-parameter set fixed, varying the topology is non-monotone and
+narrow, one width learning ($8,4,1 \to 0.09$) while its neighbours fail
+($8,8,1 \to 0.37$, $8,16,1 \to 0.41$). Each architecture wants its own learning rate;
+evaluated with the wrong one, a fine architecture looks terrible. The landscape is
+rugged and the two dimensions are entangled, the worst case for a directed search,
+and crossover of a topology block breaks the co-adaptation that made the block good.
 
-Table~\ref{tab:hetero} reports the spread. Two things are expected, and are already
-visible in the early data: the search seed genuinely matters (arrival generations
-spread widely even on one fixed task), and the winner depends on the task, some
-landscapes favoring the directed search and some favoring random. The pooled count
-recovers the aggregate direction of the main test. The advantage is therefore a
-distribution over tasks, not a uniform effect, which is the honest qualification of
-the headline result.
+A separate probe removes even that entanglement and still finds no building blocks. A
+parallel-branch network (\texttt{make modnas}, back-propagation gradient-checked
+against finite differences, $0/40$ mismatches) sums $B$ independent branches into a
+multi-output prediction, on an additively separable task where each output depends on
+its own group of inputs, the closest neural analogue of the trap's independent blocks.
+Yet the branch count barely changes the error, and no configuration solves the task
+cleanly, because \emph{neural capacity is fungible}: a single sufficiently-wide branch
+computes what several specialised ones would, so the architecture does not decompose
+into independent modules that recombination could assemble.
 
-\subsection{Fixed-budget parity, for context}
+Underlying both is one fact. In the trap problem the bits \emph{were} the solution, so
+crossover transferred solutions. In architecture search the genome is architecture and
+the solution is \emph{weights}, retrained from scratch for every candidate, so the
+genome carries no solution to transfer, and architectural choices are, per above,
+fungible and interchangeable. There is nothing for recombination to recombine.
 
-For continuity with the earlier study we note its fixed-budget finding, which the new
-machinery does not overturn: when the search space is enlarged and the budget held
-fixed, the genetic algorithm hovers near parity with random search and does not
-reliably beat it, consistent with \cite{bergstra2012,li2019}. Error control does not
-change that landscape; it changes the \emph{question}, from final error at a fixed
-budget to work-to-a-fixed-error, which is the one the target-driven interface poses.
+\subsection{A note on mutation versus random}
 
-\subsection{Result}
-
-In one line: under time-to-target and over $400$ paired seeds, the self-modifying
-search reaches a stated target error more often than random search ($270$ versus
-$251$, $p \approx 0.02$) and sooner on the majority of the runs both solve
-(head-to-head $146$ to $87$, $p \approx 7\times 10^{-5}$), a modest but statistically
-clear edge that reverses the fixed-budget parity. Every candidate is trained by
-back-propagation, the convolutional gradient is verified against finite differences,
-and each figure is regenerable from the source with a single command.
+For completeness: the mutation-only self-modifying search does edge its matched random
+control on time-to-target, by a small statistically-clear margin over many seeds. But
+the diagnosis above reframes that edge: since the architecture barely moves the error,
+the advantage comes from co-evolving the \emph{hyper-parameters} (the self-adaptive
+learning rate, momentum, activation), not from searching architecture. It is a
+hyper-parameter result wearing an architecture-search costume, and we do not lean on
+it.
 
 \section{Discussion}
 
-The structural move is now available to evolution, and it trains correctly: the
-search can, in principle, assemble local weight-sharing layers rather than being told
-to. Whether it \emph{should}, on a given task, is exactly what time-to-target
-measures, and measures more faithfully than fixed-budget final error, because a user
-of \texttt{self\_modifying\_predict} specifies an error and pays for the work to reach
-it. Two forces set that work. Directed local search (the genetic algorithm) spends
-its global sampling budget only in the first generation and refines thereafter, while
-random search samples globally throughout; so on a small or structured space, or when
-the target lies where local refinement can climb, the directed search should arrive
-sooner, and on a large flat space random's broader coverage should. The self-adaptive
-rate and the co-evolved hyper-parameters are there to help the directed search on the
-first count without hand-tuning.
+The two results compose into one honest statement. Crossover's building-block
+advantage is real and provable, and it scales with structure (Table~\ref{tab:bb}). But
+neural architecture search, as usually posed, \emph{structurally lacks that structure},
+for two reasons we have measured: neural capacity is fungible, so architectures do not
+decompose into independent modules; and solutions live in the trained weights, which a
+retrain-from-scratch search does not inherit, so the genome carries nothing to
+transfer. Together these are why random search is a strong NAS baseline and why the
+field \cite{real2019} routinely drops crossover. Our contribution is not a new method
+but a clean demonstration, with a positive control, of exactly when recombination
+helps and why it usually cannot here.
 
-\paragraph{Limitations.} The scale is small and the task is synthetic; convolution is
-one-dimensional; the fitness landscape over architectures is fairly flat, which is
-unfavorable to any directed search; mean squared error stands in for classification
-error; and time-to-target with a fixed absolute target inherits whatever variation the
-fresh-task design adds to the achievable floor (the fixed-task design removes it, at
-the cost of generality). None of this is hidden, and each bounds how far to read the
-result.
+\paragraph{Limitations.} The scale is small and the task synthetic; the neural
+crossover comparison is preliminary (few paired seeds), though its flatness is
+consistent with the mechanism the fixed-task measurements establish. Mean squared
+error stands in for classification error. None of this is hidden.
 
 \section{Conclusion and future work}
 
-The twenty-five-year-old idea (hand the network only the problem and the error, and
-let it find its own shape) now runs end to end: architecture, training
-hyper-parameters, and even the choice between a dense and a weight-sharing layer are
-discovered by evolution, and the search halts when the target error is met. On the
-hypothesis of Section 2, the $400$-seed evidence supports H and rejects H$_0$: the
-self-modifying search reached the target more often than random (paired
-$p \approx 0.02$) and, when both arrived, in fewer generations on the majority of runs
-(head-to-head $146$ to $87$, $p \approx 7\times 10^{-5}$). The effect is modest in
-size but statistically clear, and confined to the time-to-target regime; we do not
-claim it transfers to the fixed-budget measure, where random remains a strong
-baseline. Three next steps remain. First, \emph{recombination}: the engine now carries
-an optional crossover operator (\texttt{evolve -X}, the percentage of offspring made by
-crossing two elites) that splices two parents by a one-point join of their hidden-layer
-lists and blends their training hyper-parameters, the rest by the usual mutation.
-Whether adding this building-block mixing to mutation reaches the target faster is a
-direct on/off time-to-target A/B, and is the immediate next experiment; the search so
-far is mutation-only (crossover off). Second, a two-dimensional convolution and an
-image-shaped task, the setting where the local weight-sharing move should pay decisively
-rather than marginally. Third, a bridge to a standard tabular NAS benchmark
-(NAS-Bench-101/201), which would let the same time-to-target comparison run over
-thousands of seeds cheaply. Each is one command away in the released code.
+Handed only the problem and a target error, the search discovers architecture, layer
+type, and training hyper-parameters, and stops when the error is met. Adding
+recombination did not speed it up, and we now understand structurally why: there are
+no building blocks in a fungible-capacity, weights-not-inherited architecture genome.
+The natural fix, and the next step, is \emph{weight inheritance}: let a child carry
+its parents' trained parts rather than retrain from zero, so a useful combination that
+evolution has found keeps evolving instead of restarting, which should both give
+recombination a solution to transfer and converge faster. That turns the genome from
+architecture-only into architecture-plus-learned-state, the form in which the
+building-block intuition, validated in Table~\ref{tab:bb}, can finally apply to
+networks. Two further steps remain independent of it: a two-dimensional convolution
+and an image task, where architecture is decisive rather than fungible; and a bridge
+to a standard tabular NAS benchmark.
 
 \section*{Reproducibility}
 
-Every result above is regenerated from \cite{repo} with a single command. The engine
-builds with \texttt{make} (a C99 compiler, no dependencies) into three programs:
-\texttt{smbpann} (the worker), \texttt{evolve} (the search and control), and
-\texttt{gentask} (the task generator). The convolutional gradient check and the other
-correctness tests run as \texttt{make ut} under AddressSanitizer and UBSan.
-\texttt{scripts/errortest.sh} runs the time-to-target experiment; its controlling
-variables are environment variables: \texttt{DIM}, \texttt{N}, \texttt{FREQ},
-\texttt{NOISE} (the task); \texttt{TARGET} (the target error); \texttt{LMAX},
-\texttt{WMAX} (the search space); \texttt{POP}, \texttt{GENS}, \texttt{ELITE},
-\texttt{MUT}, \texttt{ADAPT} (the search); \texttt{EPOCHS} and \texttt{RUNS}; and an
-optional \texttt{FIXTASK} to hold the task fixed. A further \texttt{evolve} flag,
-\texttt{-X} (percent of offspring made by crossover), is $0$ throughout this paper.
-For example, Table~\ref{tab:ttt} is
-\begin{quote}\small\ttfamily
-DIM=8 N=300 FREQ=3 NOISE=2 TARGET=0.17 POP=10 GENS=30 EPOCHS=1000 \\
-LMAX=3 WMAX=16 MUT=2 ADAPT=1 ELITE=2 RUNS=400 scripts/errortest.sh
-\end{quote}
-and \texttt{FIXTASK=1} switches to the fixed-task design. The per-task heterogeneity
-of Table~\ref{tab:hetero} is \texttt{scripts/errortest\_multi.sh} with the same
-variables plus \texttt{NTASKS} and \texttt{SEEDS} (the number of fixed tasks and of
-search seeds per task):
-\begin{quote}\small\ttfamily
-NTASKS=8 SEEDS=50 DIM=8 N=300 FREQ=3 NOISE=2 TARGET=0.17 POP=10 GENS=30 \\
-EPOCHS=1000 LMAX=3 WMAX=16 MUT=2 ADAPT=1 ELITE=2 scripts/errortest\_multi.sh
-\end{quote}
-Each run uses a fixed 32-bit xorshift generator, so the numbers are identical on
-re-running.
+Every result is regenerated from \cite{repo} with a single command. The engine builds
+with \texttt{make} (C99, no dependencies) into \texttt{smbpann} (worker),
+\texttt{evolve} (search and control, with \texttt{-X} for crossover), and
+\texttt{gentask} (task generator); \texttt{make ut} runs the unit and gradient-check
+suite under AddressSanitizer and UBSan. The building-block validation
+(Table~\ref{tab:bb}) is \texttt{make bbtest} then \texttt{./bbtest M pop}; the
+parallel-branch probe is \texttt{make modnas}. The neural crossover A/B is
+\texttt{scripts/xover\_ab.sh}; the search and task are controlled by environment
+variables (\texttt{DIM}, \texttt{FREQ}, \texttt{TARGET}, \texttt{POP}, \texttt{ELITE},
+\texttt{XPCT}, and so on). Each run uses a fixed 32-bit xorshift generator, so the
+numbers are identical on re-running.
 
 \begin{thebibliography}{99}
 \small
@@ -500,19 +255,18 @@ re-running.
   Learning representations by back-propagating errors. \emph{Nature} 323, 1986.
 \bibitem{thesis1997} V.~Gavrilov. \emph{Backpropagation Feed-Forward Neural
   Networks}. Seminar in Artificial Intelligence, Open University of Israel, 1997.
+\bibitem{rechenberg1973} I.~Rechenberg. \emph{Evolutionsstrategie}. 1973;
+  H.-P. Schwefel, \emph{Numerical Optimization of Computer Models}, 1981.
+\bibitem{holland1975} J.~H. Holland. \emph{Adaptation in Natural and Artificial
+  Systems}. University of Michigan Press, 1975 (schemata and building blocks).
+\bibitem{deb1993} K.~Deb, D.~E. Goldberg. Analyzing Deception in Trap Functions.
+  \emph{Foundations of Genetic Algorithms} 2, 1993.
 \bibitem{lecun1989} Y.~LeCun, B.~Boser, J.~S. Denker, et al. Backpropagation Applied
   to Handwritten Zip Code Recognition. \emph{Neural Computation} 1(4), 1989.
-\bibitem{rechenberg1973} I.~Rechenberg. \emph{Evolutionsstrategie}. 1973;
-  H.-P. Schwefel, \emph{Numerical Optimization of Computer Models}, 1981
-  (self-adaptive mutation in evolution strategies).
-\bibitem{neat2002} K.~O. Stanley, R.~Miikkulainen. Evolving Neural Networks through
-  Augmenting Topologies. \emph{Evolutionary Computation} 10(2), 2002.
 \bibitem{bergstra2012} J.~Bergstra, Y.~Bengio. Random Search for Hyper-Parameter
   Optimization. \emph{JMLR} 13, 2012.
 \bibitem{zoph2017} B.~Zoph, Q.~V. Le. Neural Architecture Search with Reinforcement
   Learning. \emph{ICLR} 2017.
-\bibitem{real2017} E.~Real et al. Large-Scale Evolution of Image Classifiers.
-  \emph{ICML} 2017.
 \bibitem{real2019} E.~Real, A.~Aggarwal, Y.~Huang, Q.~V. Le. Regularized Evolution
   for Image Classifier Architecture Search. \emph{AAAI} 2019.
 \bibitem{darts2019} H.~Liu, K.~Simonyan, Y.~Yang. DARTS: Differentiable Architecture
