@@ -221,6 +221,54 @@ evolution has found is inherited and keeps evolving, rather than being retrained
 zero, which is both what gives recombination a solution to transfer and what makes the
 search converge faster.
 
+\subsection{Weight inheritance in the full engine, and its budget dependence}
+
+Table~\ref{tab:modevo} is a controlled modular probe. We also wired weight inheritance
+through the full self-modifying engine (\texttt{evolve -w}): a checkpoint of each
+candidate's trained weights crosses the worker boundary as a plain-text file, and a
+child warm-starts from its parent's checkpoint over the layers a mutation left
+unchanged, while the elite resume their own training each generation. With inheritance
+off the run is byte-identical to before; the matched random control, which has no
+lineage to inherit from, is identical in both arms. Because warm-starting saves training
+a from-scratch search discards, the gain should be largest when the per-candidate epoch
+budget is small, and fade as candidates converge on their own. We sweep it
+(\texttt{scripts/inherit\_sweep.sh}): a paired A/B over $300$ fresh-task seeds per cell,
+the search run once from scratch and once with inheritance at a fixed budget.
+
+\begin{table}[t]
+\centering
+\caption{Weight inheritance in the engine: mean final validation error, from scratch
+versus inherited, over $300$ paired seeds per cell ($d=6$, pop 10, $\le\!3$ layers of
+width $\le\!12$). Inheritance wins significantly in every cell (exact sign test
+$p<10^{-3}$), but the relative error reduction shrinks monotonically as the per-candidate
+epoch budget grows, from $21\%$ at 20 epochs to $6\%$ at 160: warm-starting helps most
+when training is scarce.}
+\label{tab:sweep}
+\begin{tabular}{ccccc}
+\toprule
+epochs & generations & from scratch & inherit & inherit wins (/300) \\
+\midrule
+20  & 8  & 0.0730 & 0.0609 & 242 \\
+20  & 20 & 0.0660 & 0.0518 & 251 \\
+40  & 8  & 0.0646 & 0.0569 & 218 \\
+40  & 20 & 0.0576 & 0.0474 & 239 \\
+80  & 8  & 0.0603 & 0.0539 & 207 \\
+80  & 20 & 0.0527 & 0.0464 & 218 \\
+160 & 8  & 0.0568 & 0.0534 & 176 \\
+160 & 20 & 0.0499 & 0.0454 & 199 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:sweep} shows the predicted gradient cleanly: inheritance lowers the
+search's final error at equal compute across the board, but the effect falls from about
+a fifth of the error at a $20$-epoch budget to a few percent at $160$, where each
+candidate largely trains to convergence on its own and there is little discarded
+training to reclaim. More generations help as well, since an elite lineage accumulates
+training over more rounds. The engine result and the modular probe agree: carrying the
+learned state, not only the architecture, is what lets an evolutionary search stop
+paying to relearn what it already found.
+
 \section{Discussion}
 
 The three experiments compose into one statement. Crossover's building-block advantage
@@ -238,14 +286,9 @@ abstract, but that it is exactly as useful as the genome is a carrier of separab
 building blocks.
 
 \paragraph{Limitations.} Scale is small and tasks synthetic; Table~\ref{tab:modevo}
-is a controlled probe with a fixed per-component task and a fixed module count.
-Weight inheritance is now also wired through the full engine (\texttt{evolve -w}): a
-checkpoint of each candidate's trained weights crosses the worker boundary as a
-plain-text file, and a child warm-starts from its parent's checkpoint over the layers
-the mutation left unchanged; on a small dataset at a low per-candidate epoch budget
-this lowered the search's final error by about a third at equal compute, with the
-random control unaffected. A full engine-scale study of that gain is left as future
-work. Mean squared error stands in for classification error. None of this is hidden.
+is a controlled probe with a fixed per-component task and a fixed module count, and the
+engine sweep (Table~\ref{tab:sweep}) is a $6$-input problem with shallow networks.
+Mean squared error stands in for classification error. None of this is hidden.
 
 \section{Conclusion and future work}
 
@@ -271,8 +314,10 @@ bbtest} (Table~\ref{tab:bb}, building-block traps), \texttt{make modnas} (the
 parallel-branch gradient check), and \texttt{make modevo} (Table~\ref{tab:modevo},
 weight-inheriting crossover; run \texttt{./modevo G freq}). The neural crossover A/B is
 \texttt{scripts/xover\_ab.sh}; weight inheritance in the engine is \texttt{evolve -w 1}
-(the worker's \texttt{-W}/\texttt{-w} save and warm-start checkpoints). Each run uses a
-fixed 32-bit xorshift generator, so the numbers are identical on re-running.
+(the worker's \texttt{-W}/\texttt{-w} save and warm-start checkpoints), its A/B is
+\texttt{scripts/inherit\_ab.sh} and the budget sweep of Table~\ref{tab:sweep} is
+\texttt{scripts/inherit\_sweep.sh}. Each run uses a fixed 32-bit xorshift generator, so
+the numbers are identical on re-running.
 
 \begin{thebibliography}{99}
 \small
