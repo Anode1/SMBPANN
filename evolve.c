@@ -76,7 +76,7 @@ static void ck_path(char *buf, size_t bufsz, long pid, long gen, size_t slot)
  * Each slot saves to its own generation-tagged file; a slot warm-starts from
  * WSRC[i], the file its source wrote last generation. Returns 0 or -1. */
 static int write_pop_ck(const char *path, const Genome *pop, size_t n,
-                        const char (*wsrc)[160], long pid, long gen)
+                        char (*wsrc)[160], long pid, long gen)
 {
     FILE  *f = fopen(path, "w");
     char   buf[256], save[160];
