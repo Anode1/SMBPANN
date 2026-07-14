@@ -304,20 +304,20 @@ $0.1\%$ error and the dense network near chance ($39\%$). Here architecture is n
 fungible, the right structure carries the solution and the wrong one cannot reach it
 with limited data. This is the regime in which architecture search should pay.
 
-Running the engine's own search on this task closes the loop. We generate the same
-motif task as a dataset (\texttt{gentask -I 8}) and run the self-modifying search on
-it at a low per-candidate epoch budget, where a convolution's efficiency shows. Over
-$8$ seeds the search climbs from a dense start to a \emph{convolutional} architecture
-in $6$, and those convolutional runs reach $10$ to $100$ times lower error than the
-dense ones (best conv $\approx 2\times10^{-6}$ versus dense $\approx 3\times10^{-4}$
-test-MSE). On the earlier fungible tasks the search had no reason to prefer
-convolution and did not; handed a task where structure is decisive, it discovers
-convolution on its own, the local weight-sharing inductive bias LeCun introduced by
-hand, which is the top-line goal this project set out from: a network handed only the
-problem that finds the structure the problem needs. (The engine's convolution is
-one-dimensional over the row-major image, which already exposes enough local structure
-to be decisive here; a native 2D convolution in the search space is the clean
-refinement.)
+Running the engine's own search on this task closes the loop, and the project's arc.
+The genome's search space includes a \emph{native 2D convolution} front-end,
+$F$ filters of $K\times K$ swept over the $S\times S$ image with a global max-pool per
+filter (\texttt{conv2f}, its back-propagation gradient-checked against finite
+differences), the operation LeCun designed for images, which the search may switch on
+and tune. We generate the motif task as a dataset (\texttt{gentask -I 8}) and run the
+self-modifying search on it at a low per-candidate epoch budget. Over $40$ fresh image
+seeds the search discovers the 2D convolution in \emph{every one}, reaching a median
+test-MSE of $2\times10^{-7}$, roughly five orders of magnitude below the dense
+architectures it can equally build ($\approx 2\times10^{-2}$). On the earlier fungible
+tasks the search had no reason to prefer convolution and did not; handed a task where
+structure is decisive, and given that structure as a reachable move, it finds it every
+time, the local weight-sharing inductive bias LeCun introduced by hand, discovered by a
+network handed only the problem. That is the top-line goal this project set out from.
 
 \section{Discussion}
 
@@ -351,10 +351,11 @@ through the engine as well (\texttt{evolve -w}): children warm-start from their
 parents' checkpointed weights, and the search reaches a lower error at equal compute.
 We also showed the regime these methods are built for exists, and that the search
 works in it: on a translation-invariant image task a convolution is decisive where a
-dense network fails (Table~\ref{tab:conv2d}), and the engine's own search, run there,
-discovers convolution on its own in most seeds. The remaining steps are refinements: a
-native 2D convolution in the search space (the engine's is 1D over the flattened
-image), and a bridge to a standard tabular NAS benchmark.
+dense network fails (Table~\ref{tab:conv2d}), and the engine's search, given a native
+2D convolution as a reachable move, discovers it there in every one of $40$ seeds,
+reaching an error five orders of magnitude below the dense alternative. The clear
+remaining step is a bridge to a standard tabular NAS benchmark, to run the same
+comparisons over thousands of seeds cheaply.
 
 \section*{Reproducibility}
 
