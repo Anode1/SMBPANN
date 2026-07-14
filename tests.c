@@ -15,6 +15,7 @@
 
 #include "act.h"
 #include "arena.h"
+#include "ckpt.h"
 #include "common.h"
 #include "data.h"
 #include "genome.h"
@@ -435,6 +436,41 @@ int main(void)
             }
             CHECK(ok, "conv: a convolutional net trains (error falls)");
         }
+    }
+
+    /* ckpt: save then warm-start restores identical weights (round-trip); an
+     * incompatible target inherits nothing, keeping its own init (no corruption) */
+    {
+        const char *path = "/tmp/smb_ckpt_ut.tmp";
+        size_t dims[3] = {3, 5, 2}, dims2[3] = {3, 6, 2};
+        Rng r;
+        Net *a, *b, *c;
+        int same = 1, untouched = 1;
+        size_t l, i;
+
+        rng_seed(&r, 7);
+        a = net_new(dims, 3); net_init(a, &r);
+        b = net_new(dims, 3); rng_seed(&r, 99); net_init(b, &r);   /* different init */
+        c = net_new(dims2, 3); rng_seed(&r, 99); net_init(c, &r);  /* incompatible mid layer */
+        if (a && b && c && ckpt_save(a, path) == 0) {
+            Net cbefore = *c;                     /* shallow snapshot of pointers */
+            smb_real w0 = c->w[1][0];
+            ckpt_warmstart(b, path);
+            ckpt_warmstart(c, path);
+            for (l = 1; l < 3; l++) {
+                size_t ws = net_layer_wsize(a, l);
+                for (i = 0; i < ws; i++)
+                    if (a->w[l][i] != b->w[l][i]) same = 0;
+            }
+            if (c->w[1][0] != w0) untouched = 0;  /* layer 1 (5 vs 6) must not change */
+            (void)cbefore;
+            CHECK(same, "ckpt: warm-start restores identical weights");
+            CHECK(untouched, "ckpt: incompatible layer keeps its own init");
+        } else {
+            CHECK(0, "ckpt: setup");
+        }
+        net_free(a); net_free(b); net_free(c);
+        remove(path);
     }
 
     printf("\n%d checks, %d failed\n", t_run, t_fail);

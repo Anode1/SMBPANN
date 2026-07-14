@@ -22,6 +22,7 @@
 #include "common.h"
 #include "data.h"
 #include "genome.h"
+#include "ckpt.h"
 #include "net.h"
 #include "rng.h"
 #include "train.h"
@@ -51,6 +52,8 @@ static void usage(const char *prog)
         "  -m momentum  momentum coefficient                (default 0.9)\n"
         "  -s seed      PRNG seed                           (default 1)\n"
         "  -H hidden    hidden width for the XOR default    (default 4)\n"
+        "  -w file      warm-start weights from a parent checkpoint (inheritance)\n"
+        "  -W file      save trained weights to a checkpoint after training\n"
         "  -q           quiet: print only the RESULT line\n"
         "  -v           print version and exit\n"
         "  -h           print this help and exit\n",
@@ -174,6 +177,7 @@ int main(int argc, char **argv)
     long   ninput = 0, noutput = 0;
     double rate = 0.5, momentum = 0.9, frac = 0.8;
     char  *topo_arg = NULL, *file = NULL, *spec_arg = NULL;
+    char  *warm_path = NULL, *save_path = NULL;
     int    activation = ACT_SIGMOID;
     int    quiet = 0, c;
 
@@ -188,7 +192,7 @@ int main(int argc, char **argv)
     double   train_err = 0.0, test_err = 0.0, fitness = 0.0;
     int      rc = 0;
 
-    while ((c = getopt(argc, argv, "g:t:f:i:o:p:e:r:m:s:H:qvh")) != -1) {
+    while ((c = getopt(argc, argv, "g:t:f:i:o:p:e:r:m:s:H:w:W:qvh")) != -1) {
         switch (c) {
         case 'g': spec_arg = optarg; break;
         case 't': topo_arg = optarg; break;
@@ -201,6 +205,8 @@ int main(int argc, char **argv)
         case 'm': momentum = atof(optarg); break;
         case 's': seed     = atol(optarg); break;
         case 'H': hidden   = atol(optarg); break;
+        case 'w': warm_path = optarg; break;
+        case 'W': save_path = optarg; break;
         case 'q': quiet    = 1; break;
         case 'v': printf("smbpann %s\n", SMB_VERSION); return 0;
         case 'h': usage(argv[0]); return 0;
@@ -269,6 +275,12 @@ int main(int argc, char **argv)
     rng_seed(&rng, (uint32_t)seed);
     net_init(net, &rng);
 
+    /* weight inheritance: warm-start the layers that match the parent checkpoint,
+     * so an unchanged layer resumes its parent's training instead of restarting */
+    if (warm_path != NULL && ckpt_warmstart(net, warm_path) != 0)
+        fprintf(stderr, "smbpann: cannot warm-start from '%s' (training fresh)\n",
+                warm_path);
+
     t = trainer_new(net, (smb_real)rate, (smb_real)momentum);
     if (t == NULL) {
         fprintf(stderr, "smbpann: cannot build trainer\n");
@@ -297,6 +309,10 @@ int main(int argc, char **argv)
             }
         }
     }
+
+    /* checkpoint the trained weights, so this candidate's children can inherit */
+    if (save_path != NULL && ckpt_save(net, save_path) != 0)
+        fprintf(stderr, "smbpann: cannot save checkpoint '%s'\n", save_path);
 
     format_topology(dims, nlayers, topo, sizeof topo);
     printf("RESULT topology=%s spec=%s weights=%zu seed=%ld epochs=%ld "
