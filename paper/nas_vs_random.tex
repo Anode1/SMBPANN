@@ -302,9 +302,22 @@ training images & 2D convolution & dense network \\
 Table~\ref{tab:conv2d} shows the contrast: at $2000$ images the convolution is at
 $0.1\%$ error and the dense network near chance ($39\%$). Here architecture is not
 fungible, the right structure carries the solution and the wrong one cannot reach it
-with limited data. This is the regime in which architecture search, and recombination
-of architectural building blocks, would pay, and it is the natural next home for the
-methods this paper studied.
+with limited data. This is the regime in which architecture search should pay.
+
+Running the engine's own search on this task closes the loop. We generate the same
+motif task as a dataset (\texttt{gentask -I 8}) and run the self-modifying search on
+it at a low per-candidate epoch budget, where a convolution's efficiency shows. Over
+$8$ seeds the search climbs from a dense start to a \emph{convolutional} architecture
+in $6$, and those convolutional runs reach $10$ to $100$ times lower error than the
+dense ones (best conv $\approx 2\times10^{-6}$ versus dense $\approx 3\times10^{-4}$
+test-MSE). On the earlier fungible tasks the search had no reason to prefer
+convolution and did not; handed a task where structure is decisive, it discovers
+convolution on its own, the local weight-sharing inductive bias LeCun introduced by
+hand, which is the top-line goal this project set out from: a network handed only the
+problem that finds the structure the problem needs. (The engine's convolution is
+one-dimensional over the row-major image, which already exposes enough local structure
+to be decisive here; a native 2D convolution in the search space is the clean
+refinement.)
 
 \section{Discussion}
 
@@ -336,11 +349,12 @@ exactly when it does: crossover needs building blocks that carry a solution, and
 inheritance supplies them (Table~\ref{tab:modevo}). That inheritance is now wired
 through the engine as well (\texttt{evolve -w}): children warm-start from their
 parents' checkpointed weights, and the search reaches a lower error at equal compute.
-We also showed the regime these methods are built for exists: on a translation-invariant
-image task a 2D convolution is decisive where a dense network fails
-(Table~\ref{tab:conv2d}), the setting in which architecture search and its recombination
-of building blocks would pay. The clear remaining step is to run that search there, and
-to bridge to a standard tabular NAS benchmark.
+We also showed the regime these methods are built for exists, and that the search
+works in it: on a translation-invariant image task a convolution is decisive where a
+dense network fails (Table~\ref{tab:conv2d}), and the engine's own search, run there,
+discovers convolution on its own in most seeds. The remaining steps are refinements: a
+native 2D convolution in the search space (the engine's is 1D over the flattened
+image), and a bridge to a standard tabular NAS benchmark.
 
 \section*{Reproducibility}
 
