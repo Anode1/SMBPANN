@@ -31,6 +31,19 @@
 #define GENOME_MINK      2
 #define GENOME_MAXK      5
 
+/* 2D conv front-end bounds (a perfect-square input is treated as an S x S image). */
+#define GENOME_C2_MINK     2
+#define GENOME_C2_MAXK     5
+#define GENOME_C2_MINSIDE  4
+
+/* integer floor(sqrt(n)) */
+static size_t isqrt_(size_t n)
+{
+    size_t r = 0;
+    while ((r + 1) * (r + 1) <= n) r++;
+    return r;
+}
+
 /* uniform integer in [0, m) via the PRNG */
 static size_t below(Rng *rng, size_t m)
 {
@@ -44,6 +57,13 @@ static void genome_recompute(Genome *g)
 {
     size_t l;
 
+    /* a 2D conv front-end feeds the F pooled features to a dense head, so layer 1
+     * must be dense, and dim[0] is the front-end's filter count */
+    if (g->c2filt > 0) {
+        g->dim[0] = g->c2filt;
+        if (g->n >= 2 && g->kind[1] == LAYER_CONV)
+            g->kind[1] = LAYER_DENSE;
+    }
     for (l = 1; l < g->n; l++) {
         if (g->kind[l] == LAYER_CONV) {
             size_t prev = g->dim[l - 1];
@@ -67,6 +87,10 @@ void genome_random(Genome *g, size_t ninput, size_t noutput,
                    size_t maxhid, size_t maxwidth, Rng *rng)
 {
     size_t nhid, i;
+
+    g->ninput  = ninput;                     /* init before any genome_recompute */
+    g->c2filt  = 0;
+    g->c2ksize = 0;
 
     if (maxhid > SMB_MAX_LAYERS - 2)
         maxhid = SMB_MAX_LAYERS - 2;
@@ -92,6 +116,25 @@ void genome_random(Genome *g, size_t ninput, size_t noutput,
     g->lrate      = rng_uniform(rng, 0.1f, 0.8f);
     g->momentum   = rng_uniform(rng, 0.5f, 0.95f);
     g->activation = (int)below(rng, ACT_COUNT);
+
+    /* 2D conv front-end: only for a square (image) input, about 40% of the time.
+     * The guard short-circuits before drawing for non-square inputs, so the PRNG
+     * stream (and hence every existing non-image run) is unchanged. */
+    {
+        size_t side = isqrt_(ninput);
+        if (side * side == ninput && side >= GENOME_C2_MINSIDE
+            && below(rng, 5) < 2) {
+            g->c2ksize = GENOME_C2_MINK + below(rng, GENOME_C2_MAXK - GENOME_C2_MINK + 1);
+            if (g->c2ksize > side) g->c2ksize = side;
+            g->c2filt  = 1 + below(rng, GENOME_MAXFILT);
+            if (g->kind[1] == LAYER_CONV) {        /* the front-end feeds a dense head */
+                g->kind[1] = LAYER_DENSE;
+                g->dim[1]  = 1 + below(rng, maxwidth);
+            }
+            g->dim[0] = g->c2filt;                 /* net input = F pooled features */
+            genome_recompute(g);
+        }
+    }
 }
 
 /* The self-adaptive step shared by asexual reproduction and crossover: perturb
@@ -150,6 +193,11 @@ void genome_crossover(Genome *child, const Genome *a, const Genome *b,
     nhid = ca + (bhid - cb);                     /* one-point spliced depth */
     if (nhid > maxhid)
         nhid = maxhid;
+
+    /* the 2D conv front-end rides with parent A; set before any genome_recompute */
+    child->ninput  = a->ninput;
+    child->c2filt  = a->c2filt;
+    child->c2ksize = a->c2ksize;
 
     child->dim[0]  = a->dim[0];                  /* input fixed by the problem */
     child->kind[0] = LAYER_DENSE;
@@ -213,6 +261,40 @@ void genome_mutate(Genome *g, size_t maxhid, size_t maxwidth, Rng *rng)
 
     if (maxhid > SMB_MAX_LAYERS - 2)
         maxhid = SMB_MAX_LAYERS - 2;
+
+    /* 2D conv front-end move (only for a square image input; the guard
+     * short-circuits before drawing otherwise, so non-image runs are unchanged):
+     * toggle the front-end on/off, or nudge its filter count or kernel size. */
+    {
+        size_t side = isqrt_(g->ninput);
+        if (side * side == g->ninput && side >= GENOME_C2_MINSIDE
+            && (rng_u32(rng) % 100u) < 12u) {
+            if (g->c2filt == 0) {                          /* turn it on */
+                g->c2ksize = GENOME_C2_MINK
+                             + below(rng, GENOME_C2_MAXK - GENOME_C2_MINK + 1);
+                if (g->c2ksize > side) g->c2ksize = side;
+                g->c2filt  = 1 + below(rng, GENOME_MAXFILT);
+                if (g->kind[1] == LAYER_CONV) {
+                    g->kind[1] = LAYER_DENSE;
+                    g->dim[1]  = 1 + below(rng, maxwidth);
+                }
+                g->dim[0] = g->c2filt;
+            } else if ((rng_u32(rng) & 3u) == 0u) {        /* turn it off */
+                g->c2filt = 0; g->c2ksize = 0;
+                g->dim[0] = g->ninput;
+            } else if ((rng_u32(rng) & 1u) != 0u) {        /* nudge filters */
+                if ((rng_u32(rng) & 1u) && g->c2filt < GENOME_MAXFILT) g->c2filt++;
+                else if (g->c2filt > 1) g->c2filt--;
+                g->dim[0] = g->c2filt;
+            } else {                                       /* nudge kernel */
+                if ((rng_u32(rng) & 1u) && g->c2ksize < GENOME_C2_MAXK
+                    && g->c2ksize < side) g->c2ksize++;
+                else if (g->c2ksize > GENOME_C2_MINK) g->c2ksize--;
+            }
+            genome_recompute(g);
+            return;                                        /* one move per call */
+        }
+    }
 
     /* with no hidden layers the only meaningful move is to add one (dense) */
     if (nhid == 0) {
@@ -282,6 +364,12 @@ void genome_format(const Genome *g, char *buf, size_t bufsz)
 {
     size_t i, off = 0;
 
+    if (g->c2filt > 0 && off < bufsz) {              /* 2D conv front-end prefix */
+        int w = snprintf(buf + off, bufsz - off, "C%zu:%zu;",
+                         g->c2filt, g->c2ksize);
+        if (w > 0 && (size_t)w < bufsz - off)
+            off += (size_t)w;
+    }
     for (i = 0; i < g->n && off < bufsz; i++) {
         int w;
         if (g->kind[i] == LAYER_CONV)
@@ -310,6 +398,23 @@ int genome_parse(Genome *g, const char *s)
     g->lrate      = 0.5f;
     g->momentum   = 0.9f;
     g->activation = ACT_SIGMOID;
+    g->ninput     = 0;
+    g->c2filt     = 0;
+    g->c2ksize    = 0;
+
+    /* optional 2D conv front-end prefix "C<filters>:<kernel>;" */
+    if (*p == 'C') {
+        char *end;
+        long  F = strtol(p + 1, &end, 10), K;
+        if (end != p + 1 && F > 0 && *end == ':') {
+            K = strtol(end + 1, &end, 10);
+            if (K > 0 && *end == ';') {
+                g->c2filt  = (size_t)F;
+                g->c2ksize = (size_t)K;
+                p = end + 1;
+            }
+        }
+    }
 
     while (*p != '\0' && *p != '|') {
         if (n >= SMB_MAX_LAYERS)

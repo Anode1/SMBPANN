@@ -140,6 +140,25 @@ smb_real trainer_learn(Trainer *t, const smb_real *x, const smb_real *d)
     return E;
 }
 
+void trainer_input_grad(const Trainer *t, smb_real *out)
+{
+    const Net *net = t->net;
+    size_t     nin = net->dim[0], n1 = net->dim[1], i, j;
+
+    for (j = 0; j < nin; j++)
+        out[j] = 0;
+    if (net->kind[1] != LAYER_DENSE)          /* only a dense head is supported */
+        return;
+    /* beta[1][i] = -dE/d(pre-activation of unit i); dE/d(input j) =
+     * -sum_i beta[1][i] w[1][i][j], with w[1] row-major (row receives, col sends) */
+    for (i = 0; i < n1; i++) {
+        smb_real        bi = t->beta[1][i];
+        const smb_real *wi = net->w[1] + i * nin;
+        for (j = 0; j < nin; j++)
+            out[j] -= bi * wi[j];
+    }
+}
+
 void trainer_free(Trainer *t)
 {
     size_t l;

@@ -48,6 +48,13 @@ Trainer *trainer_new(Net *net, smb_real rate, smb_real momentum);
  * Allocates nothing. */
 smb_real trainer_learn(Trainer *t, const smb_real *x, const smb_real *d);
 
+/* After a trainer_learn step, write dE/d(network input) into OUT (dim[0] values),
+ * from the retained layer-1 error signal: out[j] = -sum_i beta[1][i] w[1][i][j].
+ * A 2D conv front-end uses this to train jointly with the network. Valid only when
+ * the first layer is dense (the front-end feeds a dense head); writes zeros
+ * otherwise. Call right after trainer_learn. */
+void trainer_input_grad(const Trainer *t, smb_real *out);
+
 /* Release the trainer's scratch. NULL-safe. Does NOT free the borrowed net. */
 void trainer_free(Trainer *t);
 

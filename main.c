@@ -23,6 +23,7 @@
 #include "data.h"
 #include "genome.h"
 #include "ckpt.h"
+#include "conv2f.h"
 #include "net.h"
 #include "rng.h"
 #include "train.h"
@@ -99,8 +100,11 @@ static void format_topology(const size_t *dims, size_t n, char *buf, size_t bufs
     }
 }
 
-/* Mean squared error over the train (USE_TEST=0) or test (USE_TEST=1) half. */
-static double eval_mse(Net *net, const Dataset *ds, const Split *sp, int use_test)
+/* Mean squared error over the train (USE_TEST=0) or test (USE_TEST=1) half. When
+ * FRONT is non-NULL, each input image is passed through the 2D conv front-end
+ * first, and the network sees the pooled features. */
+static double eval_mse(Net *net, Conv2f *front, const Dataset *ds,
+                       const Split *sp, int use_test)
 {
     size_t count = use_test ? split_test_count(sp) : split_train_count(sp);
     size_t p, k;
@@ -111,9 +115,10 @@ static double eval_mse(Net *net, const Dataset *ds, const Split *sp, int use_tes
     for (p = 0; p < count; p++) {
         size_t          idx = use_test ? split_test_index(sp, p)
                                        : split_train_index(sp, p);
-        const smb_real *x = dataset_input(ds, idx);
-        const smb_real *d = dataset_target(ds, idx);
-        const smb_real *y = net_forward(net, x);
+        const smb_real *x  = dataset_input(ds, idx);
+        const smb_real *d  = dataset_target(ds, idx);
+        const smb_real *in = front ? conv2f_forward(front, x) : x;
+        const smb_real *y  = net_forward(net, in);
         for (k = 0; k < ds->noutput; k++) {
             double e = (double)d[k] - (double)y[k];
             sum += e * e;
@@ -122,17 +127,18 @@ static double eval_mse(Net *net, const Dataset *ds, const Split *sp, int use_tes
     return sum / (double)(count * ds->noutput);
 }
 
-/* Load FILE, split it, train NET/T on the train half, and report train and
- * test MSE. Returns 0, or -1 on load/split failure. */
-static int run_dataset(Net *net, Trainer *t, const char *file,
+/* Load FILE, split it, train NET/T (with the optional 2D conv FRONT, trained
+ * jointly) on the train half, and report train and test MSE. Returns 0, or -1. */
+static int run_dataset(Net *net, Trainer *t, Conv2f *front, const char *file,
                        size_t ni, size_t no, double frac, long epochs,
                        uint32_t seed, double *train_err, double *test_err)
 {
-    Dataset ds;
-    Split   sp;
-    Rng     r;
-    long    ep;
-    size_t  p;
+    Dataset  ds;
+    Split    sp;
+    Rng      r;
+    long     ep;
+    size_t   p;
+    smb_real ig[CONV2F_MAXF];              /* dE/d(pooled features) for the front-end */
 
     if (dataset_load(&ds, file, ni, no) != 0)
         return -1;
@@ -143,12 +149,20 @@ static int run_dataset(Net *net, Trainer *t, const char *file,
     }
     for (ep = 0; ep < epochs; ep++)
         for (p = 0; p < split_train_count(&sp); p++) {
-            size_t idx = split_train_index(&sp, p);
-            (void)trainer_learn(t, dataset_input(&ds, idx),
-                                dataset_target(&ds, idx));
+            size_t          idx = split_train_index(&sp, p);
+            const smb_real *x   = dataset_input(&ds, idx);
+            const smb_real *tg  = dataset_target(&ds, idx);
+            if (front != NULL) {
+                const smb_real *feat = conv2f_forward(front, x);
+                (void)trainer_learn(t, feat, tg);
+                trainer_input_grad(t, ig);        /* dE/d(features) from the net */
+                conv2f_backward(front, x, ig, t->rate, t->momentum);
+            } else {
+                (void)trainer_learn(t, x, tg);
+            }
         }
-    *train_err = eval_mse(net, &ds, &sp, 0);
-    *test_err  = eval_mse(net, &ds, &sp, 1);
+    *train_err = eval_mse(net, front, &ds, &sp, 0);
+    *test_err  = eval_mse(net, front, &ds, &sp, 1);
     split_free(&sp);
     dataset_free(&ds);
     return 0;
@@ -187,6 +201,8 @@ int main(int argc, char **argv)
     Genome   gen;
     int      have_spec = 0;
     Net     *net = NULL;
+    Conv2f   front;
+    int      have_front = 0;
     Trainer *t = NULL;
     Rng      rng;
     double   train_err = 0.0, test_err = 0.0, fitness = 0.0;
@@ -251,10 +267,24 @@ int main(int argc, char **argv)
             fprintf(stderr, "smbpann: -f requires -i and -o\n");
             return 2;
         }
-        if (dims[0] != (size_t)ninput || dims[nlayers - 1] != (size_t)noutput) {
-            fprintf(stderr, "smbpann: topology ends (%zu,%zu) must match data "
-                            "(%ld,%ld)\n",
-                    dims[0], dims[nlayers - 1], ninput, noutput);
+        if (dims[nlayers - 1] != (size_t)noutput) {
+            fprintf(stderr, "smbpann: topology output %zu must match data %ld\n",
+                    dims[nlayers - 1], noutput);
+            return 2;
+        }
+        if (have_spec && gen.c2filt > 0) {
+            /* a 2D conv front-end consumes the whole (square) image; the network's
+             * input dims[0] is the F pooled features, not the pixel count */
+            size_t side = 0;
+            while ((side + 1) * (side + 1) <= (size_t)ninput) side++;
+            if (side * side != (size_t)ninput || gen.c2ksize > side) {
+                fprintf(stderr, "smbpann: 2D front-end needs a square image "
+                                "input (got %ld)\n", ninput);
+                return 2;
+            }
+        } else if (dims[0] != (size_t)ninput) {
+            fprintf(stderr, "smbpann: topology input %zu must match data %ld\n",
+                    dims[0], ninput);
             return 2;
         }
     } else if (dims[0] != 2 || dims[nlayers - 1] != 1) {
@@ -275,6 +305,18 @@ int main(int argc, char **argv)
     rng_seed(&rng, (uint32_t)seed);
     net_init(net, &rng);
 
+    /* a 2D conv front-end sits in front of the network (S = sqrt(ninput)) */
+    if (have_spec && gen.c2filt > 0) {
+        size_t side = 0;
+        while ((side + 1) * (side + 1) <= (size_t)ninput) side++;
+        if (conv2f_init(&front, gen.c2filt, gen.c2ksize, side, &rng) != 0) {
+            fprintf(stderr, "smbpann: cannot build 2D conv front-end\n");
+            net_free(net);
+            return 1;
+        }
+        have_front = 1;
+    }
+
     /* weight inheritance: warm-start the layers that match the parent checkpoint,
      * so an unchanged layer resumes its parent's training instead of restarting */
     if (warm_path != NULL && ckpt_warmstart(net, warm_path) != 0)
@@ -289,7 +331,8 @@ int main(int argc, char **argv)
     }
 
     if (file != NULL) {
-        if (run_dataset(net, t, file, (size_t)ninput, (size_t)noutput, frac,
+        if (run_dataset(net, t, have_front ? &front : NULL,
+                        file, (size_t)ninput, (size_t)noutput, frac,
                         epochs, (uint32_t)seed, &train_err, &test_err) != 0) {
             fprintf(stderr, "smbpann: cannot load or split '%s'\n", file);
             rc = 1;

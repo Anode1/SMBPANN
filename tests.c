@@ -16,6 +16,7 @@
 #include "act.h"
 #include "arena.h"
 #include "ckpt.h"
+#include "conv2f.h"
 #include "common.h"
 #include "data.h"
 #include "genome.h"
@@ -471,6 +472,43 @@ int main(void)
         }
         net_free(a); net_free(b); net_free(c);
         remove(path);
+    }
+
+    /* conv2f: the 2D conv front-end's analytic weight gradient matches central
+     * finite differences of a toy loss on its pooled features */
+    {
+        Rng r;
+        Conv2f base;
+        smb_real img[64], tgt[CONV2F_MAXF];
+        int trial, ok = 1, i;
+        rng_seed(&r, 31);
+        conv2f_init(&base, 4, 3, 8, &r);            /* 4 filters, 3x3, 8x8 image */
+        for (i = 0; i < 64; i++) img[i] = rng_uniform(&r, -1.0f, 1.0f);
+        for (i = 0; i < 4; i++)  tgt[i] = rng_uniform(&r, 0.0f, 1.0f);
+        for (trial = 0; trial < 30; trial++) {
+            Conv2f a = base, num = base;
+            smb_real dfeat[CONV2F_MAXF], eps = 1e-3f, ana, gnum, tol, before, w0, Lp, Lm;
+            smb_real *wp_a, *wp_n;
+            int f = (int)(rng_u32(&r) % 4u), bias = (int)(rng_u32(&r) & 1u);
+            int kk = (int)(rng_u32(&r) % 9u), j;
+            if (bias) { wp_a = &a.b[f]; wp_n = &num.b[f]; }
+            else      { wp_a = &a.w[f][kk]; wp_n = &num.w[f][kk]; }
+            before = *wp_a;
+            conv2f_forward(&a, img);
+            for (j = 0; j < 4; j++) dfeat[j] = a.pooled[j] - tgt[j];
+            conv2f_backward(&a, img, dfeat, 1.0f, 0.0f);   /* lr=1, mom=0: delta = grad */
+            ana = -(*wp_a - before);
+            w0 = *wp_n;
+            *wp_n = w0 + eps; { const smb_real *p = conv2f_forward(&num, img);
+                Lp = 0; for (j = 0; j < 4; j++) { smb_real e = p[j]-tgt[j]; Lp += 0.5f*e*e; } }
+            *wp_n = w0 - eps; { const smb_real *p = conv2f_forward(&num, img);
+                Lm = 0; for (j = 0; j < 4; j++) { smb_real e = p[j]-tgt[j]; Lm += 0.5f*e*e; } }
+            *wp_n = w0;
+            gnum = (Lp - Lm) / (2.0f * eps);
+            tol = 5e-3f + 2e-2f * (smb_real)fabs((double)ana);
+            if ((smb_real)fabs((double)(ana - gnum)) > tol) ok = 0;
+        }
+        CHECK(ok, "conv2f: 2D conv gradient matches finite differences");
     }
 
     printf("\n%d checks, %d failed\n", t_run, t_fail);

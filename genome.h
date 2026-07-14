@@ -32,6 +32,9 @@ typedef struct {
     smb_real lrate;                 /* learning rate  (co-evolved)              */
     smb_real momentum;              /* momentum       (co-evolved)              */
     int      activation;            /* hidden activation, act.h kind (co-evolved)*/
+    size_t   ninput;                /* problem input width (S*S if a 2D image)  */
+    size_t   c2filt;                /* 2D conv front-end filters (0 = none);    */
+    size_t   c2ksize;               /* when >0, dim[0] is the F pooled features  */
 } Genome;
 
 /* A random genome: NINPUT inputs, NOUTPUT outputs, and 0..MAXHID hidden layers
