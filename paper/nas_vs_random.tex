@@ -269,6 +269,43 @@ training over more rounds. The engine result and the modular probe agree: carryi
 learned state, not only the architecture, is what lets an evolutionary search stop
 paying to relearn what it already found.
 
+\subsection{Where architecture is decisive}
+
+The whole account rests on architecture being fungible on our tasks; it is worth
+showing the opposite regime exists, where architecture is decisive and a search would
+have real structure to find. We built a translation-invariant image task (\texttt{make
+conv2d}): a small diagonal motif, ``\textbackslash'' or ``/'', placed at a random
+position in a noisy $8\times8$ image, the label being its orientation. A single
+2D convolution that detects the motif wherever it sits (gradient-checked, $0/40$
+finite-difference mismatches) generalizes; a dense network of similar size, which must
+relearn the motif at every position, does not, until it is given far more data.
+
+\begin{table}[t]
+\centering
+\caption{An image task where architecture is decisive: test error rate on the
+translation-invariant motif task, a 2D convolution ($6$ filters) versus a dense
+network ($24$ hidden), mean of $8$ seeds. With limited data the convolution
+generalizes and the dense network is near chance; only with an order of magnitude more
+data does the dense network catch up.}
+\label{tab:conv2d}
+\begin{tabular}{ccc}
+\toprule
+training images & 2D convolution & dense network \\
+\midrule
+2000  & \textbf{0.001} & 0.388 \\
+6000  & \textbf{0.000} & 0.192 \\
+20000 & 0.000 & 0.002 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:conv2d} shows the contrast: at $2000$ images the convolution is at
+$0.1\%$ error and the dense network near chance ($39\%$). Here architecture is not
+fungible, the right structure carries the solution and the wrong one cannot reach it
+with limited data. This is the regime in which architecture search, and recombination
+of architectural building blocks, would pay, and it is the natural next home for the
+methods this paper studied.
+
 \section{Discussion}
 
 The three experiments compose into one statement. Crossover's building-block advantage
@@ -299,9 +336,11 @@ exactly when it does: crossover needs building blocks that carry a solution, and
 inheritance supplies them (Table~\ref{tab:modevo}). That inheritance is now wired
 through the engine as well (\texttt{evolve -w}): children warm-start from their
 parents' checkpointed weights, and the search reaches a lower error at equal compute.
-Two further steps remain: a two-dimensional convolution and an image task, where
-architecture is decisive rather than fungible; and a bridge to a standard tabular NAS
-benchmark.
+We also showed the regime these methods are built for exists: on a translation-invariant
+image task a 2D convolution is decisive where a dense network fails
+(Table~\ref{tab:conv2d}), the setting in which architecture search and its recombination
+of building blocks would pay. The clear remaining step is to run that search there, and
+to bridge to a standard tabular NAS benchmark.
 
 \section*{Reproducibility}
 
@@ -312,7 +351,8 @@ with \texttt{make} (C99, no dependencies) into \texttt{smbpann} (worker),
 AddressSanitizer and UBSan. The three validation probes are standalone: \texttt{make
 bbtest} (Table~\ref{tab:bb}, building-block traps), \texttt{make modnas} (the
 parallel-branch gradient check), and \texttt{make modevo} (Table~\ref{tab:modevo},
-weight-inheriting crossover; run \texttt{./modevo G freq}). The neural crossover A/B is
+weight-inheriting crossover; run \texttt{./modevo G freq}); and \texttt{make conv2d}
+(Table~\ref{tab:conv2d}, the image task where architecture is decisive). The neural crossover A/B is
 \texttt{scripts/xover\_ab.sh}; weight inheritance in the engine is \texttt{evolve -w 1}
 (the worker's \texttt{-W}/\texttt{-w} save and warm-start checkpoints), its A/B is
 \texttt{scripts/inherit\_ab.sh} and the budget sweep of Table~\ref{tab:sweep} is
