@@ -30,7 +30,7 @@ static void usage(const char *prog)
     fprintf(stderr,
         "usage: %s -i in -o out [-P pop] [-G gens] [-k elite] [-s seed]\n"
         "          [-L maxhidden] [-W maxwidth] [-M rate] [-A 0|1] [-E error]\n"
-        "          [-X crossover%%]\n"
+        "          [-X crossover%%] [-w 0|1]\n"
         "\n"
         "Evolves network topologies and races the GA against random search.\n"
         "Fitness comes from scripts/evaluate.sh (set COMMON for a dataset; with\n"
@@ -58,6 +58,36 @@ static int write_pop(const char *path, const Genome *pop, size_t n)
     for (i = 0; i < n; i++) {
         genome_format(&pop[i], buf, sizeof buf);
         fprintf(f, "%s\n", buf);
+    }
+    fclose(f);
+    return 0;
+}
+
+/* Checkpoint path for slot SLOT written in generation GEN, double-buffered by
+ * generation parity so this generation's files (read next generation as
+ * warm-start sources) are not overwritten by next generation's writes. */
+static void ck_path(char *buf, size_t bufsz, long pid, long gen, size_t slot)
+{
+    snprintf(buf, bufsz, "/tmp/smb_ck_%ld_%ld_%zu.ckpt", pid, gen & 1L, slot);
+}
+
+/* Write a population with per-candidate weight-inheritance columns:
+ * "spec  warm_ckpt  save_ckpt" per line (warm_ckpt "-" means train from scratch).
+ * Each slot saves to its own generation-tagged file; a slot warm-starts from
+ * WSRC[i], the file its source wrote last generation. Returns 0 or -1. */
+static int write_pop_ck(const char *path, const Genome *pop, size_t n,
+                        const char (*wsrc)[160], long pid, long gen)
+{
+    FILE  *f = fopen(path, "w");
+    char   buf[256], save[160];
+    size_t i;
+
+    if (f == NULL)
+        return -1;
+    for (i = 0; i < n; i++) {
+        genome_format(&pop[i], buf, sizeof buf);
+        ck_path(save, sizeof save, pid, gen, i);
+        fprintf(f, "%s %s %s\n", buf, (wsrc[i][0] != '\0') ? wsrc[i] : "-", save);
     }
     fclose(f);
     return 0;
@@ -105,6 +135,7 @@ int main(int argc, char **argv)
     long   mutations = 1;   /* the mutation rate (initial, if self-adaptive) */
     long   adapt = 1;       /* 1 = self-adaptive rate, 0 = fixed rate         */
     long   xover = 0;       /* percent of offspring made by crossover (0=off) */
+    long   inherit = 0;     /* 1 = weight inheritance (warm-start children)   */
     double target = 0.0;    /* stop when GA best <= this; 0 = disabled        */
     int    ga_hit = 0, rand_hit = 0;
     long   ga_hit_gen = 0, rand_hit_gen = 0;   /* gen each first met the target */
@@ -117,12 +148,18 @@ int main(int argc, char **argv)
     Rng         ga_rng, rand_rng;
     Genome      gapop[EV_MAX_POP], randpop[EV_MAX_POP], eliteg[EV_MAX_POP];
     char        etop[EV_MAX_POP][256];
+    /* weight-inheritance bookkeeping: each slot's warm-start source path (its
+     * source's previous-generation checkpoint), and the elite's origin slots */
+    static char wsrc[EV_MAX_POP][160];
+    char        wsrc_next[EV_MAX_POP][160];
+    size_t      elite_slot[EV_MAX_POP];
+    long        pid = (long)getpid();
     double      ga_best = 0.0, rand_best = 0.0;
     smb_real    ga_rate = 1.0f;
     char        ga_topo[256] = "", rand_topo[256] = "";
     int         have_ga = 0, have_rand = 0;
 
-    while ((c = getopt(argc, argv, "i:o:P:G:k:s:L:W:M:A:E:X:h")) != -1) {
+    while ((c = getopt(argc, argv, "i:o:P:G:k:s:L:W:M:A:E:X:w:h")) != -1) {
         switch (c) {
         case 'i': ninput    = atol(optarg); break;
         case 'o': noutput   = atol(optarg); break;
@@ -136,6 +173,7 @@ int main(int argc, char **argv)
         case 'A': adapt     = atol(optarg); break;
         case 'E': target    = atof(optarg); break;
         case 'X': xover     = atol(optarg); break;
+        case 'w': inherit   = atol(optarg); break;
         case 'h': usage(argv[0]); return 0;
         default:  usage(argv[0]); return 2;
         }
@@ -146,7 +184,8 @@ int main(int argc, char **argv)
     }
     if (pop < 2 || pop > EV_MAX_POP || elite < 1 || elite >= pop
         || gens < 1 || maxwidth < 1 || mutations < 1
-        || (adapt != 0 && adapt != 1) || xover < 0 || xover > 100) {
+        || (adapt != 0 && adapt != 1) || xover < 0 || xover > 100
+        || (inherit != 0 && inherit != 1)) {
         fprintf(stderr, "evolve: need 2 <= pop <= %d, 1 <= elite < pop, "
                         "gens >= 1, maxwidth >= 1, mutations >= 1, A in {0,1}, "
                         "0 <= X <= 100\n",
@@ -183,6 +222,8 @@ int main(int argc, char **argv)
                mutations, seed);
     if (xover > 0)
         printf("  crossover: %ld%% of offspring recombine two elites\n", xover);
+    if (inherit)
+        printf("  weight inheritance: children warm-start from a parent's weights\n");
 
     for (gen = 1; gen <= gens; gen++) {
         size_t ne, e;
@@ -191,7 +232,8 @@ int main(int argc, char **argv)
         size_t rne;
 
         /* --- the genetic search --- */
-        if (write_pop(popfile, gapop, (size_t)pop) != 0
+        if ((inherit ? write_pop_ck(popfile, gapop, (size_t)pop, wsrc, pid, gen)
+                     : write_pop(popfile, gapop, (size_t)pop)) != 0
             || evaluate(evalcmd, popfile, resfile, etop, (size_t)elite,
                         &ne, &gbest) != 0) {
             fprintf(stderr, "evolve: evaluation failed (is %s runnable?)\n",
@@ -211,6 +253,7 @@ int main(int argc, char **argv)
                 genome_format(&gapop[j], buf, sizeof buf);
                 if (strcmp(buf, etop[e]) == 0) {
                     eliteg[e] = gapop[j];
+                    elite_slot[e] = j;          /* its slot -> its checkpoint */
                     found = 1;
                     break;
                 }
@@ -218,6 +261,7 @@ int main(int argc, char **argv)
             if (!found) {                       /* should not happen; be safe */
                 genome_parse(&eliteg[e], etop[e]);
                 eliteg[e].rate = (smb_real)mutations;
+                elite_slot[e] = e;
             }
         }
 
@@ -232,28 +276,41 @@ int main(int argc, char **argv)
         for (i = 0; i < ne; i++)
             gapop[i] = eliteg[i];
         for (i = ne; i < (size_t)pop; i++) {
+            size_t src;                          /* elite this child inherits from */
             /* a fraction of offspring are made by crossover of two elites; the
              * rest by asexual (self-adaptive or fixed) reproduction. With xover=0
              * the first test short-circuits without drawing, so behaviour and the
              * PRNG stream are identical to the mutation-only search. */
             if (xover > 0 && (rng_u32(&ga_rng) % 100u) < (uint32_t)xover) {
-                const Genome *pa = &eliteg[below_pop(&ga_rng, ne)];
-                const Genome *pb = &eliteg[below_pop(&ga_rng, ne)];
-                genome_crossover(&gapop[i], pa, pb,
+                size_t pai = below_pop(&ga_rng, ne);
+                size_t pbi = below_pop(&ga_rng, ne);
+                genome_crossover(&gapop[i], &eliteg[pai], &eliteg[pbi],
                                  (size_t)maxhid, (size_t)maxwidth, &ga_rng);
+                src = pai;                       /* warm-start from the first parent */
             } else {
-                const Genome *parent = &eliteg[below_pop(&ga_rng, ne)];
+                size_t pi = below_pop(&ga_rng, ne);
                 if (adapt) {
-                    genome_reproduce(&gapop[i], parent,
+                    genome_reproduce(&gapop[i], &eliteg[pi],
                                      (size_t)maxhid, (size_t)maxwidth, &ga_rng);
                 } else {
                     long mv;
-                    gapop[i] = *parent;
+                    gapop[i] = eliteg[pi];
                     for (mv = 0; mv < mutations; mv++)
                         genome_mutate(&gapop[i], (size_t)maxhid, (size_t)maxwidth,
                                       &ga_rng);
                 }
+                src = pi;
             }
+            if (inherit)                          /* inherit source's trained weights */
+                ck_path(wsrc_next[i], sizeof wsrc_next[i], pid, gen,
+                        elite_slot[src]);
+        }
+        if (inherit) {
+            /* the elite keep their own trained weights; then adopt next gen's map */
+            for (i = 0; i < ne; i++)
+                ck_path(wsrc_next[i], sizeof wsrc_next[i], pid, gen, elite_slot[i]);
+            for (i = 0; i < (size_t)pop; i++)
+                memcpy(wsrc[i], wsrc_next[i], sizeof wsrc[i]);
         }
 
         /* --- matched-compute random control: pop fresh random genomes --- */
@@ -298,6 +355,15 @@ int main(int argc, char **argv)
 
     remove(popfile);
     remove(resfile);
+    if (inherit) {                        /* remove both parities' checkpoint files */
+        char ck[160];
+        long par;
+        for (par = 0; par < 2; par++)
+            for (i = 0; i < (size_t)pop; i++) {
+                ck_path(ck, sizeof ck, pid, par, i);
+                remove(ck);
+            }
+    }
     return 0;
 }
 

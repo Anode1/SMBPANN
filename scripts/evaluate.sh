@@ -24,11 +24,16 @@ SMB="${SMB:-./smbpann}"
 JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
 COMMON="${COMMON:-}"
 
-# --worker: evaluate one candidate topology; emit "<fitness>\t<RESULT line>".
-# The fitness is prefixed as a sort key and stripped again by the coordinator.
+# --worker: evaluate one candidate; emit "<fitness>\t<RESULT line>". The fitness is
+# a sort key stripped again by the coordinator. A candidate line is "spec", or
+# "spec warm_ckpt save_ckpt" for weight inheritance (a "-" means none): the worker
+# then warm-starts from warm_ckpt and saves its trained weights to save_ckpt.
 if [ "${1:-}" = "--worker" ]; then
-    spec="$2"
-    line=$($SMB -g "$spec" $COMMON -q 2>/dev/null | grep '^RESULT' || true)
+    set -- $2                      # word-split the candidate line
+    spec="$1"; wpath="${2:-}"; Wpath="${3:-}"
+    wopt=""; [ -n "$wpath" ] && [ "$wpath" != "-" ] && wopt="-w $wpath"
+    Wopt=""; [ -n "$Wpath" ] && [ "$Wpath" != "-" ] && Wopt="-W $Wpath"
+    line=$($SMB -g "$spec" $wopt $Wopt $COMMON -q 2>/dev/null | grep '^RESULT' || true)
     if [ -z "$line" ]; then
         printf 'inf\tRESULT spec=%s fitness=inf (worker failed)\n' "$spec"
     else

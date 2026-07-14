@@ -316,9 +316,12 @@ int main(int argc, char **argv)
 
     format_topology(dims, nlayers, topo, sizeof topo);
     printf("RESULT topology=%s spec=%s weights=%zu seed=%ld epochs=%ld "
-           "train=%.6g test=%.6g fitness=%.6g\n",
+           "train=%.6g test=%.6g fitness=%.6g",
            topo, (spec_arg != NULL) ? spec_arg : topo,
            net_nweights(net), seed, epochs, train_err, test_err, fitness);
+    if (save_path != NULL)          /* echo the checkpoint so the search maps it */
+        printf(" ckpt=%s", save_path);
+    printf("\n");
 
 cleanup:
     trainer_free(t);
