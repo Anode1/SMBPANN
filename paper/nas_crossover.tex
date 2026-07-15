@@ -47,11 +47,12 @@ facts motivate us: plain random search is a strong baseline \cite{bergstra2012,l
 the leading evolutionary method drops crossover entirely, keeping only mutation with aging
 \cite{real2019}.
 
-We ask two questions on a real benchmark. Does crossover beat random search? And does a
-crossover that \emph{respects} the space's structure --- NAS-Bench-101's cell factors into a
-wiring dimension and a labeling dimension --- beat one that ignores it? The intuition for the
-second is strong: a graph's building blocks are its subgraphs and wiring, not arbitrary bits.
-We find yes, and no: the structure-aware operators are worse, reversing below random at scale.
+We study two things on a real benchmark: whether crossover beats random search at all, and
+whether a crossover that \emph{respects} the space's structure --- NAS-Bench-101's cell factors
+into a wiring dimension and a labeling dimension --- beats one that ignores it. The intuition
+for the second is strong: a graph's building blocks are its subgraphs and wiring, not arbitrary
+bits. It beats random, but the structure-aware operators are worse than the structure-blind
+one, reversing below random at scale.
 (The recombination logic comes from a self-modifying back-propagation engine \cite{thesis1997};
 we move fitness onto the table so training noise cannot confound the comparison.)
 
