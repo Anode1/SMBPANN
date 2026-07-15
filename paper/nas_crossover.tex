@@ -152,7 +152,7 @@ operator's advantage over random decays to nothing.
 
 \begin{table}[t]
 \centering
-\caption{NAS-Bench-101, population $50$, elite $12$, $600$ paired seeds. Mean best
+\caption{NAS-Bench-101, population $50$, elite $12$, $4000$ paired seeds. Mean best
 test-accuracy ($\%$), and Wilcoxon signed-rank $z$ against random search (positive $=$
 beats random). Flat crossover wins at every budget; \emph{axis and path drop below random
 at scale} and aligned's edge decays to zero. Every arm shares each seed with the control.}
@@ -161,28 +161,29 @@ at scale} and aligned's edge decays to zero. Every arm shares each seed with the
 \toprule
 budget & random & flat ($z$) & axis ($z$) & aligned ($z$) & path ($z$) \\
 \midrule
-$500$   & $93.639$ & $\mathbf{94.009}\;(+19.0)$ & $93.792\;(+11.4)$ & $93.909\;(+16.2)$ & $93.922\;(+17.6)$ \\
-$2000$  & $93.743$ & $\mathbf{94.082}\;(+17.8)$ & $93.852\;(+7.7)$  & $94.001\;(+15.0)$ & $93.930\;(+13.0)$ \\
-$8000$  & $93.940$ & $\mathbf{94.094}\;(+12.3)$ & $93.867\;(\mathbf{-5.2})$ & $94.032\;(+7.4)$ & $93.933\;(-0.6)$ \\
-$20000$ & $94.037$ & $\mathbf{94.096}\;(+6.2)$  & $93.873\;(\mathbf{-10.9})$ & $94.042\;(+0.9)$ & $93.934\;(\mathbf{-8.0})$ \\
+$500$   & $93.645$ & $\mathbf{93.998}\;(+48.0)$ & $93.806\;(+30.3)$ & $93.917\;(+41.8)$ & $93.904\;(+44.4)$ \\
+$2000$  & $93.746$ & $\mathbf{94.072}\;(+45.8)$ & $93.872\;(+22.5)$ & $94.009\;(+39.8)$ & $93.911\;(+29.9)$ \\
+$8000$  & $93.941$ & $\mathbf{94.085}\;(+29.2)$ & $93.883\;(\mathbf{-10.2})$ & $94.036\;(+19.7)$ & $93.912\;(\mathbf{-6.1})$ \\
+$20000$ & $94.042$ & $\mathbf{94.088}\;(+12.5)$ & $93.886\;(\mathbf{-27.6})$ & $94.044\;(+1.9)$ & $93.913\;(\mathbf{-26.0})$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The trends are clean and monotone across the four budgets. Flat's advantage over random
-shrinks as random saturates (its $z$ falls $19\!\to\!18\!\to\!12\!\to\!6$) but never
-disappears; it beats every structured operator head-to-head at every budget. Axis, which
-factors the two dimensions into large indivisible units, converges prematurely and its $z$
-against random crosses from $+11$ to $-11$; by $20{,}000$ evaluations it loses to random
-search $176/399$. The path operator behaves the same way and more starkly: its mean best
-accuracy barely moves across a fortyfold increase in budget ($93.922 \to 93.930 \to 93.933
-\to 93.934$) --- it has essentially converged by $500$ evaluations and then stops --- so
-random search sails past it and it too ends significantly \emph{below} random ($z=-8.0$).
-Only the aligned operator, which mixes at the intermediate granularity of node modules,
-holds on: its edge over random decays from $z=16$ to $z=0.9$, exactly to the break-even
-point. So of the four crossovers, the one that ignores structure wins at every budget, the
-two most structured ones (axis, path) fall below random search at scale, and the
-intermediate one ends in a tie with it.
+shrinks as random saturates (its $z$ falls $48\!\to\!46\!\to\!29\!\to\!13$) but never
+disappears --- even at the largest budget it wins $2268/1322$ of the paired seeds --- and it
+beats every structured operator head-to-head at every budget. Axis, which factors the two
+dimensions into large indivisible units, converges prematurely and its $z$ against random
+crosses from $+30$ to $-28$; by $20{,}000$ evaluations it loses to random search
+$1230/2559$. The path operator behaves the same way and more starkly: its mean best accuracy
+barely moves across a fortyfold increase in budget ($93.904 \to 93.911 \to 93.912 \to
+93.913$) --- it has essentially converged by $500$ evaluations and then stops --- so random
+search sails past it and it too ends far \emph{below} random ($z=-26$). Only the aligned
+operator, which mixes at the intermediate granularity of node modules, holds on: its edge
+over random decays from $z=42$ to $z=1.9$, essentially to the break-even point. So of the
+four crossovers, the one that ignores structure wins at every budget, the two most structured
+ones (axis, path) fall below random search at scale, and the intermediate one ends in a tie
+with it.
 
 The obvious escape --- that the structured operators fail because they produce more
 invalid graphs --- is closed by measurement: axis, aligned, and path in fact produce
