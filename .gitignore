@@ -7,6 +7,9 @@
 /smbpann_ut
 /smbpann_ut_asan
 /smbpann_ut_ubsan
+/nasxover
+/nb101
+/nb101_extract
 
 # -- legacy/java --
 legacy/java/build/
@@ -19,3 +22,4 @@ paper/*.out
 paper/*.fls
 paper/*.fdb_latexmk
 paper/*.synctex.gz
+validation/nasbench101.txt

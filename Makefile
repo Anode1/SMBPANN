@@ -64,7 +64,7 @@ release  : CFLAGS   = -O2
 %.o: %.c
 	$(CC) $(SMB_CFLAGS) $(SMB_VERDEF) $(CPPFLAGS) $(CFLAGS) -MMD -c $< -o $@
 
-.PHONY: all release debug pedantic clean ut ut-asan ut-ubsan check bbtest modnas modevo conv2d nasxover
+.PHONY: all release debug pedantic clean ut ut-asan ut-ubsan check bbtest modnas modevo conv2d nasxover nb101_extract nb101
 
 all release debug pedantic: $(BIN) $(EVOLVE) $(GENTASK)
 
@@ -77,6 +77,10 @@ modnas:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o modnas validation/modular_nas.c $(SMB_MATH)
 nasxover:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o nasxover validation/nasxover.c $(SMB_MATH)
+nb101_extract:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o nb101_extract validation/nb101_extract.c
+nb101:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o nb101 validation/nb101.c $(SMB_MATH)
 conv2d:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o conv2d validation/conv2d.c $(SMB_MATH)
 modevo:
@@ -112,6 +116,6 @@ ut-ubsan:
 	./$(TESTBIN)_ubsan
 
 clean:
-	-rm -f $(BIN) $(EVOLVE) $(GENTASK) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan bbtest modnas modevo conv2d nasxover $(OBJS) $(OBJS:.o=.d)
+	-rm -f $(BIN) $(EVOLVE) $(GENTASK) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan bbtest modnas modevo conv2d nasxover nb101_extract nb101 $(OBJS) $(OBJS:.o=.d)
 
 -include $(OBJS:.o=.d)
