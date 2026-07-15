@@ -317,8 +317,10 @@ int main(int argc, char **argv)
         have_front = 1;
     }
 
-    /* weight inheritance: warm-start the layers that match the parent checkpoint,
-     * so an unchanged layer resumes its parent's training instead of restarting */
+    /* weight inheritance: warm-start only from an exactly-matching parent
+     * checkpoint (a surviving elite resumes its own training); a changed topology
+     * is refused and trains from scratch -- inheriting weights across a structural
+     * change would copy them into layers they were not trained in */
     if (warm_path != NULL && ckpt_warmstart(net, warm_path) != 0)
         fprintf(stderr, "smbpann: cannot warm-start from '%s' (training fresh)\n",
                 warm_path);

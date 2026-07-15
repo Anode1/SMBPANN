@@ -183,48 +183,58 @@ void genome_reproduce(Genome *child, const Genome *parent,
 void genome_crossover(Genome *child, const Genome *a, const Genome *b,
                       size_t maxhid, size_t maxwidth, Rng *rng)
 {
-    size_t ahid = a->n - 2, bhid = b->n - 2;    /* hidden-layer counts */
-    size_t ca = below(rng, ahid + 1);           /* take hidden 1..ca from A */
-    size_t cb = below(rng, bhid + 1);           /* then hidden cb.. from B  */
-    size_t nhid, l, i;
+    size_t        ahid = a->n - 2, bhid = b->n - 2;      /* hidden-layer counts */
+    size_t        common = (ahid < bhid) ? ahid : bhid;  /* aligned prefix depth */
+    const Genome *tail = ((rng_u32(rng) & 1u) != 0u) ? a : b;  /* depth donor */
+    const Genome *fe   = ((rng_u32(rng) & 1u) != 0u) ? a : b;  /* front-end donor */
+    size_t        nhid, l, i;
 
     if (maxhid > SMB_MAX_LAYERS - 2)
         maxhid = SMB_MAX_LAYERS - 2;
-    nhid = ca + (bhid - cb);                     /* one-point spliced depth */
+
+    /* Depth is a building block: inherit it whole from one uniformly-chosen parent.
+     * Crossover recombines existing blocks; inventing a novel depth is mutation's
+     * job (so no one-point splice can stretch the child past both parents). */
+    nhid = tail->n - 2;
     if (nhid > maxhid)
         nhid = maxhid;
 
-    /* the 2D conv front-end rides with parent A; set before any genome_recompute */
+    /* The 2D conv front-end is a separable gene: take it whole from a uniformly-
+     * chosen parent (both share the problem's input, so either is valid), not
+     * always from A. Set before any genome_recompute. */
     child->ninput  = a->ninput;
-    child->c2filt  = a->c2filt;
-    child->c2ksize = a->c2ksize;
+    child->c2filt  = fe->c2filt;
+    child->c2ksize = fe->c2ksize;
 
     child->dim[0]  = a->dim[0];                  /* input fixed by the problem */
     child->kind[0] = LAYER_DENSE;
-    l = 1;
-    for (i = 0; i < ca && (l - 1) < nhid; i++, l++) {         /* prefix of A */
-        child->kind[l]  = a->kind[1 + i];
-        child->dim[l]   = a->dim[1 + i];
-        child->nfilt[l] = a->nfilt[1 + i];
-        child->ksize[l] = a->ksize[1 + i];
-    }
-    for (i = 0; (cb + i) < bhid && (l - 1) < nhid; i++, l++) { /* suffix of B */
-        size_t src = 1 + cb + i;
-        child->kind[l]  = b->kind[src];
-        child->dim[l]   = b->dim[src];
-        child->nfilt[l] = b->nfilt[src];
-        child->ksize[l] = b->ksize[src];
+
+    /* Uniform crossover of homologous layers. Layer i aligns across parents by
+     * depth from the input (the i-th feature stage); over the aligned prefix each
+     * whole layer is inherited from a uniformly-chosen parent, and beyond it the
+     * extra depth comes as a coherent unit from the depth donor. */
+    for (i = 0, l = 1; i < nhid; i++, l++) {
+        const Genome *src = (i < common)
+                            ? (((rng_u32(rng) & 1u) != 0u) ? a : b)
+                            : tail;
+        size_t        si  = 1 + i;
+        child->kind[l]  = src->kind[si];
+        child->dim[l]   = src->dim[si];
+        child->nfilt[l] = src->nfilt[si];
+        child->ksize[l] = src->ksize[si];
     }
     child->kind[l] = LAYER_DENSE;                /* output fixed by the problem */
     child->dim[l]  = a->dim[a->n - 1];
     child->n = l + 1;
     genome_recompute(child);                     /* derive any conv widths */
 
-    /* blend the training hyper-parameters: geometric mean for the positive
-     * scale ones, arithmetic for momentum, one parent's activation gene */
+    /* Object hyper-parameters recombine discretely -- each inherited whole from one
+     * parent, preserving good parental values instead of averaging them away. The
+     * self-adaptive mutation RATE is a strategy parameter: intermediate (geometric-
+     * mean) recombination, per the evolution-strategies convention. */
     child->rate       = (smb_real)sqrt((double)a->rate * (double)b->rate);
-    child->lrate      = (smb_real)sqrt((double)a->lrate * (double)b->lrate);
-    child->momentum   = (smb_real)(0.5 * ((double)a->momentum + (double)b->momentum));
+    child->lrate      = ((rng_u32(rng) & 1u) != 0u) ? a->lrate : b->lrate;
+    child->momentum   = ((rng_u32(rng) & 1u) != 0u) ? a->momentum : b->momentum;
     child->activation = ((rng_u32(rng) & 1u) != 0u) ? a->activation : b->activation;
 
     selfadapt(child, maxhid, maxwidth, rng);

@@ -54,10 +54,14 @@ void genome_mutate(Genome *g, size_t maxhid, size_t maxwidth, Rng *rng);
 void genome_reproduce(Genome *child, const Genome *parent,
                       size_t maxhid, size_t maxwidth, Rng *rng);
 
-/* Sexual reproduction: recombine two parents into CHILD by a one-point splice of
- * their hidden layers (a prefix of A, a suffix of B, so depth is inherited too)
- * and a blend of the training hyper-parameters, then the same self-adaptive step
- * as genome_reproduce. The input and output widths stay fixed by the problem. */
+/* Sexual reproduction: recombine two parents into CHILD by UNIFORM crossover of
+ * their homologous hidden layers -- layers align by depth from the input, and over
+ * the aligned prefix each whole layer is drawn from a uniformly-chosen parent. The
+ * child's depth (and any tail beyond the shorter parent) is inherited whole from
+ * one parent; the 2D front-end and each object hyper-parameter (learning rate,
+ * momentum, activation) are likewise inherited discretely from a random parent,
+ * while the self-adaptive mutation rate blends (geometric mean). Then the same
+ * self-adaptive step as genome_reproduce. Input and output widths stay fixed. */
 void genome_crossover(Genome *child, const Genome *a, const Genome *b,
                       size_t maxhid, size_t maxwidth, Rng *rng);
 

@@ -19,12 +19,15 @@
  * file error. */
 int ckpt_save(const Net *net, const char *path);
 
-/* Warm-start NET (already built and net_init'd) from the checkpoint at PATH: for
- * every layer that index-aligns and is weight-compatible (same kind and same
- * weight/bias buffer sizes), copy the saved weights and biases over the random
- * init; leave every other layer as initialized. So an unchanged layer inherits its
- * parent's training and a mutated or added layer starts fresh. Returns 0, or -1 on
- * a missing or malformed file (NET is left as it was on failure of a later layer).*/
+/* Warm-start NET (already built and net_init'd) from the checkpoint at PATH.
+ * Inheritance is all-or-nothing: only if the checkpoint's topology matches NET
+ * *exactly* -- same layer count, and every layer the same kind, dims, filters and
+ * kernel -- are the saved weights and biases copied over the random init. Any
+ * structural difference (a mutated width, an inserted/pruned/flipped layer, a
+ * crossover splice) makes a positional copy meaningless -- weights would land in a
+ * layer they were not trained in -- so the whole checkpoint is refused and NET
+ * keeps its fresh init (the child trains from scratch). Returns 0 on success or on
+ * a clean refusal, or -1 on a missing or malformed file. */
 int ckpt_warmstart(Net *net, const char *path);
 
 #endif /* SMB_CKPT_H */
