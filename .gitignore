@@ -23,3 +23,7 @@ paper/*.fls
 paper/*.fdb_latexmk
 paper/*.synctex.gz
 validation/nasbench101.txt
+/bbtest
+/modnas
+/modevo
+/conv2d
