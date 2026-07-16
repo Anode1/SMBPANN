@@ -37,11 +37,22 @@ XOR the search reliably finds, on its own, that a ReLU hidden layer with high
 momentum solves it near-exactly.)
 
 Layers are also **structural**: each hidden layer can evolve between a dense one
-and a weight-shared, locally-connected **convolution-like** kind. So the search
-can, in principle, discover the shift-invariant, weight-sharing structure LeCun
-designed by hand for images, rather than being told it, which is the 1997 thesis's
-central point that the architecture's inductive bias carries much of the work. The
-convolutional backprop is verified by a numerical gradient check in the test suite.
+and a weight-shared, locally-connected **convolution-like** kind. This was the
+project's original ambition, stated in the 1997 thesis: to let the search
+**rediscover LeCun's topology** on its own, the local receptive field and shared
+weights that carry much of the work on images, rather than being handed it. The
+thesis already drew the idea, a single unit fed by a small window of the previous
+layer, the local feature detector:
+
+![Local receptive field from the 1997 thesis: one unit in the next layer wired to a small window of the previous layer, the weight-sharing feature detector that convolution generalizes.](doc/feature_detector_field.png)
+
+*Local receptive field, drawn in the 1997 thesis: one unit fed by a small window of
+the previous layer. Shared across positions, this is a convolution.*
+
+So the search can, in principle, discover this shift-invariant, weight-sharing
+structure rather than being told it, the thesis's central point that the
+architecture's inductive bias carries much of the work. The convolutional backprop
+is verified by a numerical gradient check in the test suite.
 
 The search returns the architecture that generalizes best on validation, with the
 standard caveat that the search itself can overfit the validation split, so a
