@@ -135,3 +135,5 @@ clean:
 -include $(OBJS:.o=.d)
 emerge_2d:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d validation/emerge_2d.c $(SMB_MATH)
+emerge_2d_orient:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_orient validation/emerge_2d_orient.c $(SMB_MATH)

@@ -42,3 +42,5 @@ emerge_staged
 scratch_emerge_staged.out
 emerge_2d
 scratch_emerge_2d.out
+emerge_2d_orient
+scratch_emerge_2d_orient.out
