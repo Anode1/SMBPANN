@@ -349,6 +349,29 @@ run: this only appears with **balanced classes** — an initial 1/3-positive / 2
 C=1 and C=2 at 0.67, the majority-class baseline, and hid the effect completely until the imbalance was
 found and fixed.
 
+### 14. Does emergent width track operation count? A boundary — it breaks at K=3
+
+Section 13 (one op → one channel, two ops → two) invites a clean generalization: grow channels until
+the task solves, and the selected count C* should equal the number of operations K. `emerge_2d_grow.c`
+tests it on K-operation tasks (K oriented bars all present vs one dropped, balanced), growing C from 1.
+**It does not hold.**
+
+| K ops | C=1 | C=2 | C=3 | C=4 | C=5 | selected C* |
+|---|---|---|---|---|---|---|
+| K=1 | 1.000 | — | — | — | — | **1.0** (clean) |
+| K=2 | 0.725 | 0.860 | 0.977 | — | — | ~2.5 (roughly) |
+| K=3 | 0.649 | 0.658 | 0.751 | 0.796 | 0.857 | ~4.75 (only ~4/6 solved) |
+
+K=1 is clean and K=2 roughly tracks, but **K=3 breaks**: it is not solved at 3 channels — even with a
+stronger-compute check (450 epochs, larger amplitude) C=3 reached only 0.75 — and needs 4–5 *redundant*
+channels to marginally cross, unreliably. More compute barely moved it, so this is **structural, not
+trainability**. Two honest reasons: gradient descent does not cleanly assign one channel per operation
+(so covering all K detectors needs redundancy, C > K), and a K-way conjunction **compounds per-channel
+error** (0.95³ ≈ 0.86, right at the target edge). So the *direction* is right — more operations need
+more channels — but the clean "width = operation count" law is false. Section 13's small-K result
+stands; its tidy generalization does not, and it is more honest to show the staircase collapsing at
+K=3 than to have stopped at K=2 where it still looked clean.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
