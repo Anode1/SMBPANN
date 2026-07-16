@@ -34,3 +34,5 @@ emerge_offset
 scratch_emerge_local.out
 emerge_compose
 scratch_emerge_compose.out
+emerge_arch
+scratch_emerge_arch.out
