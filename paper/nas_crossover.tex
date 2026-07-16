@@ -21,9 +21,13 @@ optimizer built for industrial use in 2002. Reference implementation:
 \begin{abstract}
 Evolutionary neural architecture search recombines architectures with crossover, yet random
 search is famously hard to beat and it is rarely clear whether crossover contributes anything
-of its own. We give one rule with a positive control and a real-space test, on two
-dependency-free C testbeds, each with paired significance tests. The rule: \emph{crossover
-helps exactly when the space carries separable, recombinable building blocks}. Positive
+of its own. The idea we test: a NAS-Bench-101 cell is multi-dimensional (a wiring dimension
+$\times$ a labeling dimension, plus a path view), so a crossover that recombines along that
+structure ($H_1$) ought to beat a structure-blind one; the null ($H_0$) is that the real cell
+space carries no such recombinable building blocks. We give one rule with a positive control
+and a real-space test, on two dependency-free C testbeds, each with paired significance tests.
+The rule: \emph{crossover helps exactly when the space carries separable, recombinable
+building blocks}. Positive
 control --- on concatenated deceptive trap functions, separable by construction, one-point
 crossover's advantage over mutation grows with the number of blocks, from $1.8\times$ at four
 blocks to a regime at sixteen where mutation reaches the optimum $28/200$ times and crossover
