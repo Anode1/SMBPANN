@@ -393,6 +393,29 @@ orientation detectors, and no readout can compensate for evidence that was never
 Section 14 stands, now sharper — the boundary of "width tracks operations" is a *feature-extraction*
 limit of a single conv layer, not a readout artifact.
 
+### 16. The closer: does a deeper feature extractor recover K=3? (No — it is a robust wall)
+
+Section 15 located K=3's failure in the conv channels, not the readout. The last question: is it that
+*one* conv layer cannot specialize (which a deeper *extractor* would fix), or a harder wall?
+`emerge_2d_deep2.c` adds a second conv layer (1→C1 intermediate → C final channels, linear head fixed).
+
+| extractor | K | C=1 | C=2 | C=3 | C=4 |
+|---|---|---|---|---|---|
+| 1-layer | 2 | 0.717 | 0.845 | 0.955 | 0.944 |
+| 2-layer | 2 | 0.671 | 0.817 | 0.858 | 0.877 |
+| 1-layer | 3 | 0.635 | 0.674 | 0.759 | 0.763 |
+| **2-layer** | 3 | 0.623 | 0.623 | 0.645 | 0.645 |
+
+**A firm no — extractor depth does not recover K=3; it makes it worse.** At K=3 the 2-layer extractor
+is stuck at ~0.63 across every C (the 1-layer reached 0.76), and K=2 is slightly worse too. The deeper
+net adds optimization difficulty without cleaner orientation specialization. So K=3's limit is **robust**
+— unmoved by a deeper readout (Section 15) *and* a deeper extractor (here) — a wall of this
+conv + max-pool + K-way-conjunction setup, not a single-layer artifact. Honest caveat: the deeper net is
+plausibly under-trained, so this shows that *adding* depth did not help (and hurt), not that depth
+*cannot* in principle. Either way, the 2-D arc closes where the discipline pointed: the tidy "width =
+operations" law holds for small K, breaks at K=3, and three separate attempts to rescue it failed —
+which is a more honest place to end than the clean staircase we would have reported by stopping at K=2.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
