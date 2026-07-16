@@ -160,7 +160,7 @@ static double objective(const char m[H][N], double acc)
 
 /* one GA run. Fills final-generation means into out[] = {span,density,on_relevant,feasible};
  * returns best-individual TEST accuracy. sel=0 -> drift (no selection). */
-static double run_ga(int sel, int gens, uint32_t seed, double out[4])
+static double run_ga(int sel, int gens, uint32_t seed, double out[4], double *trel, double *tden)
 {
     static char pop[POP][H][N], nxt[POP][H][N];
     double fit[POP], facc[POP]; int idx[POP]; int g,p,q,i,j;
@@ -168,6 +168,7 @@ static double run_ga(int sel, int gens, uint32_t seed, double out[4])
     for(p=0;p<POP;p++) for(j=0;j<H;j++) for(i=0;i<N;i++) pop[p][j][i]=1;
     for(p=0;p<POP;p++){ facc[p]=fitness(pop[p],(uint32_t)(seed+p*2654435761u+1u)); fit[p]=objective(pop[p],facc[p]); }
     for(g=0;g<gens;g++){
+        if(trel){ double R=0,D=0; for(p=0;p<POP;p++){R+=on_relevant(pop[p]);D+=density(pop[p]);} trel[g]+=R/POP; tden[g]+=D/POP; }
         for(p=0;p<POP;p++) idx[p]=p;
         if(sel){ for(p=0;p<POP;p++) for(q=p+1;q<POP;q++) if(fit[idx[q]]>fit[idx[p]]){int t=idx[p];idx[p]=idx[q];idx[q]=t;} }
         else   { for(p=POP-1;p>0;p--){int r=(int)(r32()%(uint32_t)(p+1));int t=idx[p];idx[p]=idx[r];idx[r]=t;} }
@@ -198,9 +199,9 @@ static void task_row(const char *name, int task, int gens, int seeds, double cha
     double sel[4]={0,0,0,0}, drf[4]={0,0,0,0}, acc=0; int sd;
     for (sd=1; sd<=seeds; sd++){
         new_task(task,(uint32_t)(sd*131+1));
-        acc += run_ga(1,gens,(uint32_t)(sd*7+1),sel)/seeds;
+        acc += run_ga(1,gens,(uint32_t)(sd*7+1),sel,0,0)/seeds;
         new_task(task,(uint32_t)(sd*131+1));
-        run_ga(0,gens,(uint32_t)(sd*7+1),drf);
+        run_ga(0,gens,(uint32_t)(sd*7+1),drf,0,0);
     }
     avg(sel,seeds); avg(drf,seeds);
     printf("  %-18s  %.3f   %.3f    %.3f  (chance %.2f, drift %.3f)   %.3f\n",
@@ -232,7 +233,7 @@ int main(void)
     printf("  %-10s  span   density  on-relevant  test\n", "grow-rate");
     { double rates[4] = {0.000, 0.006, 0.03, 0.10};
       for (r=0;r<4;r++){ double sel[4]={0,0,0,0}, acc=0; g_padd=rates[r];
-        for (sd=1; sd<=seeds; sd++){ new_task(T_LOCAL,(uint32_t)(sd*131+1)); acc+=run_ga(1,gens,(uint32_t)(sd*7+1),sel)/seeds; }
+        for (sd=1; sd<=seeds; sd++){ new_task(T_LOCAL,(uint32_t)(sd*131+1)); acc+=run_ga(1,gens,(uint32_t)(sd*7+1),sel,0,0)/seeds; }
         avg(sel,seeds);
         printf("  %-10.3f  %.3f   %.3f    %.3f      %.3f\n", rates[r], sel[0], sel[1], sel[2], acc); }
       g_padd = envdbl("PADD",0.006); }
@@ -242,15 +243,26 @@ int main(void)
     printf("  %-8s  density  span   feasible  test\n", "target");
     { double tg[4] = {0.80, 0.85, 0.90, 0.95}; double save=g_target;
       for (r=0;r<4;r++){ double sel[4]={0,0,0,0}, acc=0; g_target=tg[r];
-        for (sd=1; sd<=seeds; sd++){ new_task(T_LOCAL,(uint32_t)(sd*131+1)); acc+=run_ga(1,gens,(uint32_t)(sd*7+1),sel)/seeds; }
+        for (sd=1; sd<=seeds; sd++){ new_task(T_LOCAL,(uint32_t)(sd*131+1)); acc+=run_ga(1,gens,(uint32_t)(sd*7+1),sel,0,0)/seeds; }
         avg(sel,seeds);
         printf("  %-8.2f  %.3f    %.3f    %3.0f%%    %.3f\n", tg[r], sel[1], sel[0], 100*sel[3], acc); }
       g_target=save; }
 
+    /* ---- convergence trajectory: watch feature selection emerge on SPARSE ---- */
+    printf("\n== emergence in action: SPARSE feature selection over generations ==\n");
+    { double trel[512]={0}, tden[512]={0}; int g, mile[6]={0,10,25,50,100,0};
+      mile[5]=gens-1;
+      for (sd=1; sd<=seeds; sd++){ new_task(T_SPARSE,(uint32_t)(sd*131+1));
+        run_ga(1,gens,(uint32_t)(sd*7+1),(double[4]){0,0,0,0},trel,tden); }
+      for (g=0; g<gens; g++){ trel[g]/=seeds; tden[g]/=seeds; }
+      printf("  %-5s  on-relevant  density   (chance on-relevant = %.2f)\n", "gen", (double)SUBSZ/N);
+      { int r; for (r=0;r<6;r++){ g=mile[r]; if(g<0||g>=gens) continue;
+          printf("  %-5d   %.3f       %.3f\n", g, trel[g], tden[g]); } } }
+
     /* ---- reuse: emerge a structure on one LOCAL task, apply to a fresh one ---- */
     printf("\n== reuse: emerge structure on task A, apply to fresh task B (same family) ==\n");
     { char keep[H][N]; double dA, tB, tBd; int a,b; static char dense[H][N];
-      new_task(T_LOCAL, 20240001u); run_ga(1,gens,20240002u,(double[4]){0,0,0,0});
+      new_task(T_LOCAL, 20240001u); run_ga(1,gens,20240002u,(double[4]){0,0,0,0},0,0);
       memcpy(keep, g_best, sizeof keep); dA = density(keep);
       new_task(T_LOCAL, 20240777u);
       for(a=0;a<H;a++) for(b=0;b<N;b++) dense[a][b]=1;

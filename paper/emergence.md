@@ -71,6 +71,20 @@ are **not** preferentially in-window (on-relevant 0.259 ≈ chance, and *below* 
 not the aligned local receptive fields convolution needs. Many sparse subnetworks solve a local task,
 and selection finds *a* sparse one, not *the* convolutional one.
 
+**Emergence in action.** On the SPARSE task the selection is visible generation by generation, as the
+population anneals from the dense seed down to ~3 connections:
+
+| gen | on-relevant | density |
+|---|---|---|
+| 0 | 0.333 (chance) | 1.000 |
+| 25 | 0.379 | 0.246 |
+| 50 | 0.700 | 0.044 |
+| 100 | 0.904 | 0.028 |
+| 150 | 0.905 | 0.028 |
+
+As energy falls (density 1.0 → 0.028) the surviving connections migrate onto the informative inputs
+(on-relevant 0.33 → 0.90). The structure is discovered *as the system cools*.
+
 ### 2. Annealing temperature controls how far it converges
 
 | grow rate | RF-span | density | test |
