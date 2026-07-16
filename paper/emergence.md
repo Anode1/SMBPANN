@@ -16,12 +16,15 @@ still solves the task.
 
 Convolution was the motivating test case: for a task whose information is local, is the
 minimal-energy structure the **local receptive field**? The answer below is partial and, I think,
-more interesting than a clean yes: energy-constrained emergence reliably discovers **which
-connections matter** (sparse, task-relevant connectivity — cleanly, for a sparse task), and the
-annealing and energy/accuracy mechanics behave exactly as the physics predicts — but the
-**specific structured topology of convolution does not fall out of connectivity pruning**. That
-matches both the pruning literature and this project's other finding (structural cleverness does
-not come for free).
+more interesting than a clean yes. Energy-constrained emergence reliably discovers **which
+connections matter** (sparse, task-relevant connectivity — cleanly, for a sparse task), and with a
+weight-tying gene it even discovers **weight sharing** (turning on a convolution when
+translation-invariance rewards it, improving generalization). The annealing and energy/accuracy
+mechanics behave exactly as the physics predicts. What still does *not* fall out is the last,
+specific piece — a **compact aligned local filter**: pruning gives sparsity but not aligned windows,
+and the tying gene gives sharing but not a tight kernel. Convolution's parts emerge separately; the
+whole, compact convolution needs a pressure the plain energy term does not supply — matching the
+pruning literature and this project's other finding that structural cleverness does not come for free.
 
 ## The mechanism, and where its pieces come from
 
@@ -115,28 +118,44 @@ A structure emerged on one task (density 0.250) transfers to a **fresh task from
 test 0.889, versus a dense net's 0.909 — nearly matching at **25% of the energy**. Discover the
 topology once, reuse it cheaply.
 
+### 5. A weight-tying gene: sharing *does* emerge, but not the compact filter
+
+`emerge_tie.c` adds convolution's other half as a gene: a `shared` bit that ties weights by offset
+(one weight per relative position, reused everywhere — a convolution), with energy now counted as
+free **parameters** (a shared filter of width K costs K; an unshared local receptive field costs
+K·H = 30). From a dense *unshared* seed, sharing forced off vs allowed (16 seeds × 150 gens):
+
+| arm | shared-frac | param-energy | RF-span | test |
+|---|---|---|---|---|
+| sharing forced off | 0.000 | 0.098 | 0.373 | 0.859 |
+| sharing allowed | **0.893** | 0.112 | 0.611 | 0.900 |
+
+**Weight sharing emerges** — 89% of the population turns it on — and it *improves generalization*
+(0.900 vs 0.859): the search discovers that tying weights is the efficient way to exploit
+translation-invariance. That is the half of convolution connectivity pruning alone could not produce,
+and it is a cleaner positive than expected. **But** the emerged shared filter is **broad** (span 0.61,
+~13 taps), not the compact K = 3 window: the parameter-energy pressure on filter *width* is too weak
+to trim it, so a weight-shared *wide* filter emerges, not a tight convolution.
+
 ## Honest bottom line
 
-Directed emergence under an energy budget **works as a sparsifier and a feature selector**: it finds
-sparse, task-relevant connectivity, cleanly picks the informative inputs on a sparse task, obeys an
-annealing temperature, and traces the accuracy/energy Pareto — and the discovered structure reuses
-across a task family. What it does **not** do is grow *convolution*. Convolution's two defining
-properties — **aligned local windows** and **shared weights** — do not emerge from connectivity
-pruning: weight sharing a mask cannot even express, and the aligned-local pattern does not
-preferentially form because many sparse subnetworks solve a translation-invariant task equally well.
+Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
+tying gene — a discoverer of weight sharing**: it finds sparse task-relevant connectivity, cleanly
+picks the informative inputs on a sparse task, turns on weight sharing when translation-invariance
+rewards it (improving generalization), obeys an annealing temperature, traces the accuracy/energy
+Pareto, and its structures reuse across a task family. What still does **not** fall out is the
+**compact aligned local receptive field**: connectivity pruning finds sparsity but not aligned
+windows, and the tying gene finds sharing but not a tight filter. Convolution's two halves emerge
+*separately and partially*; the *compact* convolution is not assembled by an energy budget alone.
 
 This is consistent with the pruning literature (sparse subnetworks, not convolutions) and with the
-crossover study in this repo: the useful, general thing here is **automatic sparsification / feature
-discovery under a resource budget**; the specific inductive bias of convolution still has to be built
-in, not pruned into existence.
+crossover study in this repo: the general, useful thing here is **automatic structural discovery under
+a resource budget** (sparsity, feature relevance, weight sharing); the last, specific piece — a tight
+local filter — needs a pressure the current energy term does not supply.
 
 ## Next steps
 
-- **A weight-tying gene**: let the genome share weights across positions, and test whether the *full*
-  convolution (local **and** shared) can emerge when the representation can express it. (Prediction:
-  locality-with-alignment might, but the literature suggests the shared symmetry needs explicit
-  search.)
-- **Force alignment**: a task or objective that rewards *translation-equivariant* structure, to test
-  whether aligned local windows (not just sparsity) can be selected for.
+- **A filter-width pressure**: penalize the *span* of a shared filter (not just its parameter count),
+  to test whether the compact local window — the last missing piece — can then be selected for.
 - **Larger N and 2-D inputs**, where greedy enumeration fails and the GA earns its keep; then sound
   and higher-dimensional tasks, to discover and reuse their topologies.
