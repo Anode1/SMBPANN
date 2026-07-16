@@ -372,6 +372,27 @@ more channels — but the clean "width = operation count" law is false. Section 
 stands; its tidy generalization does not, and it is more honest to show the staircase collapsing at
 K=3 than to have stopped at K=2 where it still looked clean.
 
+### 15. Head or channels? A combining layer recovers K=2 but not K=3
+
+Section 14's K=3 failure had two suspects: the conv channels not specializing, and a *linear* readout
+compounding their error. `emerge_2d_deep.c` separates them by swapping the linear head for a small MLP
+head (an 8-unit hidden layer over the pooled channel vector) and re-running K=2, 3 across C.
+
+| head | K | C=1 | C=2 | C=3 | C=4 | C=5 |
+|---|---|---|---|---|---|---|
+| linear | 2 | 0.717 | 0.845 | 0.955 | 0.944 | 0.981 |
+| **MLP** | 2 | 0.724 | **0.951** | 0.969 | 0.994 | 0.987 |
+| linear | 3 | 0.635 | 0.674 | 0.759 | 0.763 | 0.817 |
+| **MLP** | 3 | 0.634 | 0.741 | **0.794** | 0.841 | 0.870 |
+
+**The combining layer recovers K=2 but not K=3 — it splits the blame.** K=2 at C=2 jumps from a shaky
+0.845 to a clean **0.951**: that marginality *was* the linear head, and a nonlinear combiner fixes it.
+But K=3 at C=3 moves only 0.759 → **0.794**, still under target, and needs C≥5 even with the MLP (0.870).
+So the K=3 failure is **the conv channels, not the head**: three channels cannot pack three clean
+orientation detectors, and no readout can compensate for evidence that was never cleanly extracted.
+Section 14 stands, now sharper — the boundary of "width tracks operations" is a *feature-extraction*
+limit of a single conv layer, not a readout artifact.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
