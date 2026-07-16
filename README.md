@@ -1,4 +1,4 @@
-# SMBPANN
+# SMBPANN 2001-2015-2026
 
 **Self-Modifying Backpropagation Feed-Forward Neural Network.** A network that is
 not told its architecture but searches for it: an evolutionary search over
@@ -49,8 +49,15 @@ final untouched test set is needed to judge it.
 
 Recombining two arbitrary topologies by crossover is a known hard problem (the
 competing-conventions problem, where two networks encode the same function with
-permuted units), so the default here follows Real et al.'s mutation-only
-evolution, with crossover left as an open design question.
+permuted units), so the default follows Real et al.'s mutation-only evolution.
+Crossover is no longer left open; it is now studied directly (see the paper
+below). On deceptive trap functions, where separable building blocks exist by
+construction, crossover decisively beats mutation, and its advantage grows with the
+number of blocks. On the real NAS-Bench-101 cell space, no crossover meaningfully
+beats random search: operators that recombine the cell's wiring, labeling, node
+roles, or whole paths are all consistently worse than a plain structure-blind one,
+and none clears the benchmark's own training noise over random. Crossover helps only
+where the space carries recombinable building blocks; the real cell space does not.
 
 ## Where this sits today
 
@@ -151,6 +158,9 @@ From the [AIS](https://github.com/Anode1/ais) project:
 ```
 .                 the C99 engine: rng, act, net, train, data, arena, genome
                   smbpann (worker) + evolve (search); scripts/evaluate.sh (coordinator)
+validation/       standalone probes: bbtest (trap control), nasxover (NAS-Bench-201),
+                  nb101 + nb101_extract (NAS-Bench-101 crossover study)
+paper/            the write-up (nas_crossover) and the companion essay
 legacy/java/      the original early-2000s Java prototype (object-graph design)
 ```
 
@@ -168,8 +178,9 @@ The engine and the search both run end to end:
 - `evolve` runs the evolutionary architecture search against a matched-compute
   random-search control.
 
-The unit-test suite (30 checks: rng, act, net, the XOR backprop regression,
-arena, data, genome) runs clean under AddressSanitizer and UBSan.
+The unit-test suite (40 checks: rng, act, net, the XOR backprop regression,
+1D and 2D convolution gradient checks, checkpoints, arena, data, genome) runs
+clean under AddressSanitizer and UBSan.
 
 ```sh
 make                            # build ./smbpann and ./evolve
@@ -268,13 +279,16 @@ TARGET=0.12 RUNS=30 GENS=60 scripts/errortest.sh
 
 ## Paper
 
-A short write-up of the experiment, in the style of the 1997 thesis, with the full
-method, exact settings, population sizes, metrics, and per-run statistics:
-[`paper/nas_vs_random.pdf`](paper/nas_vs_random.pdf) (source
-[`paper/nas_vs_random.tex`](paper/nas_vs_random.tex)). Its honest bottom line
-matches the field: at this scale random search is hard to beat, self-adaptive
-mutation beats a fixed rate by a little, and enlarging the search space without the
-budget hands the advantage to random.
+A short write-up in the style of the 1997 thesis, with the full method, exact
+settings, and per-run statistics:
+[`paper/nas_crossover.pdf`](paper/nas_crossover.pdf) (source
+[`paper/nas_crossover.tex`](paper/nas_crossover.tex)). It pairs a trap-function
+positive control (crossover wins decisively where separable building blocks exist)
+with a real-space negative (on NAS-Bench-101 no crossover meaningfully beats random,
+and the structure-aware operators are worse than a plain uniform one), and explains
+why: good cells are common and the gap to the optimum is smaller than the
+benchmark's training noise, so random search is hard to beat. The companion essay is
+[`paper/essay.md`](paper/essay.md).
 
 ## Roadmap
 
@@ -290,12 +304,19 @@ budget hands the advantage to random.
 6. **A reproducible benchmark** (`gentask` + `scripts/benchmark.sh`): the GA and
    its matched random-search control on a self-contained synthetic task where
    topology matters, over several seeds, reproducible from a seed with no
-   downloads. *(done)* Bridging to the real NAS-Bench-101/201 (a cell-based search
-   space shipped as multi-gigabyte PyTorch files) is future work.
+   downloads. *(done)*
 7. **Error control** (`evolve -E` + `scripts/errortest.sh`): the search runs until
    it reaches a target validation error, realizing the top-line
    `self_modifying_predict(Train, Test, Error)` signature, and the time-to-target
    race replaces fixed-budget fitness as the measure. *(done)*
+8. **Crossover on real NAS benchmarks** (`bbtest`, `nasxover`, `nb101`): a
+   trap-function positive control, then a four-operator crossover study on
+   NAS-Bench-201 and NAS-Bench-101. The accuracy tables are extracted from the
+   official releases by a small pure-C decoder (`nb101_extract.c`), no PyTorch or
+   TensorFlow; the NAS-Bench-101 fitness oracle is isomorphism-correct by
+   brute-force canonicalization and self-tested. Finding: crossover wins where
+   building blocks exist (traps) but not on the real cell space, where nothing
+   meaningfully beats random. *(done)*
 
 See [`AGENTS.md`](AGENTS.md) for the developer contract and module map.
 
