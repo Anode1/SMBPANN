@@ -254,6 +254,31 @@ whose difficulty is a single receptive-field requirement, which uniform stacks a
 a task genuinely needing two *different* operations composed is where heterogeneity would earn its keep,
 and where the reuse heuristic would finally cost something (the next step).
 
+### 10. Where reuse breaks: a task that needs two *different* operations
+
+Section 9 left a prediction: reuse should finally cost something on a task needing two genuinely
+different operations, where no single reused block serves both roles. `emerge_twoop.c` builds it. The
+pattern to detect (anywhere, max-pool) needs **both**: a **fine motif** `(+A,−A,+A)` at three *adjacent*
+positions — visible only to a **dilation-1** block, since a dilated block skips the middle tap and
+cannot tell `(+,−,+)` from `(+,+,+)` — **and** a matching spike far away at distance `s`, reached
+cheaply only by a **dilation-3** block. Negatives break exactly one condition (wrong fine motif, or
+wrong distance), so both operations are necessary. Reuse vs recombination, equal compute, 8 seeds:
+
+| distance s | uniform d=1 | uniform d=3 | REUSE (best uniform) | FREE (recombination) |
+|---|---|---|---|---|
+| s=8 | 3/8 (L=4.7) | **0/8** | 3/8 (L=4.7) | **8/8 (L=2.4)** |
+| s=12 | **0/8** | **0/8** | 1/8 (L=4.0) | **5/8 (L=3.6)** |
+
+**Reuse breaks, exactly as predicted.** Uniform d=3 solves **0/8** at both distances — it is blind to
+the fine motif. Uniform d=1 can see the motif but pays for the reach: 3/8 at s=8 (L≈4.7) and 0/8 at
+s=12 (the required depth is too large to train). The best of *any* single reused block tops out at 3/8
+and 1/8. Recombination — a GA over dilation sequences — solves **8/8** and **5/8** at about *half* the
+energy, and its solutions are literal two-op composites: at s=8 it finds **`[1 3]`**, one fine block
+then one coarse-reach block, the exact mix no single reused block can express. This is the crossover:
+when the task's difficulty is a single receptive-field requirement, cloning one block is the tractable
+near-optimum (Section 9); the moment it needs two *different* operations, that heuristic fails and the
+expensive heterogeneous search earns its keep.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
@@ -280,10 +305,20 @@ when it pays (Sections 5, 7), and — the clearest result — the **depth of the
 which emerges to match the task's compositional depth exactly (Section 8). Emergence does not hand you
 the priors for free; it composes real, task-matched structure *on top of* the priors you supply.
 
+Sections 9–10 then locate the boundary of the reuse heuristic, and it falls exactly where the biology
+predicts. When a task is **repetitive** — its difficulty just a receptive field to be scaled — cloning
+one block and stacking it is the tractable near-optimum, and searching different blocks buys nothing
+but a bigger space (Section 9). When a task needs two **different** operations composed, that heuristic
+**breaks**: no single reused block serves both roles, and the expensive heterogeneous search
+(recombination) is required and finds the literal two-op mix (Section 10). This is the computational
+echo of clonal growth: **clone-and-scale a working module, recombine only when you need a new kind of
+part** — runners when the structure repeats, seeds when it must change.
+
 ## Next steps
 
-- **A task that needs two *different* operations composed**, not just more receptive field — the one
-  regime where Section 9's reuse heuristic should finally cost something and block diversity earn its
-  keep. This is the honest test of where "reuse the same block" breaks.
+- **A staged strategy that switches between the two regimes**: clone-and-scale a working block while
+  the task is repetitive (cheap), and fall back to heterogeneous recombination only when cloning
+  stalls — the algorithmic version of "runners when scaling a module, seeds when you need a new part."
+  Sections 9–10 give the two regimes; the open question is a searcher that detects which one it is in.
 - **Larger N and 2-D inputs**, where greedy enumeration fails and the GA earns its keep; then sound
   and higher-dimensional tasks, to discover and reuse their topologies.
