@@ -40,3 +40,5 @@ emerge_twoop
 scratch_emerge_twoop.out
 emerge_staged
 scratch_emerge_staged.out
+emerge_2d
+scratch_emerge_2d.out

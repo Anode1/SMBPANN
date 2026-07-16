@@ -133,3 +133,5 @@ clean:
 	-rm -f $(BIN) $(EVOLVE) $(GENTASK) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan bbtest modnas modevo conv2d nasxover nb101_extract nb101 conv_emerge emerge_tie $(OBJS) $(OBJS:.o=.d)
 
 -include $(OBJS:.o=.d)
+emerge_2d:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d validation/emerge_2d.c $(SMB_MATH)
