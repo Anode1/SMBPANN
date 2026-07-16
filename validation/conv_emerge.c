@@ -168,7 +168,7 @@ static double run_ga(int sel, int gens, uint32_t seed, double out[4], double *tr
     for(p=0;p<POP;p++) for(j=0;j<H;j++) for(i=0;i<N;i++) pop[p][j][i]=1;
     for(p=0;p<POP;p++){ facc[p]=fitness(pop[p],(uint32_t)(seed+p*2654435761u+1u)); fit[p]=objective(pop[p],facc[p]); }
     for(g=0;g<gens;g++){
-        if(trel){ double R=0,D=0; for(p=0;p<POP;p++){R+=on_relevant(pop[p]);D+=density(pop[p]);} trel[g]+=R/POP; tden[g]+=D/POP; }
+        if(trel && g<512){ double R=0,D=0; for(p=0;p<POP;p++){R+=on_relevant(pop[p]);D+=density(pop[p]);} trel[g]+=R/POP; tden[g]+=D/POP; }
         for(p=0;p<POP;p++) idx[p]=p;
         if(sel){ for(p=0;p<POP;p++) for(q=p+1;q<POP;q++) if(fit[idx[q]]>fit[idx[p]]){int t=idx[p];idx[p]=idx[q];idx[q]=t;} }
         else   { for(p=POP-1;p>0;p--){int r=(int)(r32()%(uint32_t)(p+1));int t=idx[p];idx[p]=idx[r];idx[r]=t;} }
