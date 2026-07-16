@@ -29,3 +29,6 @@ validation/nasbench101.txt
 /conv2d
 /conv_emerge
 /emerge_tie
+emerge_local
+emerge_offset
+scratch_emerge_local.out
