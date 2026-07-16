@@ -143,3 +143,5 @@ emerge_2d_grow:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_grow validation/emerge_2d_grow.c $(SMB_MATH)
 emerge_2d_deep:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_deep validation/emerge_2d_deep.c $(SMB_MATH)
+emerge_2d_deep2:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_deep2 validation/emerge_2d_deep2.c $(SMB_MATH)
