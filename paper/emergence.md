@@ -428,6 +428,53 @@ plausibly under-trained, so this shows that *adding* depth did not help (and hur
 operations" law holds for small K, breaks at K=3, and three separate attempts to rescue it failed —
 which is a more honest place to end than the clean staircase we would have reported by stopping at K=2.
 
+### 17. The third operator: translation replicates a working detector
+
+Clone (§9) and recombine (§10) are two of the three structural operators nature uses; the third —
+with the strongest biological grounding — is **translate**: copy a working detector to a shifted
+position (transposable elements, serial homology, the tiling of one microcircuit across a cortical
+map). Reconnecting one module across positions with *shared* weights is exactly convolution's tiling,
+reached by replication rather than design. `emerge_translate.c` asks whether it pays, on a
+translation-invariant motif task, comparing **SHARED** (one filter tiled = a convolution, 3 weights)
+against **INDEP** (a separate filter per position, 42 weights), over training-set size:
+
+| train size | SHARED (translate) | INDEP (per-position) | gap |
+|---|---|---|---|
+| 16 | **0.872** | 0.653 | +0.220 |
+| 32 | 0.856 | 0.644 | +0.212 |
+| 64 | 0.892 | 0.711 | +0.181 |
+| 128 | 0.889 | 0.725 | +0.164 |
+
+**Translation pays, and it is the antidote to the worsening.** SHARED beats INDEP at every train size
+with 14× fewer weights, and the gap *grows as data shrinks* (+0.16 → +0.22). The reason is data
+efficiency: one tiled working module learns the motif from *every* position's examples, while
+independent per-position detectors each starve on their fraction and leave unseen positions random.
+This is precisely why growing independent structure everywhere *worsens* results and why nature does
+not do it: it replicates a module that works, rather than evolving a fresh one per location.
+
+### 18. Why K=3 worsens — and why no single fix moves it (a capacity wall)
+
+The recurring frustration in the 2-D arc is that *adding* structure often makes things worse, and the
+K=3 conjunction is never solved at three channels. It is worth stating plainly what does **not** fix
+it. Four interventions, each a reasonable bet, all fail: **more channels** (§14, needs 5+, unreliable),
+**a nonlinear readout** (§15, MLP head recovers K=2 not K=3), **a deeper feature extractor** (§16, a
+2nd conv layer makes it *worse*), and **competition** — `emerge_2d_compete.c` adds lateral inhibition
+(channel filters repel, the mechanism that self-organizes cortical orientation columns), and K=3 at
+C=3 stays at 0.76–0.78 across every strength, a bump within noise:
+
+| K ops (C=3) | λ=0.00 | λ=0.10 | λ=0.30 | λ=0.60 |
+|---|---|---|---|---|
+| K=2 | 0.955 | 0.943 | 0.954 | 0.948 |
+| K=3 | 0.759 | 0.782 | 0.759 | 0.771 |
+
+So the K=3 wall is **not a missing operator** — not specialization, not readout depth, not extractor
+depth, not capacity count. It is a genuine **capacity limit** of a shallow conv + max-pool net on a
+three-way conjunction over cluttered input: per-channel detection error compounds multiplicatively
+(≈ 0.95³ at best, and detection is well below that amid the clutter), and no one refinement moves a
+multiplicative wall. Real vision beats this with *scale* — depth, normalization, residual connections,
+and vast data — not a single clever pressure. The honest lesson of the worsening is that some limits
+are not tricks waiting to be found; they are the architecture running out, and saying so is the result.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
