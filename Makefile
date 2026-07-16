@@ -87,6 +87,8 @@ emerge_compose:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_compose validation/emerge_compose.c $(SMB_MATH)
 emerge_arch:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_arch validation/emerge_arch.c $(SMB_MATH)
+emerge_twoop:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_twoop validation/emerge_twoop.c $(SMB_MATH)
 conv_emerge:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o conv_emerge validation/conv_emerge.c $(SMB_MATH)
 nb101:

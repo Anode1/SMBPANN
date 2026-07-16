@@ -36,3 +36,5 @@ emerge_compose
 scratch_emerge_compose.out
 emerge_arch
 scratch_emerge_arch.out
+emerge_twoop
+scratch_emerge_twoop.out
