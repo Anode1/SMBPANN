@@ -32,3 +32,5 @@ validation/nasbench101.txt
 emerge_local
 emerge_offset
 scratch_emerge_local.out
+emerge_compose
+scratch_emerge_compose.out
