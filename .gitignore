@@ -38,3 +38,5 @@ emerge_arch
 scratch_emerge_arch.out
 emerge_twoop
 scratch_emerge_twoop.out
+emerge_staged
+scratch_emerge_staged.out
