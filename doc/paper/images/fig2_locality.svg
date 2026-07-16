@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 260" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title>Section 7: impose locality (a necessary prior); a compact local filter and weight sharing emerge on top</title>
+  <rect x="0" y="0" width="820" height="260" fill="#ffffff"/>
+  <text x="20" y="28" font-size="16" font-weight="600" fill="#1e293b">7 · Impose locality (necessary prior) &#8594; compact filter + weight sharing emerge</text>
+  <text x="20" y="48" font-size="12.5" fill="#64748b">each hidden unit sees a contiguous window; only the width and weight-sharing are left free to emerge</text>
+
+  <!-- imposed: contiguous windows, wide -->
+  <text x="40" y="86" font-size="13" font-weight="600" fill="#334155">imposed: contiguous window / unit</text>
+  <g transform="translate(40,98)">
+    <rect x="0" y="0" width="192" height="96" fill="#f8fafc" stroke="#cbd5e1"/>
+    <g stroke="#eef2f6" stroke-width="1">
+      <line x1="0" y1="16" x2="192" y2="16"/><line x1="0" y1="32" x2="192" y2="32"/><line x1="0" y1="48" x2="192" y2="48"/><line x1="0" y1="64" x2="192" y2="64"/><line x1="0" y1="80" x2="192" y2="80"/>
+    </g>
+    <polygon points="0,0 80,0 160,96 80,96" fill="#334155" opacity="0.85"/>
+    <text x="96" y="116" font-size="12" fill="#64748b" text-anchor="middle">local, but wide (energy free)</text>
+  </g>
+
+  <!-- pressure -->
+  <g transform="translate(258,118)">
+    <line x1="0" y1="18" x2="80" y2="18" stroke="#e76f51" stroke-width="2.5"/>
+    <polygon points="80,10 96,18 80,26" fill="#e76f51"/>
+    <text x="48" y="4" font-size="11.5" fill="#e76f51" text-anchor="middle" font-weight="600">parameter energy</text>
+    <text x="48" y="42" font-size="11.5" fill="#e76f51" text-anchor="middle">+ tie-weights gene</text>
+  </g>
+
+  <!-- found: narrow band + sharing -->
+  <text x="420" y="86" font-size="13" font-weight="600" fill="#0d9488">found: compact + shared</text>
+  <g transform="translate(420,98)">
+    <rect x="0" y="0" width="192" height="96" fill="#f8fafc" stroke="#cbd5e1"/>
+    <g stroke="#eef2f6" stroke-width="1">
+      <line x1="0" y1="16" x2="192" y2="16"/><line x1="0" y1="32" x2="192" y2="32"/><line x1="0" y1="48" x2="192" y2="48"/><line x1="0" y1="64" x2="192" y2="64"/><line x1="0" y1="80" x2="192" y2="80"/>
+    </g>
+    <polygon points="16,0 64,0 144,96 96,96" fill="#0d9488" opacity="0.9"/>
+    <text x="96" y="116" font-size="12" fill="#0d9488" text-anchor="middle">mean width &#8776; K=3 (compact)</text>
+  </g>
+
+  <text x="20" y="238" font-size="11.5" fill="#94a3b8">Compact local fields fall right out; weight sharing (translation invariance) is adopted (0.88) — but its accuracy benefit is within noise.</text>
+</svg>

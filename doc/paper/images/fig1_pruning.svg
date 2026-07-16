@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 260" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title>Sections 1-6: an energy budget prunes a dense seed to sparse, task-relevant connectivity</title>
+  <rect x="0" y="0" width="820" height="260" fill="#ffffff"/>
+  <text x="20" y="28" font-size="16" font-weight="600" fill="#1e293b">1-6 · Energy budget: dense seed &#8594; sparse, task-relevant structure</text>
+  <text x="20" y="48" font-size="12.5" fill="#64748b">connectivity mask (rows = hidden units, columns = inputs); a filled cell = a connection</text>
+
+  <!-- initial: dense -->
+  <text x="40" y="88" font-size="13" font-weight="600" fill="#334155">initial: dense seed</text>
+  <g transform="translate(40,100)">
+    <rect x="0" y="0" width="200" height="75" fill="#334155" stroke="#1e293b"/>
+    <g stroke="#ffffff" stroke-width="1.5" opacity="0.85">
+      <line x1="25" y1="0" x2="25" y2="75"/><line x1="50" y1="0" x2="50" y2="75"/><line x1="75" y1="0" x2="75" y2="75"/>
+      <line x1="100" y1="0" x2="100" y2="75"/><line x1="125" y1="0" x2="125" y2="75"/><line x1="150" y1="0" x2="150" y2="75"/><line x1="175" y1="0" x2="175" y2="75"/>
+      <line x1="0" y1="25" x2="200" y2="25"/><line x1="0" y1="50" x2="200" y2="50"/>
+    </g>
+    <text x="100" y="95" font-size="12" fill="#64748b" text-anchor="middle">energy = 24 connections</text>
+  </g>
+
+  <!-- pressure arrow -->
+  <g transform="translate(268,120)">
+    <line x1="0" y1="18" x2="80" y2="18" stroke="#e76f51" stroke-width="2.5"/>
+    <polygon points="80,10 96,18 80,26" fill="#e76f51"/>
+    <text x="48" y="4" font-size="11.5" fill="#e76f51" text-anchor="middle" font-weight="600">minimize energy</text>
+    <text x="48" y="42" font-size="11.5" fill="#e76f51" text-anchor="middle">s.t. acc &#8805; target</text>
+    <text x="48" y="57" font-size="10.5" fill="#94a3b8" text-anchor="middle">(annealing: prune, rarely grow)</text>
+  </g>
+
+  <!-- found: sparse on relevant -->
+  <text x="420" y="88" font-size="13" font-weight="600" fill="#0d9488">found (SPARSE task)</text>
+  <g transform="translate(420,100)">
+    <!-- relevant column highlight -->
+    <rect x="50" y="-6" width="25" height="87" fill="#fef3c7"/>
+    <rect x="100" y="-6" width="25" height="87" fill="#fef3c7"/>
+    <rect x="150" y="-6" width="25" height="87" fill="#fef3c7"/>
+    <rect x="0" y="0" width="200" height="75" fill="#f8fafc" stroke="#cbd5e1"/>
+    <g stroke="#e2e8f0" stroke-width="1">
+      <line x1="25" y1="0" x2="25" y2="75"/><line x1="50" y1="0" x2="50" y2="75"/><line x1="75" y1="0" x2="75" y2="75"/>
+      <line x1="100" y1="0" x2="100" y2="75"/><line x1="125" y1="0" x2="125" y2="75"/><line x1="150" y1="0" x2="150" y2="75"/><line x1="175" y1="0" x2="175" y2="75"/>
+      <line x1="0" y1="25" x2="200" y2="25"/><line x1="0" y1="50" x2="200" y2="50"/>
+    </g>
+    <!-- surviving connections, on relevant (highlighted) columns -->
+    <rect x="52" y="2" width="21" height="21" fill="#0d9488"/>
+    <rect x="102" y="27" width="21" height="21" fill="#0d9488"/>
+    <rect x="152" y="52" width="21" height="21" fill="#0d9488"/>
+    <text x="100" y="95" font-size="12" fill="#0d9488" text-anchor="middle">energy = 3 · 90% on relevant inputs</text>
+    <text x="100" y="110" font-size="11" fill="#94a3b8" text-anchor="middle">(chance 33%, drift 34%)</text>
+  </g>
+
+  <text x="20" y="248" font-size="11.5" fill="#94a3b8">Result: feature selection emerges cleanly. Sparsity and weight-sharing also emerge; a compact aligned local filter does not (Sec. 6).</text>
+</svg>

@@ -6,6 +6,8 @@
 
 ## The idea
 
+![The 1997 thesis redrawing of a local, weight-shared feature detector — one unit wired to a small window of the input, which convolution generalizes.](../doc/feature_detector_field.png)
+
 The original SMBPANN ambition was that a network's **architecture should emerge** from an
 initial condition under selection, not be designed by hand. The way to make it visible — as it
 was on a Pentium-1 233 class machine, where compute was the constraint — is to put a **cost on
@@ -75,6 +77,8 @@ drift (no-selection) control and a chance baseline.
 ## Results
 
 ### 1. What emerges matches the task — cleanly for feature selection, not for convolution
+
+![Energy budget prunes a dense connectivity seed to a sparse mask whose surviving connections land on the task-relevant inputs.](../doc/paper/images/fig1_pruning.svg)
 
 | task | density | RF-span | on-relevant (chance / drift) | test |
 |---|---|---|---|---|
@@ -178,6 +182,8 @@ the locality rather than emerging it) or a coordinated structural operator.
 
 ### 7. Imposing locality (the necessary prior): does the rest of the convolution assemble?
 
+![Impose a contiguous window per unit; a compact local filter (width ≈ K) and weight sharing emerge on top.](../doc/paper/images/fig2_locality.svg)
+
 Sections 1–6 tried to let *everything* emerge and found the compact local filter does not. But a
 bounded receptive field is not something to wait out — it is a **necessary prior**, a law of the
 problem (information is local), imposed in every real ConvNet. So `emerge_local.c` imposes exactly
@@ -198,6 +204,8 @@ gradient (the same decoupling as Section 6). Impose the one necessary prior and 
 emerge separately; the clean compact *shared* whole still does not dominate.
 
 ### 8. Composition: does the emerged depth match the task's compositional depth?
+
+![Accuracy is at chance until the stack is deep enough for its receptive field to span the spike pair, then lifts off at depth ≈ s/2.](../doc/paper/images/fig3_depth.svg)
 
 The next abstraction is **composition** — stacking a block to build deeper structure. "Which blocks,
 wired how" explodes combinatorially, so `emerge_compose.c` adopts LeCun's own heuristic (knowledge):
@@ -230,6 +238,8 @@ note: when locality *and* the feed-forward composition rule are imposed (both ne
 one thing left free — **how deep** — emerges to match the task.
 
 ### 9. Does the reuse heuristic pay? Reuse vs free composition at equal compute
+
+![Reusing one block type suffices for repetitive structure; a two-operation task needs recombination of different blocks — the clone-vs-recombine trade-off nature also makes.](../doc/paper/images/fig4_reuse.svg)
 
 Section 8 *assumed* the reuse heuristic (one block type, stacked) rather than testing it. `emerge_arch.c`
 tests it: give the search a **library** of block types — a dilated conv with dilation 1/2/3 (the
@@ -327,6 +337,8 @@ orientations = two *different* operations) needs multiple feature **channels**, 
 dilation — a real engine extension, and the subject of Section 13.
 
 ### 13. 2-D reuse vs recombination: two operations need two channels
+
+![In 2-D, one op needs one channel and two ops need two (C=1 caps at 0.75, C=2 crosses target); but the tidy law breaks at three operations.](../doc/paper/images/fig5_channels.svg)
 
 With the stable orientation foundation, the 2-D analogue of Section 10 lives on the **channel** axis:
 "one feature type reused" is C=1, "diverse features" is C≥2. `emerge_2d_chan.c` (a multi-channel conv,
