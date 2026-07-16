@@ -46,3 +46,5 @@ emerge_2d_orient
 scratch_emerge_2d_orient.out
 emerge_2d_chan
 scratch_emerge_2d_chan.out
+emerge_2d_grow
+scratch_emerge_2d_grow.out
