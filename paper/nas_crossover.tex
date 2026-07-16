@@ -32,16 +32,20 @@ control --- on concatenated deceptive trap functions, separable by construction,
 crossover's advantage over mutation grows with the number of blocks, from $1.8\times$ at four
 blocks to a regime at sixteen where mutation reaches the optimum $28/200$ times and crossover
 $199/200$. Real space --- on NAS-Bench-101 ($423{,}624$ tabulated cells, fitness a lookup, so
-thousands of paired seeds are cheap), crossover \emph{does} beat random search, but every
-operator built to recombine the cell's structure --- factoring its wiring and labeling
-dimensions, aligning nodes by role, transplanting whole paths --- is \emph{worse} than a
-structure-blind per-cell uniform crossover, and two fall below random at scale. So the real
-cell space has no building-block structure to exploit along those dimensions; uniform
-crossover's only edge over random is diversity, which the structural priors collapse or
-dissipate (shown by direct diversity measurement and a population-size sweep). The lesson
-restates a known one --- random search is a strong NAS baseline, and structural cleverness
-rarely beats it --- but with a controlled mechanism and a positive control that isolates when
-recombination genuinely works. Every number regenerates from one command.
+thousands of paired seeds are cheap), no method \emph{meaningfully} beats random: random and
+all four crossovers finish within a few tenths of a percent of one another, comparable to the
+benchmark's own seed-to-seed training noise. Thousands of paired seeds do not buy a large gain;
+they resolve a consistent \emph{ordering} inside that noise band, and the ordering runs the
+wrong way for cleverness. Every operator built to recombine the cell's structure --- factoring
+its wiring and labeling dimensions, aligning nodes by role, transplanting whole paths --- is
+consistently \emph{worse} than a structure-blind per-cell uniform crossover, and two are
+consistently (if slightly) below random at scale. So the real cell space has no building-block
+structure to exploit along those dimensions; uniform crossover's slim, consistent edge over
+random is diversity, which the structural priors collapse or dissipate (shown by direct
+diversity measurement and a population-size sweep). The lesson restates a known one --- random
+search is a strong NAS baseline, and structural cleverness does not beat it --- but with a
+controlled mechanism and a positive control that isolates when recombination genuinely works.
+Every number regenerates from one command.
 \end{abstract}
 
 \section{Introduction}
@@ -156,15 +160,20 @@ baseline).
 
 \section{Results on the real space}
 
-\textbf{Crossover beats random.} At small population ($20$, elite $5$, $800$ seeds) every arm beats
-random at every budget (Wilcoxon $z=2$--$14$). Unlike the six-gene NAS-Bench-201 cell, where
-crossover's edge is a fraction of a percent and vanishes at generous budget, the larger 101 space
-gives recombination something real to exploit.
+\textbf{Nothing meaningfully beats random.} In absolute terms this is a space where random search
+is essentially unbeatable: across every budget, random and all four crossovers finish within a few
+tenths of a percent of one another (see Table~\ref{tab:scaled}), a gap comparable to the
+benchmark's own training noise --- the same architecture, trained three times, varies by a
+similar amount. No crossover produces a gain a practitioner would notice. What the paired,
+many-seed design buys is not size but resolution: it lets us read a \emph{consistent ordering}
+inside that noise band, and that ordering --- not any large effect --- is the finding.
 
-\textbf{Structure does not help; at scale it hurts.} Table~\ref{tab:scaled} scales to population $50$,
-budget $20{,}000$, $4000$ paired seeds. \textbf{Flat} wins at \emph{every} budget and beats each
-structured operator head-to-head; its edge over random shrinks as random saturates
-($z:48\!\to\!46\!\to\!29\!\to\!13$) but never vanishes ($2268/1322$ paired wins even at $20{,}000$).
+\textbf{Structure does not help; at scale it slips below random.} Table~\ref{tab:scaled} scales to
+population $50$, budget $20{,}000$, $4000$ paired seeds; all differences below are small (within
+the noise floor above) but consistent across the $4000$ seeds. \textbf{Flat} is the best at
+\emph{every} budget and beats each structured operator head-to-head; its slim edge over random
+shrinks as random saturates ($z:48\!\to\!46\!\to\!29\!\to\!13$) but stays consistent ($2268/1322$
+paired wins even at $20{,}000$).
 The structured operators worsen with compute: \textbf{axis} crosses from $z{=}{+}30$ to $-28$ (losing
 to random $1230/2559$); \textbf{path} plateaus almost immediately ($93.904\!\to\!93.913$ over a
 $40\times$ budget rise) and ends at $z{=}{-}26$; \textbf{aligned} decays from $z{=}42$ to $1.9$, to
@@ -175,8 +184,9 @@ axis/aligned/path yield \emph{more} valid offspring ($95$--$97\%$) than flat ($9
 \begin{table}[t]
 \centering
 \caption{NAS-Bench-101, population $50$, elite $12$, $4000$ paired seeds. Mean best test-accuracy
-($\%$), and Wilcoxon signed-rank $z$ against random search (positive $=$ beats random). Flat wins at
-every budget; \emph{axis and path drop below random at scale}; aligned's edge decays to zero.}
+($\%$), and Wilcoxon signed-rank $z$ against random search (positive $=$ above random). All gaps are
+small --- within the benchmark's training noise --- but consistent across $4000$ seeds. Flat is best at
+every budget; \emph{axis and path slip just below random at scale}; aligned's edge decays to zero.}
 \label{tab:scaled}
 \begin{tabular}{lccccc}
 \toprule
@@ -231,7 +241,8 @@ historical markings \cite{neat2002} and He et al.'s modular inheritable crossove
 NAS-Bench-101 \cite{nasbench101} makes a study at this seed count possible. The contribution is a
 clean, reproducible pairing: a positive control that shows exactly when crossover's building-block
 advantage appears, and a real NAS space where it does not --- four structure-respecting crossovers all
-lose to plain uniform crossover, two to random search --- with a diversity mechanism that explains why.
+lose (consistently, though by small margins) to plain uniform crossover, two of them to random search
+--- with a diversity mechanism that explains why.
 
 \section{Discussion}
 
@@ -241,11 +252,16 @@ mutation grows with the number of blocks until mutation cannot solve the problem
 does not supply such structure along its natural dimensions: recombining its wiring and labeling axes,
 aligning nodes by role, or transplanting whole paths all lose to a structure-blind uniform crossover,
 whose own edge over random is only diversity, which the structural priors collapse or dissipate.
-\textbf{Limitations:} one tabulated cell space with lookup fitness (no training confound, but no
-transfer guarantee to larger or hierarchical spaces); \texttt{aligned} is one alignment and a better
-one may exist --- but the burden is now on exhibiting one that beats uniform crossover, which four
-natural attempts do not. The natural next step is a larger, hierarchical space where recombination has
-more room to matter.
+\textbf{On effect size:} none of the NAS-Bench-101 differences is large --- every method lands within a
+few tenths of a percent of random, inside the benchmark's training noise, so no crossover meaningfully
+beats random search. Our claims are about the \emph{consistent direction} of small effects resolved by
+thousands of paired seeds, not about magnitude; the practical message is the familiar one, that random
+search is very hard to beat on this space, sharpened by the fact that even the direction favors no
+cleverness. \textbf{Limitations:} one tabulated cell space with lookup fitness (no training confound,
+but no transfer guarantee to larger or hierarchical spaces); \texttt{aligned} is one alignment and a
+better one may exist --- but the burden is now on exhibiting one that beats uniform crossover, which
+four natural attempts do not. The natural next step is a larger, hierarchical space where recombination
+has more room to matter.
 
 \section*{Reproducibility}
 
