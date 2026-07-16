@@ -51,6 +51,16 @@ This sits at an intersection of several fields, which is where the idea gets its
 - **Network pruning**: "start dense, prune to the minimal structure that holds accuracy" is the
   pruning tradition, whose origin is **LeCun's own Optimal Brain Damage (1990)**. The pruning
   literature finds sparse *subnetworks*, not convolutions — which is exactly what we see.
+- **Clonal / modular growth** (biology): the reuse heuristic of Section 9 is nature's default for
+  scaling a working structure. Plants propagate by **layering and runners** (a branch roots and
+  becomes an independent child); coral, hydroids and bryozoans tile one body-plan; **fungal mycelium**
+  extends self-similar hyphae. The rule is *clone what works and scale — spend nothing searching
+  alternatives* — precisely what wins at equal compute in Section 9. Its complement is **recombination**
+  (sexual reproduction), the expensive search that exists to assemble *genuinely new* parts, worth it
+  only when more-of-the-same will not do — the regime of the two-different-operations frontier below.
+  (Nature runs both, and which appears tracks cost: filamentous fungi clone, but *slime molds* like
+  *Physarum* genuinely optimize their transport network — clone-and-scale and search are two tools,
+  not one.)
 
 ## Setup
 
