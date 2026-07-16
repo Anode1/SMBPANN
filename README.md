@@ -1,4 +1,4 @@
-# SMBPANN 2001-2015-2026
+# SMBPANN
 
 **Self-Modifying Backpropagation Feed-Forward Neural Network.** A network that is
 not told its architecture but searches for it: an evolutionary search over

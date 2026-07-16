@@ -8,7 +8,8 @@
 
 The original SMBPANN ambition was that a network's **architecture should emerge** from an
 initial condition under selection, not be designed by hand. The way to make it visible — as it
-was on a 486, where compute was the constraint — is to put a **cost on resources**: start from a
+was on a Pentium-1 233 class machine, where compute was the constraint — is to put a **cost on
+resources**: start from a
 fully-connected (dense) net and select for the structure that reaches a target accuracy with the
 **least energy** (fewest connections). Removing a connection saves energy; removing a *useful* one
 breaks the accuracy floor and is punished. So the search settles on a minimal structure that
