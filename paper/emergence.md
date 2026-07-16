@@ -219,6 +219,31 @@ above the bare RF bound (robust detection needs a margin layer). This is the cle
 note: when locality *and* the feed-forward composition rule are imposed (both necessary priors), the
 one thing left free — **how deep** — emerges to match the task.
 
+### 9. Does the reuse heuristic pay? Reuse vs free composition at equal compute
+
+Section 8 *assumed* the reuse heuristic (one block type, stacked) rather than testing it. `emerge_arch.c`
+tests it: give the search a **library** of block types — a dilated conv with dilation 1/2/3 (the
+standard way to trade receptive-field reach against sampling detail) — and compare, at **equal
+compute** (matched candidate-training budgets), a **REUSE** search (enumerate uniform dilation×depth)
+against a **FREE** GA over arbitrary dilation sequences. Same spike-distance task; energy = block count.
+
+| distance s | REUSE solve | REUSE energy | FREE solve | FREE energy | verdict |
+|---|---|---|---|---|---|
+| s=4 | 8/8 | 1.6 | 8/8 | **1.2** | tie-solve, FREE marginally cheaper |
+| s=8 | **8/8** | **2.8** | 7/8 | 3.0 | REUSE solves more |
+| s=12 | 7/8 | **2.7** | 7/8 | 3.1 | REUSE cheaper |
+
+**The reuse heuristic is validated.** At matched compute the free heterogeneous search never solves
+*more reliably* or at *lower energy* than simply enumerating uniform reused blocks — and on the harder
+tasks (s=8, 12) reuse is strictly better on both. Its only edge is a marginal one on the *easiest*
+task (s=4), where a single block is optimal and FREE's extra wandering lands on it slightly more often.
+Block diversity buys nothing but a larger search: the good architectures here are uniform, so the
+combinatorial space is mostly wasted effort. This is the user's original intuition made quantitative —
+"the combinations are large, so use knowledge (reuse the same blocks)." Honest scope: this is a task
+whose difficulty is a single receptive-field requirement, which uniform stacks already meet optimally;
+a task genuinely needing two *different* operations composed is where heterogeneity would earn its keep,
+and where the reuse heuristic would finally cost something (the next step).
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
@@ -247,8 +272,8 @@ the priors for free; it composes real, task-matched structure *on top of* the pr
 
 ## Next steps
 
-- **Different blocks in the composition**, not one reused type — testing whether the same energy
-  budget still selects a working hierarchy when the search space is larger, or whether the reuse
-  heuristic (identical blocks, stacked) is what keeps it tractable.
+- **A task that needs two *different* operations composed**, not just more receptive field — the one
+  regime where Section 9's reuse heuristic should finally cost something and block diversity earn its
+  keep. This is the honest test of where "reuse the same block" breaks.
 - **Larger N and 2-D inputs**, where greedy enumeration fails and the GA earns its keep; then sound
   and higher-dimensional tasks, to discover and reuse their topologies.
