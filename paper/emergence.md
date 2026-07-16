@@ -324,8 +324,30 @@ informative): a single 3×3 filter discriminates them at **0.980** mean, SD 0.02
 Underclaimed: this is a *replication of conv's known core competency*, not a discovery — but it is the
 stable ground the distance task lacked. The genuinely-2-D reuse-vs-recombination question (two
 orientations = two *different* operations) needs multiple feature **channels**, not just depth or
-dilation — a real engine extension, and honest future work. So 2-D so far is: a verified engine, one
-null, and one stable foundation, with the interesting study scoped but not yet claimed.
+dilation — a real engine extension, and the subject of Section 13.
+
+### 13. 2-D reuse vs recombination: two operations need two channels
+
+With the stable orientation foundation, the 2-D analogue of Section 10 lives on the **channel** axis:
+"one feature type reused" is C=1, "diverse features" is C≥2. `emerge_2d_chan.c` (a multi-channel conv,
+1→C, per-channel global max-pool) tests it. ONE-OP = orientation of a single bar; TWO-OP = a horizontal
+bar **and** a vertical bar both present (positive) vs exactly one (negative), balanced 50/50.
+
+| task | C=1 | C=2 | C=3 | C=4 |
+|---|---|---|---|---|
+| ONE-OP (one orientation) | 0.980 | 0.993 | 1.000 | 1.000 |
+| TWO-OP (both orientations) | **0.726** | **0.891** | 0.881 | 0.971 |
+
+**The crossover reproduces in genuine 2-D.** ONE-OP is flat-high: one channel already suffices, extra
+channels add nothing — so the channel requirement is *specific*, not a general free lunch. TWO-OP shows
+it: a single channel caps at **0.726**, exactly the ~0.75 ceiling a lone orientation detector can reach
+(it gets every positive plus the negatives lacking its orientation, and misses the negatives that have
+it); **C=2 jumps to 0.891, crossing target** — an H-detector and a V-detector, AND'd by the readout, do
+what one cannot; C=4 is robust at 0.97. Two different operations require two feature channels, just as
+the 1-D two-op task required two different blocks. Skeptical footnote, kept because it nearly fooled the
+run: this only appears with **balanced classes** — an initial 1/3-positive / 2/3-negative split parked
+C=1 and C=2 at 0.67, the majority-class baseline, and hid the effect completely until the imbalance was
+found and fixed.
 
 ## Honest bottom line
 
