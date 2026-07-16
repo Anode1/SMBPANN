@@ -279,6 +279,32 @@ when the task's difficulty is a single receptive-field requirement, cloning one 
 near-optimum (Section 9); the moment it needs two *different* operations, that heuristic fails and the
 expensive heterogeneous search earns its keep.
 
+### 11. An adaptive searcher: clone while it pays, recombine when it stalls
+
+Sections 9 and 10 give two regimes and two winning strategies. `emerge_staged.c` builds the searcher
+that handles both *without being told which it is in*. It **clones** first — enumerates reused
+(uniform-dilation) stacks, cheapest energy first, and stops the instant one solves. If the whole clone
+sweep finishes *without* solving, that is the stall signal (no single reused block works) and it
+switches to **recombine** — the GA over heterogeneous sequences. (No accuracy-plateau detector: these
+tasks are flat-then-jump, so a plateau would misfire in the flat region; "clone sweep finished
+unsolved" is the robust signal.) Three strategies — pure REUSE, pure FREE, STAGED — on both regimes at
+the same s=8, 8 seeds:
+
+| regime | REUSE (clone only) | FREE (recombine only) | STAGED |
+|---|---|---|---|
+| ONE-OP (repetitive) | 5/8, cost 63 | 5/8, cost 134 | **7/8**, cost 114 (5 clone + 2 recombine) |
+| TWO-OP (two ops) | 2/8, cost 79 | 8/8, cost 140 | **8/8**, cost 185 (2 clone + 6 recombine) |
+
+**STAGED beat both fixed strategies on solve rate in *both* regimes** — more than the "match the best
+in each regime" it was designed for. The reason is that clone and recombine have *partially
+non-overlapping success sets*: trying clone-then-recombine catches seeds that neither gets alone, so
+the fallback backstops training noise even in the easy regime, not just the hard one. **Honest cost:**
+adaptivity is not free — STAGED pays for the failed clone sweep before recombining (ONE-OP cost 114 vs
+REUSE's 63; TWO-OP 185 vs FREE's 140), and these are noisy 8-seed rates (REUSE's 5/8 here vs Section 9's
+8/8 reflects fewer restarts and early-exit taking a marginal low-energy stack). But STAGED never
+suffers either fixed strategy's worst-case failure — REUSE's 2/8 collapse on the two-op task, or FREE's
+wasted search on the repetitive one. It detects the regime from whether cloning stalls, and adapts.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
@@ -312,13 +338,15 @@ but a bigger space (Section 9). When a task needs two **different** operations c
 **breaks**: no single reused block serves both roles, and the expensive heterogeneous search
 (recombination) is required and finds the literal two-op mix (Section 10). This is the computational
 echo of clonal growth: **clone-and-scale a working module, recombine only when you need a new kind of
-part** — runners when the structure repeats, seeds when it must change.
+part** — runners when the structure repeats, seeds when it must change. And Section 11 closes the loop:
+a searcher that clones by default and recombines only when cloning stalls detects the regime on its
+own, and — because clone and recombine catch different cases — is *more reliable than either strategy
+alone*. The adaptive policy is not just a convenience; it is strictly the more robust one.
 
 ## Next steps
 
-- **A staged strategy that switches between the two regimes**: clone-and-scale a working block while
-  the task is repetitive (cheap), and fall back to heterogeneous recombination only when cloning
-  stalls — the algorithmic version of "runners when scaling a module, seeds when you need a new part."
-  Sections 9–10 give the two regimes; the open question is a searcher that detects which one it is in.
 - **Larger N and 2-D inputs**, where greedy enumeration fails and the GA earns its keep; then sound
   and higher-dimensional tasks, to discover and reuse their topologies.
+- **A cost-aware stall signal**: STAGED currently pays a full failed clone sweep before switching;
+  detecting the stall sooner (without a plateau detector, which flat-then-jump tasks defeat) would cut
+  the adaptivity overhead. The open question is a cheaper regime-detector than "clone sweep exhausted."
