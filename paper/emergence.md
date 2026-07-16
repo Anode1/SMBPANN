@@ -27,7 +27,10 @@ the tying gene gives sharing but not a tight kernel, and an explicit filter-widt
 does not tighten it (because sharing decouples connection-count from parameter-count, so there is no
 gradient left to prune — Section 6). Convolution's parts emerge separately; the compact whole is
 unreachable by an energy budget on a general genome — matching the pruning literature and this
-project's other finding that structural cleverness does not come for free.
+project's other finding that structural cleverness does not come for free. But imposing the priors a
+ConvNet always assumes — a **local receptive field** and a **feed-forward reused-block composition** —
+changes the picture: on top of those necessary priors, compact local fields and, most clearly, the
+**depth of the abstraction hierarchy** emerge to match the task (Sections 7–8).
 
 ## The mechanism, and where its pieces come from
 
@@ -163,6 +166,59 @@ once, which random mutation essentially never does. The compact kernel is unreac
 this genome — it would need either a contiguous-kernel representation with a width gene (which *imposes*
 the locality rather than emerging it) or a coordinated structural operator.
 
+### 7. Imposing locality (the necessary prior): does the rest of the convolution assemble?
+
+Sections 1–6 tried to let *everything* emerge and found the compact local filter does not. But a
+bounded receptive field is not something to wait out — it is a **necessary prior**, a law of the
+problem (information is local), imposed in every real ConvNet. So `emerge_local.c` imposes exactly
+that and nothing more: each hidden unit sees a **contiguous** window `[start, start+w)`. The window
+**width** and **weight sharing** (a `shared` gene tying weights by within-window offset — i.e.
+translation invariance) are left free, to emerge under a free-parameter budget from a dense seed.
+
+| arm | shared-frac | mean width | max width | coverage | test |
+|---|---|---|---|---|---|
+| sharing forced off | 0.000 | **2.71** | 9.78 | 0.902 | 0.891 |
+| sharing allowed | **0.883** | 4.36 | 6.40 | 0.867 | 0.875 |
+
+Given locality, **compact local receptive fields fall right out**: the unshared arm anneals to mean
+width **2.71 ≈ K**. **Weight sharing is adopted** (0.883 of the population turns it on), so
+translation invariance *is* selected — but its benefit is **within noise** (0.875 vs 0.891) and the
+shared arm stays *wider*, because shared energy charges only the *max* width, so mean width has no
+gradient (the same decoupling as Section 6). Impose the one necessary prior and the pieces still
+emerge separately; the clean compact *shared* whole still does not dominate.
+
+### 8. Composition: does the emerged depth match the task's compositional depth?
+
+The next abstraction is **composition** — stacking a block to build deeper structure. "Which blocks,
+wired how" explodes combinatorially, so `emerge_compose.c` adopts LeCun's own heuristic (knowledge):
+don't design each block, **reuse one block type, wired feed-forward input→output, and search only the
+depth**. The feed-forward reused-block stack is *imposed* (a bit of cheating, exactly as a ConvNet
+imposes it); the **depth** `L`, all weights, and cross-task transfer are left to emerge.
+
+A task only tests this if it genuinely *needs* depth. A full linear readout defeats the point (it
+integrates globally, so a shallow block suffices — verified, it does). The fair task uses a
+**receptive-field** requirement with a **max-pool** readout: detect two spikes at a specific distance
+`s` (both classes have two spikes, so position and count are useless — a unit must *see both at once*
+and check the spacing). That needs receptive field ≥ `s+1`, i.e. depth ≥ `s/2`. Under an energy
+budget (energy = depth), does the selected depth track `s`? (12 seeds × 4 restarts, target 0.85.)
+
+| distance s (needs L) | L=1 | L=2 | L=3 | L=4 | L=5 |
+|---|---|---|---|---|---|
+| s=2 (need L=1) | 0.729 | **0.902** | 0.923 | 0.869 | 0.897 |
+| s=4 (need L=2) | 0.551 | 0.711 | **0.908** | 0.830 | 0.797 |
+| s=6 (need L=3) | 0.555 | 0.595 | 0.695 | 0.765 | 0.786 |
+| s=8 (need L=4) | 0.539 | 0.591 | 0.657 | 0.711 | 0.783 |
+
+**Emergent depth tracks required depth.** Each task is pinned at **chance** until the stack is deep
+enough to see the pair, then accuracy **lifts off exactly at the receptive-field floor** L ≈ s/2
+(s=4 lifts at L=2, s=6 at L=3, s=8 at L=4); energy then selects the shallowest sufficient stack, and
+that depth rises **1:1 with s**. Abstraction layers appear exactly as deep as the composition demands,
+from one reused block. Honest caveats: the largest spacings (s=6, 8) keep climbing but do not cross
+0.85 within L ≤ 5 (deeper stacks / more training would be needed), and the 0.85-target depth sits ~1
+above the bare RF bound (robust detection needs a margin layer). This is the clearest positive in the
+note: when locality *and* the feed-forward composition rule are imposed (both necessary priors), the
+one thing left free — **how deep** — emerges to match the task.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
@@ -178,13 +234,21 @@ This is consistent with the pruning literature (sparse subnetworks, not convolut
 crossover study in this repo: the general, useful thing here is **automatic structural discovery under
 a resource budget** (sparsity, feature relevance, weight sharing). The last, specific piece — a tight
 local filter — is *not* reachable by any energy pressure on this genome (Section 6), because sharing
-decouples connection-count from parameter-count; getting it would mean building the locality into the
-representation (which is imposing convolution, not emerging it) or a coordinated structural operator.
+decouples connection-count from parameter-count.
+
+Sections 7–8 draw the honest line between what must be *imposed* and what then *emerges*. A bounded
+local receptive field, and a feed-forward reused-block composition rule, are **necessary priors** — a
+ConvNet imposes both, and so must we; waiting for them to appear from nothing is neither realistic nor
+what LeCun did. But once those priors are granted, real structure emerges on top of them under nothing
+but an energy budget: **compact local fields** (Section 7, mean width ≈ K), **weight sharing** adopted
+when it pays (Sections 5, 7), and — the clearest result — the **depth of the abstraction hierarchy**,
+which emerges to match the task's compositional depth exactly (Section 8). Emergence does not hand you
+the priors for free; it composes real, task-matched structure *on top of* the priors you supply.
 
 ## Next steps
 
-- **A coordinated structural operator** (whole-offset add/remove, or a contiguous-kernel width gene),
-  to see whether the compact kernel can be reached at all — accepting that a width gene *imposes*
-  locality rather than emerging it from a general genome.
+- **Different blocks in the composition**, not one reused type — testing whether the same energy
+  budget still selects a working hierarchy when the search space is larger, or whether the reuse
+  heuristic (identical blocks, stacked) is what keeps it tractable.
 - **Larger N and 2-D inputs**, where greedy enumeration fails and the GA earns its keep; then sound
   and higher-dimensional tasks, to discover and reuse their topologies.
