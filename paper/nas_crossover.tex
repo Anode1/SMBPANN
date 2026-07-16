@@ -231,6 +231,23 @@ $64$ & $\mathbf{94.122}\;(+19.3)$& $93.917\;(+11.6)$& $94.064\;(+17.2)$& $93.957
 \end{tabular}
 \end{table}
 
+\textbf{Why random is unbeatable here: the density of good cells.} The small effect sizes have a
+structural cause one can read straight off the benchmark's accuracy distribution. The near-optimal
+region is \emph{dense}: of the $423{,}624$ cells, $2.45\%$ ($10{,}378$) score within one point of the
+global optimum ($94.32\%$) and $17.7\%$ within two points, and the median cell already reaches
+$\sim\!90\%$. A single random draw therefore lands within one point of the best with probability
+$0.0245$, and the best of just $100$ random draws is within one point of the optimum $92\%$ of the
+time. Random search reaches the near-optimal manifold almost immediately, and at that resolution there
+is simply nothing left for a smarter search to win. The final sliver is the opposite regime: only
+$0.09\%$ ($400$ cells) lie within half a point of the optimum, so that last fraction of a percent is
+genuinely rare --- but the accuracy differences there are inside the benchmark's own training noise, so
+no method can resolve them reliably. Between the near-optimal region, trivially reached by sampling,
+and the true optimum, rare and sub-noise, there is no band in which a directed search extracts a
+meaningful, repeatable edge. In statistical-physics terms the density of near-ground states is high
+while the gap to the ground state is smaller than the noise: sampling finds the low-energy manifold at
+once, and nothing resolves the residual gap. That is the physics of why random search is not beaten on
+this space, and why crossover's edge --- real as a direction --- is microscopic as a magnitude.
+
 \section{Relation to prior work}
 
 Nothing here is new in framing. Building-block recombination and crossover are Holland
