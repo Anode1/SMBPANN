@@ -6,11 +6,12 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 
-\title{\textbf{Crossover on a Real Neural Architecture Search Space:\\
-Structure Does Not Help, and at Scale It Hurts}}
+\title{\textbf{When Does Crossover Help Architecture Search?\\
+A Building-Block Rule, a Trap-Function Control, and a Real-Space Negative}}
 \author{Vasili Gavrilov\thanks{Independent researcher. Physics and computer
 science by education; a professional software engineer with a background in
-numerical optimization and machine learning. Reference implementation:
+numerical optimization and machine learning, including a genetic-algorithm
+optimizer built for industrial use in 2002. Reference implementation:
 \url{https://github.com/Anode1/SMBPANN}.}}
 \date{2026}
 
@@ -18,116 +19,160 @@ numerical optimization and machine learning. Reference implementation:
 \maketitle
 
 \begin{abstract}
-Evolutionary neural architecture search recombines architectures with crossover, yet
-random search is famously hard to beat and it is rarely clear whether crossover contributes
-anything of its own. We test this on NAS-Bench-101, a tabulated space of $423{,}624$ cells
-whose fitness is a lookup, so thousands of paired seeds are cheap. Two findings, both with
-paired significance tests. (i) Crossover \emph{does} beat random search here, significantly
-at every budget. (ii) Making the crossover \emph{respect the space's structure makes it
-worse}. The cell is multi-dimensional --- wiring (adjacency) $\times$ labeling (operations),
-plus a path view --- so we recombine along those axes: factor wiring from labeling, align
-nodes by role, transplant whole paths. All three underperform plain per-cell uniform
-crossover, and two fall \emph{below random} at large budget. The cause is diversity:
-structural priors either collapse offspring variety into premature convergence (axis, path)
-or maintain it without exploiting it (aligned), while uniform crossover balances the two; a
-population-size sweep independently confirms that crossover's benefit is created by the
-diversity available to it. The lesson restates a known one --- random search is a strong NAS
-baseline, structural cleverness rarely beats it --- with a controlled mechanism on a real
-space. The isomorphism-correct oracle and all operators are one dependency-free C program;
-every number regenerates from one command.
+Evolutionary neural architecture search recombines architectures with crossover, yet random
+search is famously hard to beat and it is rarely clear whether crossover contributes anything
+of its own. We give one rule with a positive control and a real-space test, on two
+dependency-free C testbeds, each with paired significance tests. The rule: \emph{crossover
+helps exactly when the space carries separable, recombinable building blocks}. Positive
+control --- on concatenated deceptive trap functions, separable by construction, one-point
+crossover's advantage over mutation grows with the number of blocks, from $1.8\times$ at four
+blocks to a regime at sixteen where mutation reaches the optimum $28/200$ times and crossover
+$199/200$. Real space --- on NAS-Bench-101 ($423{,}624$ tabulated cells, fitness a lookup, so
+thousands of paired seeds are cheap), crossover \emph{does} beat random search, but every
+operator built to recombine the cell's structure --- factoring its wiring and labeling
+dimensions, aligning nodes by role, transplanting whole paths --- is \emph{worse} than a
+structure-blind per-cell uniform crossover, and two fall below random at scale. So the real
+cell space has no building-block structure to exploit along those dimensions; uniform
+crossover's only edge over random is diversity, which the structural priors collapse or
+dissipate (shown by direct diversity measurement and a population-size sweep). The lesson
+restates a known one --- random search is a strong NAS baseline, and structural cleverness
+rarely beats it --- but with a controlled mechanism and a positive control that isolates when
+recombination genuinely works. Every number regenerates from one command.
 \end{abstract}
 
 \section{Introduction}
 
-Neural architecture search (NAS) automates a network's shape; methods differ mainly in
-search strategy --- RL \cite{zoph2017}, gradient relaxation \cite{darts2019}, Bayesian
-optimization, random search, evolution \cite{elsken2019}. Evolutionary NAS mutates and
-recombines architectures, training each candidate by back-propagation \cite{real2019}. Two
-facts motivate us: plain random search is a strong baseline \cite{bergstra2012,li2019}, and
-the leading evolutionary method drops crossover entirely, keeping only mutation with aging
+Neural architecture search (NAS) automates a network's shape; methods differ mainly in search
+strategy --- RL \cite{zoph2017}, gradient relaxation \cite{darts2019}, Bayesian optimization,
+random search, evolution \cite{elsken2019}. Evolutionary NAS mutates and recombines
+architectures, training each candidate by back-propagation \cite{real2019}. Two facts
+motivate us: plain random search is a strong baseline \cite{bergstra2012,li2019}, and the
+leading evolutionary method drops crossover entirely, keeping only mutation with aging
 \cite{real2019}.
 
-We study two things on a real benchmark: whether crossover beats random search at all, and
-whether a crossover that \emph{respects} the space's structure --- NAS-Bench-101's cell factors
-into a wiring dimension and a labeling dimension --- beats one that ignores it. The intuition
-for the second is strong: a graph's building blocks are its subgraphs and wiring, not arbitrary
-bits. It beats random, but the structure-aware operators are worse than the structure-blind
-one, reversing below random at scale.
-(The recombination logic comes from a self-modifying back-propagation engine \cite{thesis1997};
-we move fitness onto the table so training noise cannot confound the comparison.)
+Crossover \cite{holland1975} is supposed to recombine \emph{building blocks} --- partial
+solutions that can be assembled across parents. So the operative question is not ``does
+crossover help?'' but ``does the space \emph{have} building blocks it can recombine?'' We
+answer with a rule and two testbeds. A positive control fixes the meaning of the rule:
+deceptive trap functions, which are separable into blocks by construction, where crossover
+must and does win. Then the real test: NAS-Bench-101, whose cell is naturally
+multi-dimensional --- a wiring dimension and a labeling dimension, plus a path view --- and on
+which we ask whether crossover operators that respect that structure beat a structure-blind
+one. Stated as a hypothesis: $H_1$, a crossover that recombines the cell's building blocks
+(its wiring and labeling dimensions, its node roles, its paths) beats a structure-blind
+uniform crossover; the null $H_0$ is that it does not, because the real cell space carries no
+such recombinable structure. The intuition behind $H_1$ is strong, and our trap-function
+control shows the effect it predicts is real when blocks exist. Yet on NAS-Bench-101 the data
+does not merely fail to reject $H_0$: the structure-aware operators are significantly
+\emph{worse} than the structure-blind one, and worse than random search at scale. (The
+recombination logic is from a self-modifying back-propagation engine
+\cite{thesis1997}; on NAS-Bench-101 we move fitness onto the table so training noise cannot
+confound the comparison.)
 
-\section{The space and the fitness oracle}
+\section{Positive control: crossover on separable building blocks}
 
-A NAS-Bench-101 cell is a directed acyclic graph on up to seven nodes: node~0 input,
-node~$n{-}1$ output, interior nodes labeled \texttt{conv1x1}/\texttt{conv3x3}/\texttt{maxpool3x3}.
-It has two orthogonal dimensions --- \emph{wiring} (the adjacency) and \emph{labeling} (the
-ops) --- and a derived path view. The benchmark tabulates the trained CIFAR-10 accuracy of all
-$423{,}624$ cells, so fitness is a lookup.
-
-The benchmark de-duplicates \emph{isomorphic} graphs, so a recombined child is usually a
-relabeling of a catalogued cell rather than a verbatim match, and lookup needs a canonical
-form. We compute it by brute force: prune nodes lying on no input--output path, then take the
-lexicographically minimum adjacency-plus-labeling encoding over all $\le5!=120$ interior-node
-permutations --- exact and dependency-free. A self-test confirms it: over $5{,}000$ cells both
-the verbatim graph and a random relabeling map to the same accuracy ($5000/5000$ each), and the
-$423{,}624$ rows collapse to exactly $423{,}624$ canonical keys (no collisions). This same
-canonicalization supplies the alignment operator's node correspondence. The table is extracted
-from the official \texttt{nasbench\_only108.tfrecord} by a small C decoder (TFRecord framing,
-JSON, hand-parsed \texttt{ModelMetrics} protobuf); best test $94.32\%$ / val $95.06\%$
-reproduce the published optima.
-
-\section{Operators}
-
-Every individual is a seven-node upper-triangular cell (input $0$, output $6$). All arms share
-one population loop, one light mutation (flip an edge or re-roll an interior op), elitism, and
-query budget; \emph{only the crossover differs}, so any difference is attributable to it.
-Selection is on validation accuracy, reporting test. Four crossovers against a random control:
-
-\begin{itemize}
-\item \textbf{flat} --- per-cell uniform: each adjacency bit and each op from a uniformly
-chosen parent. Structure-blind, maximum-diversity (and the ``competing-conventions'' strawman,
-since node $k$ need not play the same role in both parents).
-\item \textbf{axis} --- dimension-factored: the whole wiring from one parent, the whole
-labeling from the other.
-\item \textbf{aligned} --- role-aligned: match the second parent's interior nodes to the first
-by role (op and in/out degree), then recombine \emph{node modules} (each node's incoming edges
-and its op together from one aligned parent) --- removing the competing-conventions problem
-before recombining.
-\item \textbf{path} --- subgraph transplant: recombine whole input--output paths, each carrying
-its own parent's ops, added greedily under the nine-edge cap (the graph dimension).
-\end{itemize}
-
-\textbf{Matched compute, paired.} Each arm gets a fixed query budget; the random control spends
-the same on independent random cells; a child that prunes invalid or over-budget is a spent
-query scored zero, penalizing wasted queries honestly. In each trial the control and all arms
-share the \emph{same} seed --- an identical initial population --- so a trial is a paired
-observation; we report paired win/loss and the Wilcoxon signed-rank $z$ of (arm $-$ baseline).
-
-\section{Results}
-
-\textbf{Crossover beats random.} At small population ($20$, elite $5$, $800$ seeds) every arm
-beats random at every budget (Wilcoxon $z=2$--$14$). Unlike the six-gene NAS-Bench-201 cell,
-where crossover's edge is a fraction of a percent and vanishes at generous budget, the larger
-101 space gives recombination something real to exploit.
-
-\textbf{Structure does not help; at scale it hurts.} Table~\ref{tab:scaled} scales to
-population $50$, budget $20{,}000$, $4000$ paired seeds. \textbf{Flat} wins at \emph{every}
-budget and beats each structured operator head-to-head; its edge over random shrinks as random
-saturates ($z:48\!\to\!46\!\to\!29\!\to\!13$) but never vanishes ($2268/1322$ paired wins even
-at $20{,}000$). The structured operators worsen with compute: \textbf{axis} crosses from
-$z{=}{+}30$ to $-28$ (losing to random $1230/2559$); \textbf{path} plateaus almost immediately
-($93.904\!\to\!93.913$ over a $40\times$ budget rise) and ends at $z{=}{-}26$; \textbf{aligned}
-decays from $z{=}42$ to $1.9$, to break-even. So the structure-blind operator wins throughout,
-the two most structured (axis, path) fall below random at scale, and the intermediate one ties
-it. This is not a validity artifact: axis/aligned/path in fact yield \emph{more} valid
-offspring ($95$--$97\%$) than flat ($90$--$96\%$).
+Before the real space, we fix what a building-block advantage looks like on a problem
+\emph{designed} to have one. The genome is $M$ concatenated deceptive trap blocks of $K=4$
+bits: a block scores $K$ if all its bits are $1$, else $K-1$ minus its number of ones --- a
+gradient that lures a bit-flipping search toward all-zero, so the all-ones optimum is reachable
+only by \emph{assembling} correctly-solved blocks. This is exactly what one-point crossover
+recombines and a mutation-only search cannot climb to \cite{deb1993}. We run elitism $+$
+tournament selection with one-point crossover ($p=0.9$) versus the identical search with
+mutation only (population $1000$, $200$ seeds, cap $500$ generations), and scan $M$.
 
 \begin{table}[t]
 \centering
-\caption{NAS-Bench-101, population $50$, elite $12$, $4000$ paired seeds. Mean best
-test-accuracy ($\%$), and Wilcoxon signed-rank $z$ against random search (positive $=$
-beats random). Flat wins at every budget; \emph{axis and path drop below random at scale};
-aligned's edge decays to zero. Every arm shares each seed with the control.}
+\caption{Concatenated deceptive traps ($K=4$ bits/block), mean generations to the global
+optimum and how many of $200$ seeds reach it. Crossover's advantage over mutation grows with
+the number of blocks $M$ --- the signature of a genuine building-block effect --- until
+mutation essentially fails and crossover still solves it.}
+\label{tab:bb}
+\begin{tabular}{lccc}
+\toprule
+blocks $M$ & mutation-only & crossover $+$ mutation & speedup \\
+\midrule
+$4$  & $9.2$ gens, $200/200$  & $5.1$ gens, $200/200$  & $1.8\times$ \\
+$8$  & $70.8$ gens, $200/200$ & $14.2$ gens, $200/200$ & $5\times$ \\
+$12$ & $257$ gens, $185/200$  & $22.6$ gens, $200/200$ & $11\times$ \\
+$16$ & $363$ gens, \textbf{$28/200$} & $42.3$ gens, \textbf{$199/200$} & mutation fails \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:bb} is the control: when the space is separable into building blocks, crossover
+is not marginally but \emph{decisively} better, and the gap widens with the amount of structure
+until mutation alone cannot solve the problem at all. The operator works. The question for a
+real search space is whether it supplies such blocks.
+
+\section{The real space and its fitness oracle}
+
+A NAS-Bench-101 cell is a directed acyclic graph on up to seven nodes: node~0 input, node~$n{-}1$
+output, interior nodes labeled \texttt{conv1x1}/\texttt{conv3x3}/\texttt{maxpool3x3}. It has two
+orthogonal dimensions --- \emph{wiring} (the adjacency) and \emph{labeling} (the ops) --- and a
+derived path view. The benchmark \cite{nasbench101} tabulates the trained CIFAR-10 accuracy of
+all $423{,}624$ cells, so fitness is a lookup and no network is trained during search.
+
+The benchmark de-duplicates \emph{isomorphic} graphs, so a recombined child is usually a
+relabeling of a catalogued cell rather than a verbatim match, and lookup needs a canonical form.
+We compute it by brute force: prune nodes lying on no input--output path, then take the
+lexicographically minimum adjacency-plus-labeling encoding over all $\le5!=120$ interior-node
+permutations --- exact and dependency-free. A self-test confirms it: over $5{,}000$ cells both the
+verbatim graph and a random relabeling map to the same accuracy ($5000/5000$ each), and the
+$423{,}624$ rows collapse to exactly $423{,}624$ canonical keys (no collisions). This same
+canonicalization supplies the alignment operator's node correspondence. The table is extracted
+from the official \texttt{nasbench\_only108.tfrecord} by a small C decoder; best test $94.32\%$ /
+val $95.06\%$ reproduce the published optima.
+
+\section{Operators}
+
+Every individual is a seven-node upper-triangular cell. All arms share one population loop, one
+light mutation (flip an edge or re-roll an op), elitism, and query budget; \emph{only the
+crossover differs}. Selection is on validation accuracy, reporting test. Four crossovers against
+a random-search control:
+
+\begin{itemize}
+\item \textbf{flat} --- per-cell uniform: each adjacency bit and each op from a uniformly chosen
+parent. Structure-blind, maximum-diversity (and the ``competing-conventions'' strawman, since
+node $k$ need not play the same role in both parents).
+\item \textbf{axis} --- dimension-factored: the whole wiring from one parent, the whole labeling
+from the other.
+\item \textbf{aligned} --- role-aligned: match the second parent's interior nodes to the first by
+role (op and in/out degree), then recombine \emph{node modules} (each node's incoming edges and op
+together from one aligned parent) --- removing the competing-conventions problem
+\cite{neat2002,modxover2021}.
+\item \textbf{path} --- subgraph transplant: recombine whole input--output paths, each carrying its
+parent's ops, greedily under the nine-edge cap (the graph dimension).
+\end{itemize}
+
+\textbf{Matched compute, paired.} Each arm gets a fixed query budget; the random control spends the
+same on independent random cells; a child that prunes invalid or over-budget is a spent query scored
+zero. In each trial the control and all arms share the \emph{same} seed (identical start), so a trial
+is a paired observation; we report paired win/loss and the Wilcoxon signed-rank $z$ of (arm $-$
+baseline).
+
+\section{Results on the real space}
+
+\textbf{Crossover beats random.} At small population ($20$, elite $5$, $800$ seeds) every arm beats
+random at every budget (Wilcoxon $z=2$--$14$). Unlike the six-gene NAS-Bench-201 cell, where
+crossover's edge is a fraction of a percent and vanishes at generous budget, the larger 101 space
+gives recombination something real to exploit.
+
+\textbf{Structure does not help; at scale it hurts.} Table~\ref{tab:scaled} scales to population $50$,
+budget $20{,}000$, $4000$ paired seeds. \textbf{Flat} wins at \emph{every} budget and beats each
+structured operator head-to-head; its edge over random shrinks as random saturates
+($z:48\!\to\!46\!\to\!29\!\to\!13$) but never vanishes ($2268/1322$ paired wins even at $20{,}000$).
+The structured operators worsen with compute: \textbf{axis} crosses from $z{=}{+}30$ to $-28$ (losing
+to random $1230/2559$); \textbf{path} plateaus almost immediately ($93.904\!\to\!93.913$ over a
+$40\times$ budget rise) and ends at $z{=}{-}26$; \textbf{aligned} decays from $z{=}42$ to $1.9$, to
+break-even. So the structure-blind operator wins throughout, the two most structured (axis, path) fall
+below random at scale, and the intermediate one ties it. This is not a validity artifact:
+axis/aligned/path yield \emph{more} valid offspring ($95$--$97\%$) than flat ($90$--$96\%$).
+
+\begin{table}[t]
+\centering
+\caption{NAS-Bench-101, population $50$, elite $12$, $4000$ paired seeds. Mean best test-accuracy
+($\%$), and Wilcoxon signed-rank $z$ against random search (positive $=$ beats random). Flat wins at
+every budget; \emph{axis and path drop below random at scale}; aligned's edge decays to zero.}
 \label{tab:scaled}
 \begin{tabular}{lccccc}
 \toprule
@@ -142,25 +187,23 @@ $20000$ & $94.042$ & $\mathbf{94.088}\;(+12.5)$ & $93.886\;(\mathbf{-27.6})$ & $
 \end{table}
 
 \textbf{Mechanism: productive diversity.} Two independent measurements locate the cause.
-(i)~Final-population genotypic spread (mean pairwise distance over $21$ edges $+\,5$ ops) shows
-two failure modes: the operators that end below random, axis and path, \emph{collapse} the
-spread ($1.8$ and $1.3$ vs flat's $2.1$ at $20{,}000$) --- premature convergence, matching
-their plateaus; but aligned keeps the \emph{most} spread ($3.1$, above flat) and still only
-ties random, its variety never concentrating on good cells. Flat holds an intermediate,
-productive spread and wins. (We had expected the cleaner ``diversity ranks the operators'';
-the measurement falsifies it, and we report the falsification.) (ii)~Varying \emph{population}
-at fixed budget sweeps the diversity available to crossover, and the comparison moves with it
-(Table~\ref{tab:pop}): at population $8$ every arm --- flat included --- loses to random
-($z<0$); the gain rises monotonically until at $64$ all four beat it. Crossover here is better
-than random exactly when it has enough diversity \emph{and} an operator that turns diversity
-into good offspring rather than collapsing or dissipating it.
+(i)~Final-population genotypic spread (mean pairwise distance over $21$ edges $+\,5$ ops) shows two
+failure modes: the operators that end below random, axis and path, \emph{collapse} the spread ($1.8$
+and $1.3$ vs flat's $2.1$ at $20{,}000$) --- premature convergence, matching their plateaus; but
+aligned keeps the \emph{most} spread ($3.1$, above flat) and still only ties random, its variety never
+concentrating on good cells. Flat holds an intermediate, productive spread and wins. (We had expected
+the cleaner ``diversity ranks the operators''; the measurement falsifies it, and we report the
+falsification.) (ii)~Varying \emph{population} at fixed budget sweeps the diversity available to
+crossover, and the comparison moves with it (Table~\ref{tab:pop}): at population $8$ every arm --- flat
+included --- loses to random ($z<0$); the gain rises monotonically until at $64$ all four beat it.
+Crossover here is better than random exactly when it has enough diversity \emph{and} an operator that
+turns diversity into good offspring rather than collapsing or dissipating it.
 
 \begin{table}[t]
 \centering
-\caption{Population sweep at fixed budget $2000$, $600$ paired seeds (elite $=$ pop$/4$; random
-control identical throughout, mean $93.743$). Mean best test-accuracy ($\%$) and Wilcoxon $z$
-vs random. Crossover's benefit is created by diversity: at pop $8$ every arm loses to random;
-the gain rises monotonically with population.}
+\caption{Population sweep at fixed budget $2000$, $600$ paired seeds (elite $=$ pop$/4$; random control
+identical, mean $93.743$). Mean best test-accuracy ($\%$) and Wilcoxon $z$ vs random: at pop $8$ every
+arm loses to random; the gain rises monotonically with population.}
 \label{tab:pop}
 \begin{tabular}{lcccc}
 \toprule
@@ -176,39 +219,49 @@ $64$ & $\mathbf{94.122}\;(+19.3)$& $93.917\;(+11.6)$& $94.064\;(+17.2)$& $93.957
 
 \section{Relation to prior work}
 
-Nothing here is new in framing. Random search as a strong NAS baseline is
-\cite{bergstra2012,li2019}; mutation-only evolutionary NAS is \cite{real2019}; the
-competing-conventions problem the aligned operator targets motivates NEAT's historical markings
-\cite{neat2002}; NAS-Bench-101 \cite{nasbench101} makes a study at this seed count possible. The
-contribution is a clean, reproducible \emph{negative} result: on a real multi-dimensional NAS
-space, four structure-respecting crossovers all lose to plain uniform crossover, two to random
-search, with a diversity mechanism that explains why.
+Nothing here is new in framing. Building-block recombination and crossover are Holland
+\cite{holland1975}; deceptive traps as their canonical test are Deb and Goldberg \cite{deb1993};
+random search as a strong NAS baseline is \cite{bergstra2012,li2019}; mutation-only evolutionary NAS is
+\cite{real2019}; the competing-conventions problem the aligned operator targets motivates NEAT's
+historical markings \cite{neat2002} and He et al.'s modular inheritable crossover \cite{modxover2021};
+NAS-Bench-101 \cite{nasbench101} makes a study at this seed count possible. The contribution is a
+clean, reproducible pairing: a positive control that shows exactly when crossover's building-block
+advantage appears, and a real NAS space where it does not --- four structure-respecting crossovers all
+lose to plain uniform crossover, two to random search --- with a diversity mechanism that explains why.
 
 \section{Discussion}
 
-The appealing idea that crossover should recombine along a search space's natural dimensions
-does not survive contact with the data: on NAS-Bench-101 it is beaten by structure-blind
-uniform crossover, the more structured the operator the sooner random search overtakes it, and
-the cause is diversity, not validity. \textbf{Limitations:} one tabulated cell space with
-lookup fitness (no training confound, but no transfer guarantee to larger or hierarchical
-spaces); \texttt{aligned} is one alignment and a better one may exist --- but the burden is now
-on exhibiting one that beats uniform crossover, which four natural attempts do not. The natural
-next step is a larger, hierarchical space where recombination has more room to matter.
+One rule ties the two testbeds together: crossover helps to the extent the space has separable,
+recombinable building blocks. The trap control makes the effect unmistakable --- crossover's edge over
+mutation grows with the number of blocks until mutation cannot solve the problem. The real NAS cell
+does not supply such structure along its natural dimensions: recombining its wiring and labeling axes,
+aligning nodes by role, or transplanting whole paths all lose to a structure-blind uniform crossover,
+whose own edge over random is only diversity, which the structural priors collapse or dissipate.
+\textbf{Limitations:} one tabulated cell space with lookup fitness (no training confound, but no
+transfer guarantee to larger or hierarchical spaces); \texttt{aligned} is one alignment and a better
+one may exist --- but the burden is now on exhibiting one that beats uniform crossover, which four
+natural attempts do not. The natural next step is a larger, hierarchical space where recombination has
+more room to matter.
 
 \section*{Reproducibility}
 
-Every number regenerates from \cite{repo} with one command. The fitness table is extracted by
-\texttt{nb101\_extract.c} (\texttt{make nb101\_extract}); the search, oracle, and all operators
-are \texttt{validation/nb101.c} (\texttt{make nb101}), configurable by the environment
-(\texttt{POP}, \texttt{ELITE}, \texttt{SEEDS}, \texttt{BUDGETS}) and self-testing its oracle
-with \texttt{--selftest}. Both build clean under \texttt{-std=c99 -pedantic} and run clean under
-AddressSanitizer and UBSan; a fixed xorshift generator makes every run reproducible.
+Every number regenerates from \cite{repo} with one command. The trap control is \texttt{bbtest.c}
+(\texttt{make bbtest}); the fitness table is extracted by \texttt{nb101\_extract.c}
+(\texttt{make nb101\_extract}); the search, oracle, and all operators are \texttt{validation/nb101.c}
+(\texttt{make nb101}), configurable by the environment (\texttt{POP}, \texttt{ELITE}, \texttt{SEEDS},
+\texttt{BUDGETS}) and self-testing its oracle with \texttt{--selftest}. All build clean under
+\texttt{-std=c99 -pedantic} and run clean under AddressSanitizer and UBSan; a fixed xorshift generator
+makes every run reproducible.
 
 \begin{thebibliography}{99}
 \small
 \bibitem{thesis1997} V.~Gavrilov. \emph{Backpropagation Feed-Forward Neural Networks}.
   Seminar in Artificial Intelligence, Open University of Israel, 1997 (revised digital
   edition, Zenodo 2026). \url{https://doi.org/10.5281/zenodo.20450526}
+\bibitem{holland1975} J.~H. Holland. \emph{Adaptation in Natural and Artificial Systems}.
+  University of Michigan Press, 1975.
+\bibitem{deb1993} K.~Deb, D.~E. Goldberg. Analyzing Deception in Trap Functions.
+  \emph{Foundations of Genetic Algorithms} 2, 1993.
 \bibitem{bergstra2012} J.~Bergstra, Y.~Bengio. Random Search for Hyper-Parameter
   Optimization. \emph{JMLR} 13, 2012.
 \bibitem{zoph2017} B.~Zoph, Q.~V. Le. Neural Architecture Search with Reinforcement
@@ -223,6 +276,9 @@ AddressSanitizer and UBSan; a fixed xorshift generator makes every run reproduci
   Architecture Search. \emph{UAI} 2019.
 \bibitem{neat2002} K.~O. Stanley, R.~Miikkulainen. Evolving Neural Networks through
   Augmenting Topologies. \emph{Evolutionary Computation} 10(2), 2002.
+\bibitem{modxover2021} C.~He, H.~Tan, S.~Huang, R.~Cheng. Efficient evolutionary neural
+  architecture search by modular inheritable crossover. \emph{Swarm and Evolutionary
+  Computation} 64, 2021.
 \bibitem{nasbench101} C.~Ying, A.~Klein, E.~Real, E.~Christiansen, K.~Murphy, F.~Hutter.
   NAS-Bench-101: Towards Reproducible Neural Architecture Search. \emph{ICML} 2019.
 \bibitem{repo} SMBPANN reference implementation.
