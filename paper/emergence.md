@@ -22,9 +22,11 @@ weight-tying gene it even discovers **weight sharing** (turning on a convolution
 translation-invariance rewards it, improving generalization). The annealing and energy/accuracy
 mechanics behave exactly as the physics predicts. What still does *not* fall out is the last,
 specific piece — a **compact aligned local filter**: pruning gives sparsity but not aligned windows,
-and the tying gene gives sharing but not a tight kernel. Convolution's parts emerge separately; the
-whole, compact convolution needs a pressure the plain energy term does not supply — matching the
-pruning literature and this project's other finding that structural cleverness does not come for free.
+the tying gene gives sharing but not a tight kernel, and an explicit filter-width penalty *still*
+does not tighten it (because sharing decouples connection-count from parameter-count, so there is no
+gradient left to prune — Section 6). Convolution's parts emerge separately; the compact whole is
+unreachable by an energy budget on a general genome — matching the pruning literature and this
+project's other finding that structural cleverness does not come for free.
 
 ## The mechanism, and where its pieces come from
 
@@ -133,9 +135,32 @@ K·H = 30). From a dense *unshared* seed, sharing forced off vs allowed (16 seed
 **Weight sharing emerges** — 89% of the population turns it on — and it *improves generalization*
 (0.900 vs 0.859): the search discovers that tying weights is the efficient way to exploit
 translation-invariance. That is the half of convolution connectivity pruning alone could not produce,
-and it is a cleaner positive than expected. **But** the emerged shared filter is **broad** (span 0.61,
-~13 taps), not the compact K = 3 window: the parameter-energy pressure on filter *width* is too weak
-to trim it, so a weight-shared *wide* filter emerges, not a tight convolution.
+and it is a cleaner positive than expected. **But** the emerged shared filter is **broad** (~12 taps),
+not the compact K = 3 window.
+
+### 6. Filter-width pressure does not close the gap — and the mechanism says why
+
+The obvious fix is to charge for the filter's *width*: make the shared energy also penalize the
+offset *span* (max − min tap), so a broad sparse kernel costs more than a contiguous compact one.
+Sweeping that pressure (16 seeds × 150 gens):
+
+| width pressure | shared-frac | param-energy | filter-taps | test |
+|---|---|---|---|---|
+| — (unshared) | 0.000 | 0.098 | 4.6 (RF) | 0.859 |
+| 0.00 | 0.893 | 0.112 | 12.3 | 0.900 |
+| 0.50 | 0.893 | 0.153 | 11.9 | 0.896 |
+| 1.00 | 0.893 | 0.198 | 11.8 | 0.895 |
+| 2.00 | 0.789 | 0.282 | 11.6 | 0.896 |
+
+The filter **stays ~12 taps** at every pressure (12.3 → 11.6); the penalty only piles on cost, and at
+high pressure sharing even starts to *lose* (0.89 → 0.79) — the search reverts to unshared rather than
+finding the compact kernel. The reason is a clean **decoupling**: once weights are shared, removing a
+connection no longer reduces the parameter count (that offset is still used by other positions), so
+there is no energy gradient to prune the connectivity, so it never tightens; shrinking the offset span
+would require *coordinated* removal of every connection at the extreme offsets across all units at
+once, which random mutation essentially never does. The compact kernel is unreachable by pruning under
+this genome — it would need either a contiguous-kernel representation with a width gene (which *imposes*
+the locality rather than emerging it) or a coordinated structural operator.
 
 ## Honest bottom line
 
@@ -150,12 +175,15 @@ windows, and the tying gene finds sharing but not a tight filter. Convolution's 
 
 This is consistent with the pruning literature (sparse subnetworks, not convolutions) and with the
 crossover study in this repo: the general, useful thing here is **automatic structural discovery under
-a resource budget** (sparsity, feature relevance, weight sharing); the last, specific piece — a tight
-local filter — needs a pressure the current energy term does not supply.
+a resource budget** (sparsity, feature relevance, weight sharing). The last, specific piece — a tight
+local filter — is *not* reachable by any energy pressure on this genome (Section 6), because sharing
+decouples connection-count from parameter-count; getting it would mean building the locality into the
+representation (which is imposing convolution, not emerging it) or a coordinated structural operator.
 
 ## Next steps
 
-- **A filter-width pressure**: penalize the *span* of a shared filter (not just its parameter count),
-  to test whether the compact local window — the last missing piece — can then be selected for.
+- **A coordinated structural operator** (whole-offset add/remove, or a contiguous-kernel width gene),
+  to see whether the compact kernel can be reached at all — accepting that a width gene *imposes*
+  locality rather than emerging it from a general genome.
 - **Larger N and 2-D inputs**, where greedy enumeration fails and the GA earns its keep; then sound
   and higher-dimensional tasks, to discover and reuse their topologies.
