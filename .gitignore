@@ -52,3 +52,5 @@ emerge_2d_deep
 scratch_emerge_2d_deep.out
 emerge_2d_deep2
 scratch_emerge_2d_deep2.out
+emerge_translate
+scratch_emerge_translate.out
