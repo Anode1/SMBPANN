@@ -305,6 +305,28 @@ REUSE's 63; TWO-OP 185 vs FREE's 140), and these are noisy 8-seed rates (REUSE's
 suffers either fixed strategy's worst-case failure — REUSE's 2/8 collapse on the two-op task, or FREE's
 wasted search on the repetitive one. It detects the regime from whether cloning stalls, and adapts.
 
+### 12. Toward 2-D: a foundation, honestly (a null, then a stable signal)
+
+Moving to 2-D, the first honest question is whether the 1-D results even carry — and the answer so
+far is "not the one I tried first." `emerge_2d.c` lifts the emergent-depth task to 2-D (two spikes at a
+diagonal separation s; a 2-D conv stack + global max-pool): the clean staircase **does not reproduce**.
+Only the smallest separation solves (s=2: 0.86 at L=2, and it *degrades* with more depth); s=4 never
+reaches target; s=6 is chance even at depths whose receptive field covers the pair. The engine is
+verified correct (ASan-clean; s=2 learns), so this is a **task** limitation: a stacked 3×3 kernel
+builds a smooth composite filter and cannot put sharp weight at the two opposite corners a large
+separation needs, the valid-conv map shrinks to a few cells, and 144 noisy cells breed spurious
+max-pool peaks — and the diagonal task is really 1-D-on-the-diagonal anyway. An honest null.
+
+The stable 2-D signal is the canonical one — **orientation** (Hubel–Wiesel, Gabor, LeCun).
+`emerge_2d_orient.c` (horizontal vs vertical bar, both classes carry one bar so only orientation is
+informative): a single 3×3 filter discriminates them at **0.980** mean, SD 0.028, every seed above
+0.94, at L=1 — and depth only *degrades* it (0.98 → 0.93 → 0.90), a one-filter task wanting one layer.
+Underclaimed: this is a *replication of conv's known core competency*, not a discovery — but it is the
+stable ground the distance task lacked. The genuinely-2-D reuse-vs-recombination question (two
+orientations = two *different* operations) needs multiple feature **channels**, not just depth or
+dilation — a real engine extension, and honest future work. So 2-D so far is: a verified engine, one
+null, and one stable foundation, with the interesting study scoped but not yet claimed.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
