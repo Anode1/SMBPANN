@@ -206,11 +206,17 @@ mask (best-of-$r$) at the same total budget; the gap does not shrink, it \emph{g
 exploration matters more than noise-averaging here. Scaling the budget with $N$ firms the large-$N$ gap
 slightly ($+0.12\to+0.17$ at $N{=}28$) but does not change the picture.
 
-\textbf{Why it matters.} This \emph{reconciles} the crossover null. There, on NAS-Bench-101, the objective
-was flat near the top (good cells common, differences inside training noise), so directed search had
-nothing to climb and tied random; here the energy objective is exploitable, so it climbs and wins on that
-axis. Directed search beats random exactly when the objective can be climbed, not when it is flat, the
-same principle read from both ends.
+\textbf{Why it matters.} This \emph{reconciles} the crossover null and confirms the project's founding
+conjecture, that a directed search beats random, with the condition it always quietly assumed: the
+objective must have structure to climb. On NAS-Bench-101 the objective was flat near the top (good cells
+common, differences inside training noise), so directed search had nothing to climb and tied random; here
+the energy objective is exploitable, so it climbs and wins. (\enquote{Tidier} is really
+\emph{energy-efficient}: fewer, tighter connections, the more compressed solution at equal accuracy, so
+the GA is the better \emph{search}, finding a lower-energy structure than random for the same effort.)
+The margin should only widen with scale, where random sampling covers a vanishing fraction of a space that
+grows like $2^{2N}$ while a directed search keeps climbing, which is why large-scale architecture search
+uses evolution or gradients and not random; but we test $N{\le}28$, so that widening is a prediction the
+trend supports, not a large-net result we measure.
 
 \subsection{Emergent depth matches the required receptive field}
 
