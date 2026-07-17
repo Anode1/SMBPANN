@@ -381,28 +381,31 @@ dilation — a real engine extension, and the subject of Section 13.
 
 ### 13. 2-D reuse vs recombination: two operations need two channels
 
-![In 2-D, one op needs one channel and two ops need two (C=1 caps at 0.75, C=2 crosses target); but the tidy law breaks at three operations.](images/fig5_channels.svg)
+![In 2-D, one op needs one channel and two ops need more than one (a single channel caps near 0.75); the tidy law breaks at three operations.](images/fig5_channels.svg)
 
 With the stable orientation foundation, the 2-D analogue of Section 10 lives on the **channel** axis:
 "one feature type reused" is C=1, "diverse features" is C≥2. `emerge_2d_chan.c` (a multi-channel conv,
 1→C, per-channel global max-pool) tests it. ONE-OP = orientation of a single bar; TWO-OP = a horizontal
 bar **and** a vertical bar both present (positive) vs exactly one (negative), balanced 50/50.
 
+Fair statistics: mean over restarts, ±1 SD over 24 seeds.
+
 | task | C=1 | C=2 | C=3 | C=4 |
 |---|---|---|---|---|
-| ONE-OP (one orientation) | 0.980 | 0.993 | 1.000 | 1.000 |
-| TWO-OP (both orientations) | **0.726** | **0.891** | 0.881 | 0.971 |
+| ONE-OP (one orientation) | 0.941 ±0.06 | 0.979 ±0.02 | 0.991 ±0.01 | 0.994 ±0.01 |
+| TWO-OP (both orientations) | **0.688 ±0.04** | 0.769 ±0.06 | 0.859 ±0.08 | 0.894 ±0.06 |
 
-**The crossover reproduces in genuine 2-D.** ONE-OP is flat-high: one channel already suffices, extra
-channels add nothing — so the channel requirement is *specific*, not a general free lunch. TWO-OP shows
-it: a single channel caps at **0.726**, exactly the ~0.75 ceiling a lone orientation detector can reach
-(it gets every positive plus the negatives lacking its orientation, and misses the negatives that have
-it); **C=2 jumps to 0.891, crossing target** — an H-detector and a V-detector, AND'd by the readout, do
-what one cannot; C=4 is robust at 0.97. Two different operations require two feature channels, just as
-the 1-D two-op task required two different blocks. Skeptical footnote, kept because it nearly fooled the
-run: this only appears with **balanced classes** — an initial 1/3-positive / 2/3-negative split parked
-C=1 and C=2 at 0.67, the majority-class baseline, and hid the effect completely until the imbalance was
-found and fixed.
+**One channel cannot serve two operations; more channels are required.** ONE-OP is flat-high: one
+channel already solves it and extra channels add nothing — so the channel requirement is *specific*, not
+a general free lunch. TWO-OP shows it: a single channel caps at **0.688**, near the ~0.75 ceiling a lone
+orientation detector can reach (it gets every positive plus the negatives lacking its orientation, and
+misses the negatives that *have* it), and accuracy then rises monotonically with channels
+(0.69 → 0.77 → 0.86 → 0.89), crossing target around C=3. Honestly stated under the fair estimator, this
+is a **gradual rise, not a sharp C=2 jump** — the load-bearing fact is that *one* channel is not enough
+for two different operations, which is significant (0.69 vs 0.89 is many SD); the exact channel at which
+it crosses target is not sharp. Skeptical footnote, kept because it nearly fooled the run: this effect
+only appears with **balanced classes** — an early 1/3-positive / 2/3-negative split parked the low
+channel counts at 0.67, the majority-class baseline, and hid it entirely until the imbalance was fixed.
 
 ### 14. Does emergent width track operation count? A boundary — it breaks at K=3
 

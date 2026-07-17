@@ -305,6 +305,35 @@ why: good cells are common and the gap to the optimum is smaller than the
 benchmark's training noise, so random search is hard to beat. The companion essay is
 [`paper/essay.md`](paper/essay.md).
 
+## The emergence study
+
+A second, larger note comes at the same 1997 ambition from the other side. Instead of *searching* whole
+topologies, it **grows** one from an **exhaustive (fully-connected) seed under an energy budget** — an
+evolutionary search that pays for every connection — and asks, honestly, *which pieces of convolution
+emerge, and which do not*.
+
+![The main idea: an exhaustive, tangled network becomes an ordered convolution through a few structural operators.](paper/images/fig_main_idea.svg)
+
+The frame is: **impose the priors that are real symmetries of the domain** — *locality* (information is
+local) and *translatability* (a signal is the same shifted over) — and let a few biological operators
+(**prune, clone, translate, recombine**) assemble and refine the rest.
+
+![The four operators as A → B: prune, clone, translate, recombine, each with the exact action written under the arrow.](paper/images/fig_operators.svg)
+
+The honest map that comes out:
+sparse, task-relevant connectivity emerges cleanly, and weight-sharing is *adopted* when
+translation-invariance rewards it, but a **compact aligned local filter does not emerge** from an energy
+budget alone — with a crisp mechanism for *why* (once weights are shared, connection-count no longer
+gradients parameter-count, so pruning cannot tighten the kernel). On top of the imposed priors, the free
+dimensions — depth, channel count — then emerge to fit the task, up to an honest capacity limit.
+
+What is genuinely new is that evolutionary energy-emergence map from an exhaustive seed and its
+boundaries — distinct from gradient pruning (Optimal Brain Damage, Lottery Ticket), from DARTS'
+gradient-relaxed supernet, and from NEAT's grow-from-minimal. The rest reproduces known inductive-bias
+results (weight-sharing is data-efficient, LeCun 1989; receptive field ≈ depth) with a *fair baseline*
+and full reproducibility. Every claim is a small, seeded, one-`make` probe — the negatives kept, for
+honesty. See [`paper/emergence.md`](paper/emergence.md) (`validation/emerge_*.c`).
+
 ## Roadmap
 
 1. **Foundation**: flat-array FFNN, backprop with momentum, XOR. *(done)*
