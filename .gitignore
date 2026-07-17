@@ -62,3 +62,8 @@ emerge_scale
 scratch_emerge_scale.out
 emerge_baseline
 scratch_emerge_baseline.out
+scratch_translate_fair.out
+scratch_develop_fair.out
+scratch_chan_fair.out
+scratch_grow_fair.out
+scratch_emerge_2d_grow_strong.out

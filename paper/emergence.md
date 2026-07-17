@@ -414,21 +414,25 @@ the task solves, and the selected count C* should equal the number of operations
 tests it on K-operation tasks (K oriented bars all present vs one dropped, balanced), growing C from 1.
 **It does not hold.**
 
+Fair statistics: mean over restarts, 24 seeds; C* = the shallowest C reaching target, averaged over
+seeds that solve.
+
 | K ops | C=1 | C=2 | C=3 | C=4 | C=5 | selected C* |
 |---|---|---|---|---|---|---|
-| K=1 | 1.000 | — | — | — | — | **1.0** (clean) |
-| K=2 | 0.725 | 0.860 | 0.977 | — | — | ~2.5 (roughly) |
-| K=3 | 0.649 | 0.658 | 0.751 | 0.796 | 0.857 | ~4.75 (only ~4/6 solved) |
+| K=1 | 0.948 | 0.990 | 0.998 | 0.999 | 1.000 | **1.2** (24/24 solve) |
+| K=2 | 0.696 | 0.777 | 0.884 | 0.905 | 0.931 | 3.2 (24/24) |
+| K=3 | 0.614 | 0.657 | 0.711 | 0.729 | 0.788 | 5.0 (**only 2/24**) |
 
-K=1 is clean and K=2 roughly tracks, but **K=3 breaks**: it is not solved at 3 channels — even with a
-stronger-compute check (450 epochs, larger amplitude) C=3 reached only 0.75 — and needs 4–5 *redundant*
-channels to marginally cross, unreliably. More compute barely moved it, so this is **structural, not
-trainability**. Two honest reasons: gradient descent does not cleanly assign one channel per operation
-(so covering all K detectors needs redundancy, C > K), and a K-way conjunction **compounds per-channel
-error** (0.95³ ≈ 0.86, right at the target edge). So the *direction* is right — more operations need
-more channels — but the clean "width = operation count" law is false. Section 13's small-K result
-stands; its tidy generalization does not, and it is more honest to show the staircase collapsing at
-K=3 than to have stopped at K=2 where it still looked clean.
+The *direction* is right — more operations need more channels (C* ≈ 1.2, 3.2, 5.0) — but the clean
+"width = operation count" law is **false**, and honestly it is worse than a small best-of run suggested:
+K=2 already overshoots (C* ≈ 3, not 2), and **K=3 breaks** — it stays sub-target at every channel count
+(C=5 = 0.79) with only 2 of 24 seeds solving. And more compute does not rescue it: an independent
+heavy-compute rerun (2.5× epochs, 2× amplitude) also leaves K=3 sub-target, so it is **structural, not
+under-training** (§18). Two honest reasons: gradient descent does not cleanly assign one channel per
+operation (covering all K detectors needs redundancy, C > K), and a K-way conjunction **compounds
+per-channel error** (0.95³ ≈ 0.86, right at the target edge). Section 13's core (one channel is not
+enough for two operations) stands; the tidy generalization to a K=C staircase does not — and it is more
+honest to show it collapsing at K=3 than to stop at small K where it still looked clean.
 
 ### 15. Head or channels? A combining layer recovers K=2 but not K=3
 

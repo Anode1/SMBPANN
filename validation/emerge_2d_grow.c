@@ -13,15 +13,15 @@
  * that drops that one. So the minimal solving width is C = K. Growth searcher: raise C from 1 until the
  * target is met; report the selected C* per K, plus accuracy vs C. Expectation: C* tracks K (1,2,3).
  *
- * FINDING (8 seeds; and a stronger-compute check, 450 epochs / AMP 4 / 4 restarts) -- PARTIAL, honest:
- * the clean "C* = K" staircase does NOT hold. K=1 is clean (C*=1). K=2 roughly tracks (C*~2.5; C=2 sits
- * right at target so seeds often need a 3rd channel). K=3 BREAKS: not solved at 3 channels even with
- * extra compute (C=3 -> 0.75), needs 4-5 redundant channels to marginally cross (C*~4.75, only ~4/6
- * seeds), and more compute barely moved it -- so it is STRUCTURAL, not trainability. Direction is right
- * (more ops -> more channels) but the equality fails: gradient descent does not cleanly assign one
- * channel per operation (redundancy is needed to cover all K detectors) and a K-way conjunction
- * compounds per-channel error (0.95^3 ~ 0.86, at the edge). Section 13's core result (1 op -> 1 channel,
- * 2 ops -> 2) stands; this clean generalization does not.
+ * FINDING (24 seeds, fair mean over restarts) -- PARTIAL, honest: the clean "C* = K" staircase does NOT
+ * hold. Direction is right (more ops -> more channels: C* ~ 1.2, 3.2, 5.0 for K=1,2,3) but the equality
+ * fails and is worse than a best-of run suggested: K=2 already overshoots (C*~3, not 2), and K=3 BREAKS
+ * -- sub-target at every channel count (C=5 = 0.79), only 2/24 seeds solve, and an independent heavy-
+ * compute rerun (2.5x epochs, 2x amplitude) leaves it sub-target too, so it is STRUCTURAL not under-
+ * training. Reasons: gradient descent does not cleanly assign one channel per operation (redundancy is
+ * needed to cover all K detectors) and a K-way conjunction compounds per-channel error (0.95^3 ~ 0.86,
+ * at the edge). Section 13's core (one channel is not enough for two operations) stands; this clean
+ * generalization does not.
  * Self-contained C99 (multi-channel engine from emerge_2d_chan). Build: make emerge_2d_grow
  */
 #include <stdio.h>
