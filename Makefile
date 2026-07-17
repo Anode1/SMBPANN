@@ -151,6 +151,8 @@ emerge_2d_compete:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_compete validation/emerge_2d_compete.c $(SMB_MATH)
 emerge_develop:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_develop validation/emerge_develop.c $(SMB_MATH)
+emerge_develop2:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_develop2 validation/emerge_develop2.c $(SMB_MATH)
 emerge_scale:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_scale validation/emerge_scale.c $(SMB_MATH)
 emerge_baseline:
@@ -162,3 +164,6 @@ emerge_prove: validation/emerge_prove.c
 
 emerge_minimal:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_minimal validation/emerge_minimal.c $(SMB_MATH)
+
+emerge_discover:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_discover validation/emerge_discover.c $(SMB_MATH)

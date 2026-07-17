@@ -75,3 +75,7 @@ scratch_emerge_prove.out
 scratch_emerge_prove_scaling.out
 scratch_emerge_prove_scaled.out
 scratch_prove_sweep.out
+emerge_develop2
+scratch_emerge_develop2.out
+emerge_discover
+scratch_emerge_discover.out
