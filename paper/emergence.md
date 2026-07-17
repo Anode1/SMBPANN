@@ -498,25 +498,30 @@ not do it: it replicates a module that works, rather than evolving a fresh one p
 ### 18. Why K=3 worsens — and why no single fix moves it (a capacity wall)
 
 The recurring frustration in the 2-D arc is that *adding* structure often makes things worse, and the
-K=3 conjunction is never solved at three channels. It is worth stating plainly what does **not** fix
-it. Four interventions, each a reasonable bet, all fail: **more channels** (§14, needs 5+, unreliable),
-**a nonlinear readout** (§15, MLP head recovers K=2 not K=3), **a deeper feature extractor** (§16, a
-2nd conv layer makes it *worse*), and **competition** — `emerge_2d_compete.c` adds lateral inhibition
-(channel filters repel, the mechanism that self-organizes cortical orientation columns), and K=3 at
-C=3 stays at 0.76–0.78 across every strength, a bump within noise:
+K=3 conjunction is never solved at three channels. Three interventions, each a reasonable bet, fail
+cleanly: **more channels** (§14, needs 5+, unreliable), **a nonlinear readout** (§15, MLP head recovers
+K=2 not K=3), and **competition** — `emerge_2d_compete.c` adds lateral inhibition (channel filters
+repel, the mechanism that self-organizes cortical orientation columns), and K=3 at C=3 stays at
+0.76–0.78 across every strength, a bump within noise:
 
 | K ops (C=3) | λ=0.00 | λ=0.10 | λ=0.30 | λ=0.60 |
 |---|---|---|---|---|
 | K=2 | 0.955 | 0.943 | 0.954 | 0.948 |
 | K=3 | 0.759 | 0.782 | 0.759 | 0.771 |
 
-So the K=3 wall is **not a missing operator** — not specialization, not readout depth, not extractor
-depth, not capacity count. It is a genuine **capacity limit** of a shallow conv + max-pool net on a
-three-way conjunction over cluttered input: per-channel detection error compounds multiplicatively
-(≈ 0.95³ at best, and detection is well below that amid the clutter), and no one refinement moves a
-multiplicative wall. Real vision beats this with *scale* — depth, normalization, residual connections,
-and vast data — not a single clever pressure. The honest lesson of the worsening is that some limits
-are not tricks waiting to be found; they are the architecture running out, and saying so is the result.
+**And more compute does not move it.** An independent heavy-compute rerun (2.5× epochs, 2× signal
+amplitude) leaves K=3 sub-target at *every* channel count — C=3 = 0.70, C=5 = 0.80 — with only 2/6 seeds
+solving. So for the channel-count axis the wall is **robust to compute, not an under-training artifact**.
+
+The honest scope: the K=3 wall is a **capacity limit of this shallow conv + max-pool + three-way-
+conjunction setup** — per-channel detection error compounds multiplicatively (≈ 0.95³ at best, worse amid
+clutter), and neither more channels, a nonlinear readout, nor competition moves a multiplicative wall,
+even under heavy compute. **One honest caveat:** the fourth intervention we tried, a *deeper feature
+extractor* (§16, a 2nd conv layer), made it *worse* — but that arm ran at the same fixed budget and was
+plausibly under-trained, so we do **not** count it as a clean rescue-failure; whether a properly-trained
+deeper net clears K=3 is genuinely open. What the evidence supports is narrow and honest: *this* setup
+runs out at a three-way conjunction, and no cheap refinement on the channel axis rescues it. Real vision
+clears such tasks with scale — depth, normalization, residuals, vast data — not one clever pressure.
 
 ### 19. The whole sequence, chained: reuse beats re-search, and jitter is not needed
 
@@ -548,24 +553,33 @@ are stuck; reuse is *how you avoid getting stuck*. Nature keeps serial homologs 
 does not let every segment drift alone. (Caveat: on a genuinely multimodal task jitter could help; here
 the developmental assembly finds the optimum directly, so it has nothing to escape.)
 
-### 20. Scale: the reuse advantage grows with problem size
+### 20. Scale: the weight-sharing advantage widens with input size, then saturates
 
-The developmental result (§19) could be a small-task artifact. `emerge_scale.c` sweeps the input size N
-(so the number of positions to cover grows), holding the data scarce, comparing the developmental path
-(one tiled block, 3 weights, size-independent) against search-from-scratch (independent per-position
-detectors, weights growing with N):
+`emerge_scale.c` sweeps the input size N (so the number of positions to cover grows), holding the data
+scarce, comparing the **weight-shared** arm (one tiled block, 3 weights, size-independent) against a
+**locally-connected** arm (an independent filter per position, weights growing with N). Fair statistics:
+mean over restarts (no best-of selection), ±1 SD over **250 seeds**.
 
-| input N | positions | developmental (shared) | search-from-scratch (indep) | gap | scratch weights |
+![Weight-sharing stays flat as input size grows while the locally-connected baseline falls to chance; the gap widens then saturates.](images/fig_scale_chart.svg)
+
+| input N | positions | weight-shared | locally-connected | gap | LC weights |
 |---|---|---|---|---|---|
-| 16 | 14 | 0.900 | 0.703 | +0.197 | 42 |
-| 32 | 30 | 0.867 | 0.572 | +0.295 | 90 |
-| 48 | 46 | 0.898 | 0.534 | **+0.363** | 138 |
-| 64 | 62 | 0.886 | 0.550 | +0.336 | 186 |
+| 16 | 14 | 0.942 ± 0.058 | 0.692 ± 0.088 | +0.250 | 42 |
+| 32 | 30 | 0.943 ± 0.063 | 0.605 ± 0.071 | +0.338 | 90 |
+| 48 | 46 | 0.947 ± 0.071 | 0.568 ± 0.052 | +0.379 | 138 |
+| 64 | 62 | 0.947 ± 0.072 | 0.548 ± 0.043 | +0.399 | 186 |
+| 96 | 94 | 0.944 ± 0.070 | 0.529 ± 0.028 | +0.415 | 282 |
+| 128 | 126 | 0.948 ± 0.063 | 0.524 ± 0.022 | +0.424 | 378 |
 
-**Reuse-beats-re-search strengthens with scale.** The developmental path stays flat (~0.89, always 3
-weights) as the problem grows 4×; search-from-scratch *falls* (0.70 → 0.55) and bloats to 186 weights,
-because more positions starve harder on the same data. The gap nearly doubles. The advantage is not a
-toy of small problems — it is a property that grows with size, which is what makes it worth having.
+The weight-shared block stays **flat at ~0.94** (always 3 weights, size-independent); the
+locally-connected baseline **falls to chance** (0.52) and bloats to 378 weights, because each
+per-position filter starves on the ~ntr/P examples that land there. The gap is 4–6× the SD (error bars
+never overlap), so the effect is significant. Honestly stated, it **widens then saturates**: most of the
+growth is N=16→32, after which the baseline has already hit the chance floor and the gap can only
+plateau. This is **weight-sharing data efficiency** (LeCun 1989), not architecture search — and it
+survives even a *fully-trained, oracle-supervised* locally-connected baseline (`emerge_baseline.c`: the
+shared arm still wins +0.14 at N=16 up to +0.38 at N=128), so it is not an artifact of the baseline's
+training rule.
 
 ## Honest bottom line
 
