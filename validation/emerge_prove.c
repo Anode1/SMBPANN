@@ -118,17 +118,25 @@ static void run_ga(uint32_t seed, double out[4])
     { int bi=0; double bf=-1; for(p=0;p<POP;p++) if(fit[p]>bf){bf=fit[p];bi=p;} memcpy(best,pop[bi],sizeof best); }
     tally(best,seed,out);
 }
-/* RANDOM arm: draw the same number of random masks, keep the best by the same objective. */
-static void run_random(uint32_t seed, int evals, double out[4])
+/* RANDOM arm: draw random masks at matched total budget, keep the best by the same objective.
+   revals>1 gives each mask r independent evaluations (best-of-r objective) so it gets the same
+   denoising against the hard accuracy gate that the GA gets by re-evaluating survivors each
+   generation; total evaluations stay = evals, so the budget is still matched (evals/r distinct masks). */
+static void run_random(uint32_t seed, int evals, int revals, double out[4])
 {
-    static char cand[NOFFMAX], best[NOFFMAX]; double bestfit=-1; int e,o;
+    static char cand[NOFFMAX], best[NOFFMAX]; double bestfit=-1; int e,o,rr;
+    int nmask = (revals>1) ? evals/revals : evals;
     rseed(seed^0x5bd1e995u);
-    for(e=0;e<evals;e++){
+    for(e=0;e<nmask;e++){
         int k = 1 + (int)(r32()%(uint32_t)(g_noff-1));       /* random density: sparse..dense over the real offsets */
+        double f=-1;
         for(o=0;o<g_noff;o++) cand[o]=0;                     /* offset 0 phantom, left off (matches the GA) */
         { int placed=0; while(placed<k){ int oo=1+(int)(r32()%(uint32_t)(g_noff-1)); if(!cand[oo]){cand[oo]=1;placed++;} } }
-        { double acc=run_net(cand,(uint32_t)(seed+(uint32_t)e*2654435761u+3u),0), f=objective(cand,acc);
-          if(f>bestfit){ bestfit=f; memcpy(best,cand,sizeof best); } }
+        for(rr=0;rr<revals;rr++){                            /* best-of-r: did this mask ever clear the gate / score well */
+            double acc=run_net(cand,(uint32_t)(seed+((uint32_t)e*7u+(uint32_t)rr)*2654435761u+3u),0), fo=objective(cand,acc);
+            if(fo>f) f=fo;
+        }
+        if(f>bestfit){ bestfit=f; memcpy(best,cand,sizeof best); }
     }
     tally(best,seed,out);
 }
@@ -137,6 +145,7 @@ int main(void)
 {
     int seeds=envint("SEEDS",40), sd, ni, k, evals;
     int seed0=envint("SEED0",1), raw=getenv("RAW")!=NULL;   /* SEED0 offsets the chunk; RAW emits one line per seed for parallel aggregation */
+    int revals=envint("REVALS",1);                          /* r evaluations per random mask (denoising confound control); 1 = original */
     int Ns[MAXN], nN=0;
     g_gens=envint("GENS",150); g_target=envdbl("TARGET",0.90); g_width=envdbl("WIDTH",1.0);
     evals = POP*(g_gens+1);
@@ -182,7 +191,7 @@ int main(void)
         for(sd=seed0;sd<seed0+seeds;sd++){ new_task((uint32_t)(sd*131+1));
             double a[4]={0,0,0,0}, b[4]={0,0,0,0};
             run_ga((uint32_t)(sd*7+1),a);
-            run_random((uint32_t)(sd*7+1),evals,b);
+            run_random((uint32_t)(sd*7+1),evals,revals,b);
             if(raw){ printf("RAW %d %d %.0f %.4f %.4f %.4f %.0f %.4f %.4f %.4f\n",
                             Ns[ni], sd, a[0],a[1],a[2],a[3], b[0],b[1],b[2],b[3]); continue; }
             for(k=0;k<4;k++){ ga[k]+=a[k]; gq[k]+=a[k]*a[k]; }
