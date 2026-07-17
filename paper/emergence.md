@@ -29,8 +29,7 @@ characterization, negatives included, is the contribution.
 
 **What we reproduce rather than claim as new.** On top of the priors a ConvNet also hardwires,
 **locality** and **translatability**, the *real symmetries* of a signal, the free dimensions then emerge
-to fit the task: compact local fields, the *depth* that matches a task's required receptive field, and
-the *channel count* that matches its number of distinct operations (to a limit). These confirm known
+to fit the task: compact local fields and the *depth* that matches a task's required receptive field. These confirm known
 inductive-bias results, weight-sharing is data-efficient (LeCun 1989); receptive field ≈ depth, which we
 verify with a **fair baseline** (weight-sharing beats even a *fully-trained, oracle-supervised*
 locally-connected net; the advantage widens with input size, then **saturates** once the baseline hits
@@ -411,127 +410,7 @@ REUSE's 63; TWO-OP 185 vs FREE's 140), and these are noisy 8-seed rates (REUSE's
 suffers either fixed strategy's worst-case failure, REUSE's 2/8 collapse on the two-op task, or FREE's
 wasted search on the repetitive one. It detects the regime from whether cloning stalls, and adapts.
 
-### 12. Toward 2-D: a foundation, honestly (a null, then a stable signal)
-
-Moving to 2-D, the first honest question is whether the 1-D results even carry, and the answer so
-far is "not the one I tried first." `emerge_2d.c` lifts the emergent-depth task to 2-D (two spikes at a
-diagonal separation s; a 2-D conv stack + global max-pool): the clean staircase **does not reproduce**.
-Only the smallest separation solves (s=2: 0.86 at L=2, and it *degrades* with more depth); s=4 never
-reaches target; s=6 is chance even at depths whose receptive field covers the pair. The engine is
-verified correct (ASan-clean; s=2 learns), so this is a **task** limitation: a stacked 3×3 kernel
-builds a smooth composite filter and cannot put sharp weight at the two opposite corners a large
-separation needs, the valid-conv map shrinks to a few cells, and 144 noisy cells breed spurious
-max-pool peaks, and the diagonal task is really 1-D-on-the-diagonal anyway. An honest null.
-
-The stable 2-D signal is the canonical one, **orientation** (Hubel–Wiesel, Gabor, LeCun).
-`emerge_2d_orient.c` (horizontal vs vertical bar, both classes carry one bar so only orientation is
-informative): a single 3×3 filter discriminates them at **0.980** mean, SD 0.028, every seed above
-0.94, at L=1, and depth only *degrades* it (0.98 → 0.93 → 0.90), a one-filter task wanting one layer.
-Underclaimed: this is a *replication of conv's known core competency*, not a discovery, but it is the
-stable ground the distance task lacked. The genuinely-2-D reuse-vs-recombination question (two
-orientations = two *different* operations) needs multiple feature **channels**, not just depth or
-dilation, a real engine extension, and the subject of Section 13.
-
-### 13. 2-D reuse vs recombination: two operations need two channels
-
-![In 2-D, one op needs one channel and two ops need more than one (a single channel caps near 0.75); the tidy law breaks at three operations.](images/fig5_channels.svg)
-
-With the stable orientation foundation, the 2-D analogue of Section 10 lives on the **channel** axis:
-"one feature type reused" is C=1, "diverse features" is C≥2. `emerge_2d_chan.c` (a multi-channel conv,
-1→C, per-channel global max-pool) tests it. ONE-OP = orientation of a single bar; TWO-OP = a horizontal
-bar **and** a vertical bar both present (positive) vs exactly one (negative), balanced 50/50.
-
-Fair statistics: mean over restarts, ±1 SD over 24 seeds.
-
-| task | C=1 | C=2 | C=3 | C=4 |
-|---|---|---|---|---|
-| ONE-OP (one orientation) | 0.941 ±0.06 | 0.979 ±0.02 | 0.991 ±0.01 | 0.994 ±0.01 |
-| TWO-OP (both orientations) | **0.688 ±0.04** | 0.769 ±0.06 | 0.859 ±0.08 | 0.894 ±0.06 |
-
-**One channel cannot serve two operations; more channels are required.** ONE-OP is flat-high: one
-channel already solves it and extra channels add nothing, so the channel requirement is *specific*, not
-a general free lunch. TWO-OP shows it: a single channel caps at **0.688**, near the ~0.75 ceiling a lone
-orientation detector can reach (it gets every positive plus the negatives lacking its orientation, and
-misses the negatives that *have* it), and accuracy then rises monotonically with channels
-(0.69 → 0.77 → 0.86 → 0.89), crossing target around C=3. Honestly stated under the fair estimator, this
-is a **gradual rise, not a sharp C=2 jump**, the load-bearing fact is that *one* channel is not enough
-for two different operations, which is significant (0.69 vs 0.89 is many SD); the exact channel at which
-it crosses target is not sharp. Skeptical footnote, kept because it nearly fooled the run: this effect
-only appears with **balanced classes**, an early 1/3-positive / 2/3-negative split parked the low
-channel counts at 0.67, the majority-class baseline, and hid it entirely until the imbalance was fixed.
-
-### 14. Does emergent width track operation count? A boundary, it breaks at K=3
-
-Section 13 (one op → one channel, two ops → two) invites a clean generalization: grow channels until
-the task solves, and the selected count C* should equal the number of operations K. `emerge_2d_grow.c`
-tests it on K-operation tasks (K oriented bars all present vs one dropped, balanced), growing C from 1.
-**It does not hold.**
-
-Fair statistics: mean over restarts, 24 seeds; C* = the shallowest C reaching target, averaged over
-seeds that solve.
-
-| K ops | C=1 | C=2 | C=3 | C=4 | C=5 | selected C* |
-|---|---|---|---|---|---|---|
-| K=1 | 0.948 | 0.990 | 0.998 | 0.999 | 1.000 | **1.2** (24/24 solve) |
-| K=2 | 0.696 | 0.777 | 0.884 | 0.905 | 0.931 | 3.2 (24/24) |
-| K=3 | 0.614 | 0.657 | 0.711 | 0.729 | 0.788 | 5.0 (**only 2/24**) |
-
-The *direction* is right, more operations need more channels (C* ≈ 1.2, 3.2, 5.0), but the clean
-"width = operation count" law is **false**, and honestly it is worse than a small best-of run suggested:
-K=2 already overshoots (C* ≈ 3, not 2), and **K=3 breaks**, it stays sub-target at every channel count
-(C=5 = 0.79) with only 2 of 24 seeds solving. And more compute does not rescue it: an independent
-heavy-compute rerun (2.5× epochs, 2× amplitude) also leaves K=3 sub-target, so it is **structural, not
-under-training** (§18). Two honest reasons: gradient descent does not cleanly assign one channel per
-operation (covering all K detectors needs redundancy, C > K), and a K-way conjunction **compounds
-per-channel error** (0.95³ ≈ 0.86, right at the target edge). Section 13's core (one channel is not
-enough for two operations) stands; the tidy generalization to a K=C staircase does not, and it is more
-honest to show it collapsing at K=3 than to stop at small K where it still looked clean.
-
-### 15. Head or channels? A combining layer recovers K=2 but not K=3
-
-Section 14's K=3 failure had two suspects: the conv channels not specializing, and a *linear* readout
-compounding their error. `emerge_2d_deep.c` separates them by swapping the linear head for a small MLP
-head (an 8-unit hidden layer over the pooled channel vector) and re-running K=2, 3 across C.
-
-| head | K | C=1 | C=2 | C=3 | C=4 | C=5 |
-|---|---|---|---|---|---|---|
-| linear | 2 | 0.717 | 0.845 | 0.955 | 0.944 | 0.981 |
-| **MLP** | 2 | 0.724 | **0.951** | 0.969 | 0.994 | 0.987 |
-| linear | 3 | 0.635 | 0.674 | 0.759 | 0.763 | 0.817 |
-| **MLP** | 3 | 0.634 | 0.741 | **0.794** | 0.841 | 0.870 |
-
-**The combining layer recovers K=2 but not K=3, it splits the blame.** K=2 at C=2 jumps from a shaky
-0.845 to a clean **0.951**: that marginality *was* the linear head, and a nonlinear combiner fixes it.
-But K=3 at C=3 moves only 0.759 → **0.794**, still under target, and needs C≥5 even with the MLP (0.870).
-So the K=3 failure is **the conv channels, not the head**: three channels cannot pack three clean
-orientation detectors, and no readout can compensate for evidence that was never cleanly extracted.
-Section 14 stands, now sharper, the boundary of "width tracks operations" is a *feature-extraction*
-limit of a single conv layer, not a readout artifact.
-
-### 16. The closer: does a deeper feature extractor recover K=3? (No, it is a robust wall)
-
-Section 15 located K=3's failure in the conv channels, not the readout. The last question: is it that
-*one* conv layer cannot specialize (which a deeper *extractor* would fix), or a harder wall?
-`emerge_2d_deep2.c` adds a second conv layer (1→C1 intermediate → C final channels, linear head fixed).
-
-| extractor | K | C=1 | C=2 | C=3 | C=4 |
-|---|---|---|---|---|---|
-| 1-layer | 2 | 0.717 | 0.845 | 0.955 | 0.944 |
-| 2-layer | 2 | 0.671 | 0.817 | 0.858 | 0.877 |
-| 1-layer | 3 | 0.635 | 0.674 | 0.759 | 0.763 |
-| **2-layer** | 3 | 0.623 | 0.623 | 0.645 | 0.645 |
-
-**A firm no, extractor depth does not recover K=3; it makes it worse.** At K=3 the 2-layer extractor
-is stuck at ~0.63 across every C (the 1-layer reached 0.76), and K=2 is slightly worse too. The deeper
-net adds optimization difficulty without cleaner orientation specialization. So K=3's limit is **robust**,
-unmoved by a deeper readout (Section 15) *and* a deeper extractor (here), a wall of this
-conv + max-pool + K-way-conjunction setup, not a single-layer artifact. Honest caveat: the deeper net is
-plausibly under-trained, so this shows that *adding* depth did not help (and hurt), not that depth
-*cannot* in principle. Either way, the 2-D arc closes where the discipline pointed: the tidy "width =
-operations" law holds for small K, breaks at K=3, and three separate attempts to rescue it failed,
-which is a more honest place to end than the clean staircase we would have reported by stopping at K=2.
-
-### 17. The third operator: translation replicates a working detector
+### 12. The third operator: translation replicates a working detector
 
 Clone (§9) and recombine (§10) are two of the three structural operators nature uses; the third,
 with the strongest biological grounding, is **translate**: copy a working detector to a shifted
@@ -560,35 +439,7 @@ fair estimator; it is not a claim about architecture *search* (the two arms are 
 both trained by plain SGD). It is, though, exactly why replicating a working module beats growing an
 independent one per location, the biological strategy of tiling one thing that works.
 
-### 18. Why K=3 worsens, and why no single fix moves it (a capacity wall)
-
-The recurring frustration in the 2-D arc is that *adding* structure often makes things worse, and the
-K=3 conjunction is never solved at three channels. Three interventions, each a reasonable bet, fail
-cleanly: **more channels** (§14, needs 5+, unreliable), **a nonlinear readout** (§15, MLP head recovers
-K=2 not K=3), and **competition**, `emerge_2d_compete.c` adds lateral inhibition (channel filters
-repel, the mechanism that self-organizes cortical orientation columns), and K=3 at C=3 stays at
-0.76–0.78 across every strength, a bump within noise:
-
-| K ops (C=3) | λ=0.00 | λ=0.10 | λ=0.30 | λ=0.60 |
-|---|---|---|---|---|
-| K=2 | 0.955 | 0.943 | 0.954 | 0.948 |
-| K=3 | 0.759 | 0.782 | 0.759 | 0.771 |
-
-**And more compute does not move it.** An independent heavy-compute rerun (2.5× epochs, 2× signal
-amplitude) leaves K=3 sub-target at *every* channel count, C=3 = 0.70, C=5 = 0.80, with only 2/6 seeds
-solving. So for the channel-count axis the wall is **robust to compute, not an under-training artifact**.
-
-The honest scope: the K=3 wall is a **capacity limit of this shallow conv + max-pool + three-way-
-conjunction setup**, per-channel detection error compounds multiplicatively (≈ 0.95³ at best, worse amid
-clutter), and neither more channels, a nonlinear readout, nor competition moves a multiplicative wall,
-even under heavy compute. **One honest caveat:** the fourth intervention we tried, a *deeper feature
-extractor* (§16, a 2nd conv layer), made it *worse*, but that arm ran at the same fixed budget and was
-plausibly under-trained, so we do **not** count it as a clean rescue-failure; whether a properly-trained
-deeper net clears K=3 is genuinely open. What the evidence supports is narrow and honest: *this* setup
-runs out at a three-way conjunction, and no cheap refinement on the channel axis rescues it. Real vision
-clears such tasks with scale, depth, normalization, residuals, vast data, not one clever pressure.
-
-### 19. The whole sequence, chained: the shared block wins, and jitter is not needed
+### 13. The whole sequence, chained: the shared block wins, and jitter is not needed
 
 Every operator so far was tested alone. `emerge_develop.c` chains them into one run: grow a block, tile
 it (weight-shared), then refine in place, and asks whether you still need jitter (annealing) to escape
@@ -603,17 +454,17 @@ local minima. On a translation-invariant motif task with scarce data (fair mean 
 
 **The shared, tiled block wins large:** 0.86 versus 0.61 for independent per-position detectors, a
 +0.25 gap, ~3 SD, because the shared block learns from all positions while the independent ones starve.
-(This is the same weight-sharing data-efficiency effect as §17, now inside the full pipeline; it is not
+(This is the same weight-sharing data-efficiency effect as §12, now inside the full pipeline; it is not
 architecture search.) **And jitter is not needed, it hurts:** annealed jitter drops the solution to
 0.75 (−0.10, robust), because the assembly already lands *at* the optimum, so perturbation only kicks
 the good structure off it. Refining the tiled copies independently also nudges it down (0.836 vs 0.856),
-by re-introducing the §17 per-position starvation, but that particular difference (−0.02) is **within
+by re-introducing the §12 per-position starvation, but that particular difference (−0.02) is **within
 noise** and we do not lean on it. The robust rule: once tiling gives a good shared structure, keep the
 sharing *coordinated* (nature keeps serial homologs coordinated, Hox, rather than letting each segment
 drift), and do not add jitter you do not need. (Caveat: on a genuinely multimodal task jitter could
 help; here the assembly finds the optimum directly, so it has nothing to escape.)
 
-### 20. Scale: the weight-sharing advantage widens with input size, then saturates
+### 14. Scale: the weight-sharing advantage widens with input size, then saturates
 
 `emerge_scale.c` sweeps the input size N (so the number of positions to cover grows), holding the data
 scarce, comparing the **weight-shared** arm (one tiled block, 3 weights, size-independent) against a
@@ -686,10 +537,10 @@ alone*. The adaptive policy is not just a convenience; it is strictly the more r
 - **The full developmental GA**, all four operators (prune, clone, translate, recombine) chained on a
  genuinely compositional task, growing structure once and refining in place rather than re-searching.
  *Expected:* it assembles a working hierarchy that from-scratch search cannot reach at equal budget,
- the developmental margin of §19–20 widening with task complexity.
+ the developmental margin of §13–14 widening with task complexity.
 - **Real data and larger, 2-D inputs**, where greedy enumeration fails and the operators earn their
- keep. *Expected:* the scaling advantage of §20 (reuse flat, re-search falling) holds and widens.
-- **Does jitter ever earn its keep?** §19 found it unneeded, harmful, even, because reuse lands at the
+ keep. *Expected:* the scaling advantage of §14 (reuse flat, re-search falling) holds and widens.
+- **Does jitter ever earn its keep?** §13 found it unneeded, harmful, even, because reuse lands at the
  optimum. *Expected to flip only* on a genuinely multimodal task, where reuse *can* get stuck and an
  annealed jitter has a real minimum to escape. That is the one place the "no jitter" result should not
  hold, and testing it is how we bound the claim.

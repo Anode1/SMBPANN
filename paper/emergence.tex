@@ -27,9 +27,8 @@ that pays for every connection, and ask honestly which pieces of convolution fal
 task-relevant connectivity emerges cleanly; weight sharing is \emph{adopted} when translation invariance
 rewards it; and a compact aligned local filter emerges too, but only once mutation acts on the shared
 feature the way real genetics does, not on a single edge. On top of the priors a ConvNet hardwires
-(locality and translatability), the free dimensions then organize to the task: compact fields, depth that
-matches the required receptive field, channels that match the number of distinct operations, up to a
-capacity limit four interventions fail to move.
+(locality and translatability), the free dimensions then organize to the task: compact fields and depth that
+matches the required receptive field.
 
 \medskip\noindent\textbf{What is new:}
 -that \emph{directed} evolutionary search finds a \emph{tidier} filter than random sampling at
@@ -239,7 +238,10 @@ deep enough for its receptive field to span the spike pair, then rises sharply a
 connections under an energy budget), clone (duplicate and stack, for depth), translate (copy to every
 position with shared weights, a convolution), recombine (swap in a different block where one kind will
 not do). Each maps to a biological analog: pruning, gene/segment duplication, transposition/serial
-homology, sexual recombination.}
+homology, sexual recombination. Of the four, only \emph{prune} is applied inside the energy GA;
+\emph{clone} and \emph{translate} are studied as fixed shared-versus-unshared architectures
+(Sec.~3.1,~3.3), and \emph{recombine} as a search over heterogeneous block sequences (mutation over
+sequences, not two-parent crossover).}
 \label{fig:ops}
 \end{figure}
 
@@ -249,8 +251,9 @@ homology, sexual recombination.}
 
 Composing blocks explodes combinatorially, so we adopt the heuristic LeCun did: reuse one block type,
 stacked, and search only the depth. At \emph{equal compute}, a free heterogeneous search (a GA over
-arbitrary block sequences, using a dilated-conv library) never solves more reliably or at lower energy
-than simply enumerating uniform reused blocks; on the harder tasks reuse is strictly better. Block
+arbitrary block sequences, using a dilated-conv library) never solves more reliably than simply
+enumerating uniform reused blocks, and is cheaper only on the easiest task; on the harder tasks reuse is
+strictly better. Block
 diversity buys nothing but a larger search, the reuse heuristic is the tractable near-optimum, which
 is the user's intuition (``the combinations explode, so reuse the same block'') made quantitative. This
 mirrors cell-based NAS (ENAS, DARTS), which search one cell and stack it.
@@ -327,39 +330,48 @@ gap widens, then saturates once the baseline hits the floor.}
 
 The operators above were each studied alone; here we \emph{chain} the core of them in one run and compare a
 developmental trajectory against searching structure from scratch. On a translation-invariant motif task
-with scarce data (24 examples, 30 seeds), the trajectory is: (1) search from scratch, $P$ independent
+with scarce data (24 examples, 40 seeds), the trajectory is: (1) search from scratch, $P$ independent
 per-position detectors trained from random; (2) find one stable shared block; (3) clone and translate it,
 the same filter tiled at every position (a convolution assembled by replication, not re-searched); (4)
 refine in place. Search-from-scratch \emph{starves}, each position sees few examples, and reaches only
-$0.60$; finding one block and tiling it reaches $0.86$ ($+0.25$, ${\sim}15$ SEM of the paired mean). Reuse
-beats re-search: the developmental path assembles a structure a flat search cannot afford. Two side
+$0.60$; finding one block and tiling it reaches $0.86$ ($+0.25$, ${\sim}15$ SEM of the paired mean). We
+label this honestly: the $+0.25$ is the \emph{same} weight-sharing data-efficiency effect of
+Sec.~3.3--3.4 (one tiled block learns from every position while the $P$ independent per-position
+detectors starve), now shown inside a chained pipeline, not a separate ``reuse beats re-search''
+mechanism, and a fair \emph{shared} baseline trained end-to-end on the same label captures most of it.
+What the chain adds is the two side
 findings: refining the tiled copies in place \emph{hurts} ($0.84$), because independent fine-tuning
 re-introduces per-position starvation and breaks the sharing that made reuse work; and annealing jitter
 hurts more ($0.76$), because reuse lands at the optimum, so perturbation only kicks it off, jitter is for
-escaping bad minima and reuse avoids them. This chains find, clone, and translate; chaining in
-recombination of a \emph{second} discovered block, for a two-operation task, is the open step (Limitations).
+escaping bad minima and reuse avoids them. This chains find, clone, and translate; whether the fourth
+operator, recombination of a \emph{second} discovered block, \emph{emerges} when the search must find the
+decomposition itself is the question of Sec.~3.6.
 
-\section{An honest boundary in 2-D}
+\subsection{Does composition emerge when the search must find it? A boundary}
 
-In two dimensions ``two different operations'' means two feature \emph{channels}, a horizontal and a
-vertical filter, since one channel is one orientation. A task requiring both orientations present
-caps a single channel near $0.75$ (the analytic ceiling a lone orientation detector can reach), and
-accuracy rises with channels ($0.69 \to 0.77 \to 0.86 \to 0.89$ over $C{=}1{\ldots}4$, $24$ seeds): a
-gradual rise, not a sharp $C{=}2$ jump, but the load-bearing fact, one channel is not enough for two
-operations, is significant. The tidy generalization ``channel count = operation count,'' however,
-\textbf{fails}: growing channels to solve a $K$-operation task gives selected $C^\ast \approx 1.2, 3.2,
-5.0$ for $K{=}1,2,3$, so $K{=}2$ already overshoots and $K{=}3$ breaks, sub-target at every channel
-count ($C{=}5$: $0.79$), only 2 of 24 seeds solving.
+The developmental chain above, like the reuse and translation results, hands the search a decomposition
+and asks it to assemble the pieces. The sharper, honest question is whether the \emph{search itself},
+given only the composite label and an energy budget, discovers the decomposition, both how many parts and
+which. We test this on a two-operation task (a motif $A$ \emph{and} a motif $B$, each planted at a random
+position; positive iff both are present, negative iff exactly one), where a single weight-shared tiled
+channel caps at $0.75$ by construction. We sweep the channel count $C$ under an energy budget (the
+energy-selection of Sec.~2.5, now on channels), train each candidate's shared filters and read-out jointly
+by SGD on the composite label \emph{alone}, and compare against an auxiliary-label \emph{curriculum} (find
+$A$ on a per-operation label, find $B$, freeze, combine) as a supervised upper bound and an unshared
+per-position search as the floor ($40$ paired seeds).
 
-This K=3 wall is genuine, not under-training. Four interventions fail to move it: more channels, a
-nonlinear (MLP) readout, competition (lateral inhibition, the mechanism that self-organizes cortical
-orientation columns), and, with a budget caveat, a deeper extractor. An independent heavy-compute
-rerun ($2.5\times$ epochs, $2\times$ signal) leaves $K{=}3$ sub-target at every channel count, confirming
-the wall is structural for the channel axis. Per-channel detection error compounds multiplicatively
-($0.95^3 \approx 0.86$, at the target edge), and no cheap refinement moves a multiplicative wall; real
-vision clears such tasks with scale (depth, normalization, residuals, vast data), not one clever
-pressure. We report this boundary plainly: it is more honest than stopping at small $K$ where the
-staircase still looked clean.
+\textbf{Result: composition does not cleanly emerge without supervision.} On a one-operation task the
+energy-selected count is $C^\ast{=}1$; but on the two-operation task the two channels spontaneously
+specialize to the two motifs in only $55\%$ of runs (the rest collapse onto one), so $C{=}2$ plateaus at
+$0.81$ (exactly a fair shared baseline), the supervised curriculum reaches $0.87$, and the energy-selected
+count \emph{overshoots} to $C^\ast{=}3$. So directed search under an energy budget does not, on its own,
+discover the two-part decomposition: it under-specializes and pays for a redundant channel; the clean
+decomposition appears only once per-operation supervision is added. This is the honest answer to the
+chained-recombination question, and it draws the paper's sharpest internal boundary: emergent \emph{depth}
+matches the required receptive field cleanly (Sec.~2.5), but emergent \emph{composition} on the channel
+axis needs supervision or imposed structure; it does not fall out of the energy budget alone. It also
+explains a developmental chain that only \emph{appears} to recombine: hand it the decomposition (per-task
+labels, a fixed combine) and its gain is weight sharing plus that supervision, not emergent composition.
 
 \section{Related work, and how we differ}
 
@@ -392,10 +404,9 @@ what emerges under an energy budget on a task shaped like convolution, and do no
 generalize to real data. The reuse and weight-sharing results are a property of \emph{fixed}
 shared-versus-unshared architectures (data efficiency under SGD), not evidence about what the evolutionary
 search discovers; we label them accordingly. The developmental chain (Section~3.5) covers find, clone, and
-translate; chaining in recombination of a second discovered block, on a genuinely compositional task, and a
-real dataset, are the natural next steps; the K=3
-``wall'' is a capacity limit of \emph{this} shallow conv $+$ max-pool setup, and whether a properly
-trained deeper net clears it is open. What limits this work is scale, not the absence of an idea: the new
+translate; when the search must \emph{discover} the recombination of a second block it does not cleanly do
+so (Sec.~3.6), so a real dataset and scale, not another operator, are the natural next steps. What limits
+this work is scale, not the absence of an idea: the new
 parts, the sharing/energy decoupling and the directed-vs-random reconciliation, are real but small, and
 the tasks are toy, so its natural home is a workshop, reproducibility, or explainer track rather than a
 top venue, where the bar is significance at scale.
@@ -409,8 +420,9 @@ compact convolution emerges too, but only once mutation acts on the shared featu
 edge, for a decoupling reason we can state in a line. On top of imposed priors,
 depth emerges to match the receptive field, reuse beats a free search at equal compute, recombination is
 required only when a task needs a genuinely different operation, and weight-shared tiling is
-data-efficient at a degree that grows with scale then saturates. Where it runs out, a three-way
-conjunction unmoved by four fixes, we say so. The contribution is the honest map, the negatives, and
+data-efficient at a degree that grows with scale then saturates. Where the search must \emph{discover} a
+compositional decomposition itself it does not, the parts failing to specialize without supervision
+(Sec.~3.6), a boundary we mark rather than paper over. The contribution is the honest map, the negatives, and
 the reproducibility; every number regenerates from one command.
 
 \begin{thebibliography}{9}\small\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}

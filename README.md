@@ -336,7 +336,7 @@ translation-invariance rewards it, and a **compact aligned local filter emerges 
 mutation** on the shared feature, not under per-connection pruning, with a crisp mechanism for *why*
 (once weights are shared, connection-count no longer gradients parameter-count, so a single-edge mutation
 cannot tighten the kernel; the whole shared offset is the right unit). On top of the imposed priors, the free
-dimensions, depth, channel count, then emerge to fit the task, up to an honest capacity limit.
+dimensions, depth, then emerge to fit the task.
 
 What is genuinely new is that evolutionary energy-emergence map from an exhaustive seed and its
 boundaries, distinct from gradient pruning (Optimal Brain Damage, Lottery Ticket), from DARTS'
