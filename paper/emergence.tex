@@ -22,25 +22,25 @@ optimizer built for industrial use in 2002. Reference implementation:
 \maketitle
 
 \begin{abstract}
-A network's structure should \emph{emerge}, not be designed --- but from what, and how much of it?
+A network's structure should \emph{emerge}, not be designed, but from what, and how much of it?
 We grow a network's topology from an \textbf{exhaustive (fully-connected) seed under an energy
 budget}, an evolutionary search that pays for every connection, and ask honestly which pieces of
-convolution fall out and which do not. Starting dense and pruning under an evolutionary energy budget
---- not the gradient pruning of Optimal Brain Damage or the Lottery Ticket line, nor the
-grow-from-minimal of NEAT --- we characterize what emerges: sparse task-relevant connectivity emerges
+convolution fall out and which do not. Starting dense and pruning under an evolutionary energy budget,
+not the gradient pruning of Optimal Brain Damage or the Lottery Ticket line, nor the
+grow-from-minimal of NEAT, we characterize what emerges: sparse task-relevant connectivity emerges
 cleanly, and weight sharing is \emph{adopted} when translation-invariance rewards it, but a
 \textbf{compact aligned local filter does not emerge} from an energy budget alone. We give the crisp
 reason: once weights are shared, connection count no longer gradients parameter count, so pruning
-cannot tighten the kernel --- though this holds only for \emph{per-connection} mutation, and under
+cannot tighten the kernel, though this holds only for \emph{per-connection} mutation, and under
 grouped mutation on the shared feature (as in real genetics) the kernel largely does emerge. On top of
-the priors a ConvNet also hardwires --- locality and
-translatability, the real symmetries of a signal --- the free dimensions then emerge to fit the task:
+the priors a ConvNet also hardwires, locality and
+translatability, the real symmetries of a signal, the free dimensions then emerge to fit the task:
 compact local fields, the depth that matches a task's required receptive field, and the channel count
 that matches its number of distinct operations, up to an honest capacity limit that four interventions
 fail to move. These latter results reproduce known inductive-bias facts (weight sharing is
 data-efficient; receptive field $\approx$ depth), which we verify with a fair baseline and full
-reproducibility rather than claim as new. We frame the whole as a small set of biological operators ---
-prune, clone, translate, recombine --- and are careful to separate the genuinely new characterization
+reproducibility rather than claim as new. We frame the whole as a small set of biological operators,
+prune, clone, translate, recombine, and are careful to separate the genuinely new characterization
 (the evolutionary energy-emergence map from an exhaustive seed, and its negatives) from the textbook
 mechanisms it reproduces. Every number regenerates from one \texttt{make}; the dead-ends are kept.
 \end{abstract}
@@ -49,8 +49,8 @@ mechanisms it reproduces. Every number regenerates from one \texttt{make}; the d
 
 The 1997 ambition behind this project was that a network's architecture should \emph{emerge} from a
 search, not be hand-designed, in the best case rediscovering the convolutional receptive field
-(Figure~\ref{fig:main}). A companion study on that side of the idea --- \emph{searching} whole
-topologies and cells --- reached a firmly negative conclusion: on the real NAS-Bench-101 cell space, no
+(Figure~\ref{fig:main}). A companion study on that side of the idea, \emph{searching} whole
+topologies and cells, reached a firmly negative conclusion: on the real NAS-Bench-101 cell space, no
 crossover meaningfully beats random search, and structure-aware operators do worse than a structure-blind
 one, because good cells are common and the gap to the optimum sits inside the benchmark's own training
 noise. Searching for structure did not beat random.
@@ -58,7 +58,7 @@ noise. Searching for structure did not beat random.
 This paper comes at the same ambition from the opposite end. Instead of searching for the architecture,
 we \emph{grow} one: start from an exhaustive, fully-connected seed, put a cost on every connection, and
 watch which parts of convolution survive the squeeze. The question is not ``can a search find a good
-architecture'' but ``what structure emerges, on its own, under an energy budget --- and what refuses to.''
+architecture'' but ``what structure emerges, on its own, under an energy budget, and what refuses to.''
 
 \begin{figure}[t]
 \centering
@@ -74,14 +74,14 @@ prune, clone, translate, and recombine assemble and refine the rest.}
 prior result showing this together with its honest characterization of what does not emerge (the compact
 filter, and its mechanism). This is distinct from gradient pruning (Optimal Brain Damage; the Lottery
 Ticket), from DARTS' gradient-relaxed supernet, and from NEAT's grow-from-minimal, which augment rather
-than prune. Much of the rest --- weight sharing is data-efficient; receptive field $\approx$ depth ---
+than prune. Much of the rest, weight sharing is data-efficient; receptive field $\approx$ depth,
 reproduces known inductive-bias facts, which we verify carefully rather than claim as new. The value is
 the honest characterization, the negatives, and the full reproducibility; not the underlying mechanisms.
 
 \paragraph{Method in one paragraph.} A one-hidden-layer network whose connectivity is a binary mask is
 evolved by a genetic algorithm from an all-ones (dense) seed. Fitness is validation accuracy on a scarce
 training set; the objective is to minimize energy (the number of connections, or free parameters) subject
-to accuracy $\geq$ target. Mutation is mostly-prune, rarely-grow --- an annealing schedule, in which a
+to accuracy $\geq$ target. Mutation is mostly-prune, rarely-grow, an annealing schedule, in which a
 prune is a downhill move in energy and a rare added connection is an uphill thermal fluctuation. All
 numbers below are means over independent seeds; each experiment is a self-contained C99 probe.
 
@@ -91,10 +91,10 @@ numbers below are means over independent seeds; each experiment is a self-contai
 
 Under an energy budget the search prunes a dense connectivity mask to a sparse one, and on a task whose
 label depends on a few specific inputs it lands \textbf{90\%} of the surviving connections on the
-task-relevant inputs (chance $0.33$, no-selection drift $0.34$). Feature selection --- discovering
-\emph{which} inputs matter --- emerges cleanly (Figure~\ref{fig:prune}). What does \emph{not} emerge is
+task-relevant inputs (chance $0.33$, no-selection drift $0.34$). Feature selection, discovering
+\emph{which} inputs matter, emerges cleanly (Figure~\ref{fig:prune}). What does \emph{not} emerge is
 the aligned local receptive field: at comparable density the surviving connections are no more in-window
-than chance, so the search finds \emph{a} sparse subnetwork, not \emph{the} convolutional one --- exactly
+than chance, so the search finds \emph{a} sparse subnetwork, not \emph{the} convolutional one, exactly
 the outcome of the pruning literature (sparse subnetworks, not convolutions).
 
 \begin{figure}[t]
@@ -109,8 +109,8 @@ convolution does not.}
 \subsection{Imposing locality: a compact filter emerges, sharing is adopted}
 
 Locality is not something to wait out; a bounded receptive field is a law of the problem (information is
-local), and every ConvNet imposes it. When we impose only that --- each hidden unit sees a
-\emph{contiguous} window --- a compact local field falls right out: the width anneals to a mean of
+local), and every ConvNet imposes it. When we impose only that, each hidden unit sees a
+\emph{contiguous} window, a compact local field falls right out: the width anneals to a mean of
 $\approx K$ (the kernel size), the compact filter the energy budget alone could not produce. A
 weight-tying gene (tie weights by within-window offset, i.e.\ translation invariance) is \emph{adopted}
 by $0.89$ of the population; but its accuracy benefit is within noise, and the shared arm stays wider,
@@ -120,7 +120,7 @@ convolution keep emerging separately; the clean compact \emph{shared} whole does
 \subsection{Why the compact filter does not emerge: a decoupling}
 
 The mechanism is crisp and is, we think, the paper's one real insight. Once weights are shared, removing
-a connection no longer reduces the parameter count --- that offset is still used by other positions ---
+a connection no longer reduces the parameter count, that offset is still used by other positions,
 so there is no energy gradient to tighten the connectivity; the kernel never contracts. Shrinking a
 shared filter would require the \emph{coordinated} removal of every connection at an extreme offset across
 all units at once, which per-connection mutation essentially never does. So under this genome an energy
@@ -132,20 +132,23 @@ count. Getting the compact kernel would mean either building the locality into t
 assumes \emph{per-connection} mutation. Biological mutation, however, is global, not local: a change to a
 gene acts on every instance of the mechanism it builds (all the ``similar blocks and duplicated edges''),
 not on one edge. For a weight-shared filter the natural unit of mutation is therefore the shared
-\emph{offset} --- all the connections that reuse that weight --- and flipping a whole offset removes all
+\emph{offset}, all the connections that reuse that weight, and flipping a whole offset removes all
 its duplicated edges in one move, which \emph{does} reduce the parameter count. With that grouped
 mutation the missing gradient reappears, and the kernel contracts. Empirically (16 seeds), the surviving
 tap count collapses from $12.7$ under per-connection mutation to $2.6$ (near $K=3$) under grouped
 mutation; adding a width penalty sharpens it to contiguity $0.80$ and lands $0.69$ of the active offsets
 on the generative ones (per-connection: $0.21$). It is not a perfect $K=3$ kernel (span $\approx 4$,
 contiguity $\approx 0.8$), and the offset genome does make the connectivity translation-invariant by
-construction --- but the central negative, that the shared filter cannot tighten, does not survive the
+construction, but the central negative, that the shared filter cannot tighten, does not survive the
 biologically-correct mutation. The compact filter largely emerges; it just needed global mutation on the
-shared mechanism, as real genetics uses, rather than per-connection pruning.
+shared mechanism, as real genetics uses, rather than per-connection pruning. It is also robust to the
+starting point: under the same grouped mutation a \emph{minimal} seed grown up (a NEAT-style direction)
+reaches an essentially identical compact kernel to the dense seed pruned down (taps $2.8$ vs $2.8$,
+contiguity $0.90$ vs $0.89$), so the emergence does not depend on starting dense.
 
 \subsection{Emergent depth matches the required receptive field}
 
-Impose the feed-forward composition rule too --- stack one reused block type --- and the one dimension
+Impose the feed-forward composition rule too, stack one reused block type, and the one dimension
 left free, the depth, emerges to fit the task. On a task that fires only when two spikes are exactly
 distance $s$ apart (so a unit must see both at once, needing receptive field $\geq s{+}1$, i.e.\ depth
 $\geq s/2$), accuracy sits at chance until the stack is deep enough to span the pair, then lifts off at
@@ -180,7 +183,7 @@ Composing blocks explodes combinatorially, so we adopt the heuristic LeCun did: 
 stacked, and search only the depth. At \emph{equal compute}, a free heterogeneous search (a GA over
 arbitrary block sequences, using a dilated-conv library) never solves more reliably or at lower energy
 than simply enumerating uniform reused blocks; on the harder tasks reuse is strictly better. Block
-diversity buys nothing but a larger search --- the reuse heuristic is the tractable near-optimum, which
+diversity buys nothing but a larger search, the reuse heuristic is the tractable near-optimum, which
 is the user's intuition (``the combinations explode, so reuse the same block'') made quantitative. This
 mirrors cell-based NAS (ENAS, DARTS), which search one cell and stack it.
 
@@ -190,10 +193,10 @@ Reuse breaks exactly where the biology predicts. On a task that needs a fine loc
 $(+,-,+)$ at adjacent positions (visible only to a dilation-1 block) \emph{and} a far spike at distance
 $s$ (reached cheaply only by a dilation-3 block), no single reused block serves both roles: a uniform
 dilation-3 stack is blind to the fine motif (solving 0/8), a uniform dilation-1 stack cannot afford the
-reach. Recombination --- a GA over mixed block sequences --- solves 8/8 at about half the energy, and its
+reach. Recombination, a GA over mixed block sequences, solves 8/8 at about half the energy, and its
 solutions are literal two-operation mixes such as $[1,3]$: one fine block, one coarse-reach block
 (Figure~\ref{fig:reuse}). Clone when scaling a working module; recombine only when you need a new kind of
-part --- runners when the structure repeats, seeds when it must change.
+part, runners when the structure repeats, seeds when it must change.
 
 \begin{figure}[t]
 \centering
@@ -206,8 +209,8 @@ different blocks.}
 
 \subsection{Translation: weight sharing is data-efficient (a reproduction, fairly done)}
 
-The third operator, translation --- replicating one working detector across positions with shared
-weights (transposition, serial homology, cortical-map tiling) --- is exactly convolution's tiling,
+The third operator, translation, replicating one working detector across positions with shared
+weights (transposition, serial homology, cortical-map tiling), is exactly convolution's tiling,
 reached by replication. On a translation-invariant motif task we compare a weight-shared filter (3
 weights) against a locally-connected baseline (one filter per position). Table~\ref{tab:translate} gives
 the fair result (mean over restarts, $\pm 1$ SD over $40$ seeds): the shared filter wins at every train
@@ -223,9 +226,9 @@ both trained by plain SGD.
 \toprule
 train size & weight-shared & locally-connected & gap \\
 \midrule
-16  & $0.820 \pm 0.122$ & $0.581 \pm 0.065$ & $+0.239$ \\
-32  & $0.838 \pm 0.094$ & $0.615 \pm 0.071$ & $+0.224$ \\
-64  & $0.866 \pm 0.082$ & $0.672 \pm 0.076$ & $+0.195$ \\
+16 & $0.820 \pm 0.122$ & $0.581 \pm 0.065$ & $+0.239$ \\
+32 & $0.838 \pm 0.094$ & $0.615 \pm 0.071$ & $+0.224$ \\
+64 & $0.866 \pm 0.082$ & $0.672 \pm 0.076$ & $+0.195$ \\
 128 & $0.867 \pm 0.081$ & $0.724 \pm 0.086$ & $+0.143$ \\
 \bottomrule
 \end{tabular}
@@ -257,19 +260,19 @@ gap widens, then saturates once the baseline hits the floor.}
 
 \section{An honest boundary in 2-D}
 
-In two dimensions ``two different operations'' means two feature \emph{channels} --- a horizontal and a
-vertical filter --- since one channel is one orientation. A task requiring both orientations present
+In two dimensions ``two different operations'' means two feature \emph{channels}, a horizontal and a
+vertical filter, since one channel is one orientation. A task requiring both orientations present
 caps a single channel near $0.75$ (the analytic ceiling a lone orientation detector can reach), and
 accuracy rises with channels ($0.69 \to 0.77 \to 0.86 \to 0.89$ over $C{=}1{\ldots}4$, $24$ seeds): a
-gradual rise, not a sharp $C{=}2$ jump, but the load-bearing fact --- one channel is not enough for two
-operations --- is significant. The tidy generalization ``channel count = operation count,'' however,
+gradual rise, not a sharp $C{=}2$ jump, but the load-bearing fact, one channel is not enough for two
+operations, is significant. The tidy generalization ``channel count = operation count,'' however,
 \textbf{fails}: growing channels to solve a $K$-operation task gives selected $C^\ast \approx 1.2, 3.2,
-5.0$ for $K{=}1,2,3$, so $K{=}2$ already overshoots and $K{=}3$ breaks --- sub-target at every channel
+5.0$ for $K{=}1,2,3$, so $K{=}2$ already overshoots and $K{=}3$ breaks, sub-target at every channel
 count ($C{=}5$: $0.79$), only 2 of 24 seeds solving.
 
 This K=3 wall is genuine, not under-training. Four interventions fail to move it: more channels, a
 nonlinear (MLP) readout, competition (lateral inhibition, the mechanism that self-organizes cortical
-orientation columns), and --- with a budget caveat --- a deeper extractor. An independent heavy-compute
+orientation columns), and, with a budget caveat, a deeper extractor. An independent heavy-compute
 rerun ($2.5\times$ epochs, $2\times$ signal) leaves $K{=}3$ sub-target at every channel count, confirming
 the wall is structural for the channel axis. Per-channel detection error compounds multiplicatively
 ($0.95^3 \approx 0.86$, at the target edge), and no cheap refinement moves a multiplicative wall; real
@@ -280,14 +283,14 @@ staircase still looked clean.
 \section{Related work, and how we differ}
 
 The closest neighbors, and the honest distinction: \textbf{DARTS} starts from an exhaustive supernet and
-prunes to a final architecture --- closest in spirit --- but via continuous gradient relaxation over
+prunes to a final architecture, closest in spirit, but via continuous gradient relaxation over
 predefined operations, not an energy GA, and it never asks whether convolution emerges. \textbf{Optimal
 Brain Damage} and the \textbf{Lottery Ticket Hypothesis} prune dense to sparse, but by gradient
 magnitude, and find sparse subnetworks, not convolutions. \textbf{NEAT}, \textbf{HyperNEAT}, and
 Cellular Encoding evolve topology but \emph{grow from a minimal seed}, the opposite direction to pruning
 from exhaustive. \textbf{Cell-based NAS} (ENAS, regularized evolution) reuses one cell and stacks it,
 which our reuse observations echo. We claim the honest characterization of what an evolutionary energy
-budget does and does not produce, and the negatives --- not the underlying mechanisms, which are known.
+budget does and does not produce, and the negatives, not the underlying mechanisms, which are known.
 
 \section{Limitations}
 
@@ -307,26 +310,26 @@ budget on an exhaustive seed, sparsity and feature selection emerge and weight s
 compact convolution does not, for a decoupling reason we can state in a line. On top of imposed priors,
 depth emerges to match the receptive field, reuse beats a free search at equal compute, recombination is
 required only when a task needs a genuinely different operation, and weight-shared tiling is
-data-efficient at a degree that grows with scale then saturates. Where it runs out --- a three-way
-conjunction unmoved by four fixes --- we say so. The contribution is the honest map, the negatives, and
+data-efficient at a degree that grows with scale then saturates. Where it runs out, a three-way
+conjunction unmoved by four fixes, we say so. The contribution is the honest map, the negatives, and
 the reproducibility; every number regenerates from one command.
 
 \begin{thebibliography}{9}
 \bibitem{obd} Y.~LeCun, J.~S. Denker, S.~A. Solla. Optimal Brain Damage. \emph{NeurIPS} 1990.
 \bibitem{lecun89} Y.~LeCun et al. Backpropagation Applied to Handwritten Zip Code Recognition.
-  \emph{Neural Computation} 1(4), 1989.
+ \emph{Neural Computation} 1(4), 1989.
 \bibitem{lottery} J.~Frankle, M.~Carbin. The Lottery Ticket Hypothesis. \emph{ICLR} 2019.
 \bibitem{darts} H.~Liu, K.~Simonyan, Y.~Yang. DARTS: Differentiable Architecture Search. \emph{ICLR} 2019.
 \bibitem{enas} H.~Pham, M.~Guan, B.~Zoph, Q.~Le, J.~Dean. Efficient Neural Architecture Search via
-  Parameter Sharing. \emph{ICML} 2018.
+ Parameter Sharing. \emph{ICML} 2018.
 \bibitem{neat} K.~O. Stanley, R.~Miikkulainen. Evolving Neural Networks through Augmenting Topologies.
-  \emph{Evolutionary Computation} 10(2), 2002.
+ \emph{Evolutionary Computation} 10(2), 2002.
 \bibitem{amoeba} E.~Real, A.~Aggarwal, Y.~Huang, Q.~V. Le. Regularized Evolution for Image Classifier
-  Architecture Search. \emph{AAAI} 2019.
+ Architecture Search. \emph{AAAI} 2019.
 \bibitem{kirkpatrick} S.~Kirkpatrick, C.~D. Gelatt, M.~P. Vecchi. Optimization by Simulated Annealing.
-  \emph{Science} 220, 1983.
+ \emph{Science} 220, 1983.
 \bibitem{repo} V.~Gavrilov. SMBPANN reference implementation, 2001--2015--2026.
-  \url{https://github.com/Anode1/SMBPANN}.
+ \url{https://github.com/Anode1/SMBPANN}.
 \end{thebibliography}
 
 \end{document}

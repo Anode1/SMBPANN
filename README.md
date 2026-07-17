@@ -18,7 +18,7 @@ C99.
 Not a predictor whose architecture you hand-specify:
 
 ```text
-predict(TrainingSet, TestingSet, Topology, Activation, Jitter, ...)
+predict(TrainingSet, TestingSet, Topology, Activation, Jitter,...)
 ```
 
 but one handed only the problem, which finds the rest itself:
@@ -79,10 +79,10 @@ where the space carries recombinable building blocks; the real cell space does n
 The idea lines up with what the field now calls:
 
 - **Neural Architecture Search (NAS)**: automating the design of network
-  topology, brought to scale by Zoph and Le (2017) and surveyed by Elsken et al.
-  (2019).
+ topology, brought to scale by Zoph and Le (2017) and surveyed by Elsken et al.
+ (2019).
 - **AutoML**: automating the whole model-construction pipeline (Hutter et al.,
-  2019).
+ 2019).
 
 Following the Elsken survey, NAS methods differ mainly in *search strategy*:
 reinforcement learning (Zoph and Le, 2017), gradient-based or differentiable
@@ -120,27 +120,27 @@ no framework or dependency. The choice is about fit: for this workload C is the
 simplest tool that does the job well.
 
 - **Concurrency by process, not by thread.** The evolutionary search is
-  embarrassingly parallel, because candidates are independent. Each candidate is
-  evaluated in its own **process**, launched from a shell coordinator sized to the
-  CPU count, exchanging plain text with the parent. There is no shared memory, so
-  there are no data races and no synchronization code to get wrong, and a
-  candidate that crashes takes down only its own worker, not the run. For
-  independent-candidate search this is the simplest robust concurrency there is.
+ embarrassingly parallel, because candidates are independent. Each candidate is
+ evaluated in its own **process**, launched from a shell coordinator sized to the
+ CPU count, exchanging plain text with the parent. There is no shared memory, so
+ there are no data races and no synchronization code to get wrong, and a
+ candidate that crashes takes down only its own worker, not the run. For
+ independent-candidate search this is the simplest robust concurrency there is.
 - **Streaming data, bounded memory.** Backpropagation is inherently piecewise: the
-  engine trains on one example at a time. A worker streams its dataset in pieces
-  with a bounded footprint, so dataset size never dictates memory, and a read-only
-  data file is shared across all workers for free by the operating system's page
-  cache.
+ engine trains on one example at a time. A worker streams its dataset in pieces
+ with a bounded footprint, so dataset size never dictates memory, and a read-only
+ data file is shared across all workers for free by the operating system's page
+ cache.
 - **Manual memory, disciplined.** Following AIS, allocation happens only at
-  construction (`net_new`, `trainer_new`), the train and infer hot path allocates
-  nothing, and the population carves each generation from a Mark/Release arena.
-  Peak footprint is computable by hand.
+ construction (`net_new`, `trainer_new`), the train and infer hot path allocates
+ nothing, and the population carves each generation from a Mark/Release arena.
+ Peak footprint is computable by hand.
 - **Safety by isolation and tools, stated honestly.** C is not memory-safe the way
-  Java, Rust, or SPARK-verified Ada are; a bug can corrupt memory. Two things
-  contain that here: process isolation (a fault stays in one worker), and the test
-  suite run under AddressSanitizer and UBSan on every change, over the stack-first
-  discipline that keeps most of the bug classes from arising in the first place.
-  This is robustness suited to a research tool, not a formal proof.
+ Java, Rust, or SPARK-verified Ada are; a bug can corrupt memory. Two things
+ contain that here: process isolation (a fault stays in one worker), and the test
+ suite run under AddressSanitizer and UBSan on every change, over the stack-first
+ discipline that keeps most of the bug classes from arising in the first place.
+ This is robustness suited to a research tool, not a formal proof.
 
 ### Why C, and not Ada or Rust?
 
@@ -162,22 +162,22 @@ From the [AIS](https://github.com/Anode1/ais) project:
 
 - one concept per `.c` and `.h`; clear, literal names;
 - allocation only at construction, so the train and infer hot path allocates
-  nothing;
+ nothing;
 - no framework, no dependency; a plain `make` and `cc` build;
 - reproducible by construction: a seeded PRNG, no wall-clock in the engine;
 - regression tests from the smallest cases up, run under sanitizers (XOR is the
-  first gate).
+ first gate).
 
 ## Layout
 
 ```
-.                 the C99 engine: rng, act, net, train, data, arena, genome
-                  smbpann (worker) + evolve (search); scripts/evaluate.sh (coordinator)
-validation/       standalone probes: bbtest (trap control), nasxover (NAS-Bench-201),
-                  nb101 + nb101_extract (NAS-Bench-101 crossover study),
-                  emerge_* (the emergence study: energy-budget growth + the operators)
-paper/            the write-ups (emergence: .md note + .tex/.pdf paper; nas_crossover) + essay + figures
-legacy/java/      the original early-2000s Java prototype (object-graph design)
+. the C99 engine: rng, act, net, train, data, arena, genome
+ smbpann (worker) + evolve (search); scripts/evaluate.sh (coordinator)
+validation/ standalone probes: bbtest (trap control), nasxover (NAS-Bench-201),
+ nb101 + nb101_extract (NAS-Bench-101 crossover study),
+ emerge_* (the emergence study: energy-budget growth + the operators)
+paper/ the write-ups (emergence:.md note +.tex/.pdf paper; nas_crossover) + essay + figures
+legacy/java/ the original early-2000s Java prototype (object-graph design)
 ```
 
 An Ada 2012 implementation lived here too and is preserved in the git history; C
@@ -188,28 +188,28 @@ is the active language.
 The engine and the search both run end to end:
 
 - `smbpann` trains a network of a given topology (built-in XOR, or a plain-text
-  dataset) and prints a machine-readable `fitness` line;
+ dataset) and prints a machine-readable `fitness` line;
 - `scripts/evaluate.sh` evaluates a whole population in parallel, one worker
-  process per candidate, and ranks it;
+ process per candidate, and ranks it;
 - `evolve` runs the evolutionary architecture search against a matched-compute
-  random-search control.
+ random-search control.
 
 The unit-test suite (40 checks: rng, act, net, the XOR backprop regression,
 1D and 2D convolution gradient checks, checkpoints, arena, data, genome) runs
 clean under AddressSanitizer and UBSan.
 
 ```sh
-make                            # build ./smbpann and ./evolve
-./smbpann                       # train the built-in XOR demo
-./evolve -i 2 -o 1 -P 8 -G 8    # evolve XOR topologies, GA vs random search
-make ut                         # run the unit-test suite
+make # build./smbpann and./evolve
+./smbpann # train the built-in XOR demo
+./evolve -i 2 -o 1 -P 8 -G 8 # evolve XOR topologies, GA vs random search
+make ut # run the unit-test suite
 ```
 
 ```text
 evolving 8 topologies over 8 generations (elite 2, seed 1)
-gen   1   GA best=4.19705e-06 (2,8,11,15,1)   RAND best=4.78733e-06 (2,4,4,1)
+gen 1 GA best=4.19705e-06 (2,8,11,15,1) RAND best=4.78733e-06 (2,4,4,1)
 ...
-final:  GA 2.62043e-06 (2,14,15,1)  vs  RAND 3.20376e-06 (2,7,14,1)   [64 evaluations each]
+final: GA 2.62043e-06 (2,14,15,1) vs RAND 3.20376e-06 (2,7,14,1) [64 evaluations each]
 ```
 
 XOR is only a smoke test (its space is tiny and every topology solves it). For a
@@ -222,9 +222,9 @@ good offspring). Ten seeds per cell:
 
 | starting rate (`-M`) | fixed: GA wins / 10 (mean gap) | self-adaptive: GA wins / 10 (mean gap) |
 |---|---|---|
-| 1 | 5  (+0.0021) | 8  (+0.0026) |
-| 3 | 5  (+0.0004) | 6  (+0.0017) |
-| 6 | 5  (+0.0009) | 7  (+0.0023) |
+| 1 | 5 (+0.0021) | 8 (+0.0026) |
+| 3 | 5 (+0.0004) | 6 (+0.0017) |
+| 6 | 5 (+0.0009) | 7 (+0.0023) |
 
 Two honest reads. First, with a **fixed** rate the GA is about a coin-flip against
 random (5 of 10) whatever the rate, with only a small positive mean gap: in a
@@ -297,7 +297,7 @@ TARGET=0.12 RUNS=30 GENS=60 scripts/errortest.sh
 
 The write-up is the emergence study, in two forms: the paper
 [`paper/emergence.pdf`](paper/emergence.pdf) (source [`paper/emergence.tex`](paper/emergence.tex)) and
-the full reproducible note [`paper/emergence.md`](paper/emergence.md) — *what does, and does not, emerge
+the full reproducible note [`paper/emergence.md`](paper/emergence.md), *what does, and does not, emerge
 when a network's structure is grown from an exhaustive seed under an energy budget*, framed by the
 prune/clone/translate/recombine operators, with the negatives kept and every number reproducible from
 one `make`. It opens from the companion negative that motivates it, studied in detail in the earlier
@@ -309,14 +309,14 @@ it. The companion essay is [`paper/essay.md`](paper/essay.md).
 ## The emergence study
 
 A second, larger note comes at the same 1997 ambition from the other side. Instead of *searching* whole
-topologies, it **grows** one from an **exhaustive (fully-connected) seed under an energy budget** — an
-evolutionary search that pays for every connection — and asks, honestly, *which pieces of convolution
+topologies, it **grows** one from an **exhaustive (fully-connected) seed under an energy budget**, an
+evolutionary search that pays for every connection, and asks, honestly, *which pieces of convolution
 emerge, and which do not*.
 
 ![The main idea: an exhaustive, tangled network becomes an ordered convolution through a few structural operators.](paper/images/fig_main_idea.svg)
 
-The frame is: **impose the priors that are real symmetries of the domain** — *locality* (information is
-local) and *translatability* (a signal is the same shifted over) — and let a few biological operators
+The frame is: **impose the priors that are real symmetries of the domain**, *locality* (information is
+local) and *translatability* (a signal is the same shifted over), and let a few biological operators
 (**prune, clone, translate, recombine**) assemble and refine the rest.
 
 ![The four operators as A → B: prune, clone, translate, recombine, each with the exact action written under the arrow.](paper/images/fig_operators.svg)
@@ -324,16 +324,16 @@ local) and *translatability* (a signal is the same shifted over) — and let a f
 The honest map that comes out:
 sparse, task-relevant connectivity emerges cleanly, and weight-sharing is *adopted* when
 translation-invariance rewards it, but a **compact aligned local filter does not emerge** from an energy
-budget alone — with a crisp mechanism for *why* (once weights are shared, connection-count no longer
+budget alone, with a crisp mechanism for *why* (once weights are shared, connection-count no longer
 gradients parameter-count, so pruning cannot tighten the kernel). On top of the imposed priors, the free
-dimensions — depth, channel count — then emerge to fit the task, up to an honest capacity limit.
+dimensions, depth, channel count, then emerge to fit the task, up to an honest capacity limit.
 
 What is genuinely new is that evolutionary energy-emergence map from an exhaustive seed and its
-boundaries — distinct from gradient pruning (Optimal Brain Damage, Lottery Ticket), from DARTS'
+boundaries, distinct from gradient pruning (Optimal Brain Damage, Lottery Ticket), from DARTS'
 gradient-relaxed supernet, and from NEAT's grow-from-minimal. The rest reproduces known inductive-bias
 results (weight-sharing is data-efficient, LeCun 1989; receptive field ≈ depth) with a *fair baseline*
-and full reproducibility. Every claim is a small, seeded, one-`make` probe — the negatives kept, for
-honesty. See [`paper/emergence.pdf`](paper/emergence.pdf) (paper) and [`paper/emergence.md`](paper/emergence.md) (full note) — `validation/emerge_*.c`.
+and full reproducibility. Every claim is a small, seeded, one-`make` probe, the negatives kept, for
+honesty. See [`paper/emergence.pdf`](paper/emergence.pdf) (paper) and [`paper/emergence.md`](paper/emergence.md) (full note), `validation/emerge_*.c`.
 
 ## Roadmap
 
@@ -341,32 +341,32 @@ honesty. See [`paper/emergence.pdf`](paper/emergence.pdf) (paper) and [`paper/em
 2. **Arena allocator**: the Mark/Release pool the population carves from. *(done)*
 3. **Datasets**: plain-text train and test data. *(done)*
 4. **Parallel evaluation**: a shell coordinator (`scripts/evaluate.sh`) that
-   launches one worker process per candidate, sized to the CPU count, exchanging
-   fitness as plain text and ranking the results. *(done)*
+ launches one worker process per candidate, sized to the CPU count, exchanging
+ fitness as plain text and ranking the results. *(done)*
 5. **The evolutionary search** (`evolve`): a population of topologies, mutation,
-   selection on validation fitness, raced against a matched-compute random-search
-   control. *(done)*
+ selection on validation fitness, raced against a matched-compute random-search
+ control. *(done)*
 6. **A reproducible benchmark** (`gentask` + `scripts/benchmark.sh`): the GA and
-   its matched random-search control on a self-contained synthetic task where
-   topology matters, over several seeds, reproducible from a seed with no
-   downloads. *(done)*
+ its matched random-search control on a self-contained synthetic task where
+ topology matters, over several seeds, reproducible from a seed with no
+ downloads. *(done)*
 7. **Error control** (`evolve -E` + `scripts/errortest.sh`): the search runs until
-   it reaches a target validation error, realizing the top-line
-   `self_modifying_predict(Train, Test, Error)` signature, and the time-to-target
-   race replaces fixed-budget fitness as the measure. *(done)*
+ it reaches a target validation error, realizing the top-line
+ `self_modifying_predict(Train, Test, Error)` signature, and the time-to-target
+ race replaces fixed-budget fitness as the measure. *(done)*
 8. **Crossover on real NAS benchmarks** (`bbtest`, `nasxover`, `nb101`): a
-   trap-function positive control, then a four-operator crossover study on
-   NAS-Bench-201 and NAS-Bench-101. The accuracy tables are extracted from the
-   official releases by a small pure-C decoder (`nb101_extract.c`), no PyTorch or
-   TensorFlow; the NAS-Bench-101 fitness oracle is isomorphism-correct by
-   brute-force canonicalization and self-tested. Finding: crossover wins where
-   building blocks exist (traps) but not on the real cell space, where nothing
-   meaningfully beats random. *(done)*
+ trap-function positive control, then a four-operator crossover study on
+ NAS-Bench-201 and NAS-Bench-101. The accuracy tables are extracted from the
+ official releases by a small pure-C decoder (`nb101_extract.c`), no PyTorch or
+ TensorFlow; the NAS-Bench-101 fitness oracle is isomorphism-correct by
+ brute-force canonicalization and self-tested. Finding: crossover wins where
+ building blocks exist (traps) but not on the real cell space, where nothing
+ meaningfully beats random. *(done)*
 
 9. **The emergence study** (`validation/emerge_*`, [`paper/emergence.tex`](paper/emergence.tex) + [`.md`](paper/emergence.md)): coming
-   at the 1997 ambition from the other side — *growing* a topology from an exhaustive seed under an
-   energy budget, an honest map of what does and does not emerge, and the prune/clone/translate/
-   recombine operators, each a small reproducible probe with its negatives kept. *(in progress)*
+ at the 1997 ambition from the other side, *growing* a topology from an exhaustive seed under an
+ energy budget, an honest map of what does and does not emerge, and the prune/clone/translate/
+ recombine operators, each a small reproducible probe with its negatives kept. *(in progress)*
 
 See [`AGENTS.md`](AGENTS.md) for the developer contract and module map.
 
@@ -375,43 +375,43 @@ See [`AGENTS.md`](AGENTS.md) for the developer contract and module map.
 *Evolutionary Neural Architecture Search (SMBPANN's approach: evolve topology,
 train weights by backprop):*
 - E. Real, S. Moore, A. Selle, et al. *Large-Scale Evolution of Image
-  Classifiers.* ICML 2017.
+ Classifiers.* ICML 2017.
 - E. Real, A. Aggarwal, Y. Huang, Q. V. Le. *Regularized Evolution for Image
-  Classifier Architecture Search* (AmoebaNet). AAAI 2019.
+ Classifier Architecture Search* (AmoebaNet). AAAI 2019.
 
 *Neural Architecture Search and AutoML, broadly:*
 - B. Zoph, Q. V. Le. *Neural Architecture Search with Reinforcement Learning.*
-  ICLR 2017.
+ ICLR 2017.
 - H. Liu, K. Simonyan, Y. Yang. *DARTS: Differentiable Architecture Search.*
-  ICLR 2019.
+ ICLR 2019.
 - T. Elsken, J. H. Metzen, F. Hutter. *Neural Architecture Search: A Survey.*
-  JMLR, 2019.
+ JMLR, 2019.
 - F. Hutter, L. Kotthoff, J. Vanschoren (eds.). *Automated Machine Learning:
-  Methods, Systems, Challenges.* Springer, 2019 (open access).
+ Methods, Systems, Challenges.* Springer, 2019 (open access).
 
 *Classical neuroevolution (evolving topology and weights, the contrast case):*
 - K. O. Stanley, R. Miikkulainen. *Evolving Neural Networks through Augmenting
-  Topologies* (NEAT). Evolutionary Computation 10(2), 2002.
+ Topologies* (NEAT). Evolutionary Computation 10(2), 2002.
 - K. O. Stanley, J. Clune, J. Lehman, R. Miikkulainen. *Designing neural networks
-  through neuroevolution.* Nature Machine Intelligence, 2019.
+ through neuroevolution.* Nature Machine Intelligence, 2019.
 - X. Yao. *Evolving Artificial Neural Networks.* Proceedings of the IEEE 87(9),
-  1999.
+ 1999.
 
 *Baselines and reproducible benchmarks:*
 - J. Bergstra, Y. Bengio. *Random Search for Hyper-Parameter Optimization.*
-  JMLR, 2012.
+ JMLR, 2012.
 - L. Li, A. Talwalkar. *Random Search and Reproducibility for Neural Architecture
-  Search.* UAI 2019.
+ Search.* UAI 2019.
 - C. Ying, A. Klein, E. Christiansen, E. Real, K. Murphy, F. Hutter.
-  *NAS-Bench-101: Towards Reproducible Neural Architecture Search.* ICML 2019.
+ *NAS-Bench-101: Towards Reproducible Neural Architecture Search.* ICML 2019.
 - X. Dong, Y. Yang. *NAS-Bench-201: Extending the Scope of Reproducible Neural
-  Architecture Search.* ICLR 2020.
+ Architecture Search.* ICLR 2020.
 
 *Foundations:*
 - D. E. Rumelhart, G. E. Hinton, R. J. Williams. *Learning representations by
-  back-propagating errors.* Nature 323, 1986.
+ back-propagating errors.* Nature 323, 1986.
 - V. Gavrilov. *Backpropagation Feed-Forward Neural Networks.* Seminar thesis,
-  1997 (the mathematics the engine implements, cited by section in the source).
+ 1997 (the mathematics the engine implements, cited by section in the source).
 
 ## License
 
