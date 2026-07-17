@@ -13,11 +13,12 @@
  * vs MINIMAL (all offsets off, grow up). Symmetric add/remove mutation so selection, not the seed, drives
  * the outcome. Reports taps/span/contiguity/on-relevant/test for each seed.
  *
- * FINDING (16 seeds, width penalty 1.0): the emergence is ROBUST TO THE STARTING POINT. Dense-prune and
- * minimal-grow reach an essentially identical compact kernel: taps 2.8 vs 2.8 (~K), span 4.1 vs 4.2,
- * contiguity 0.90 vs 0.89, on-relevant 0.76 vs 0.79, test 0.882 vs 0.889. So with grouped mutation the
- * compact filter emerges the same way whether you prune from dense or grow from minimal (NEAT-style) --
- * the direction does not matter. Self-contained C99. Build: make emerge_minimal
+ * FINDING (24 seeds, width penalty 1.0): the emergence is ROBUST TO THE STARTING POINT. Dense-prune and
+ * minimal-grow reach an essentially identical kernel: taps 3.5 vs 3.8 (~K), span 6.9 vs 7.0, contiguity
+ * 0.77 vs 0.80, on-relevant 0.61 vs 0.65, test 0.877 vs 0.877. So with grouped mutation the filter
+ * emerges the same way whether you prune from dense or grow from minimal (NEAT-style) -- the direction
+ * does not matter. (A lucky 16-seed run gave a tighter 2.8/0.90; 24 seeds is the honest, looser number,
+ * and the robustness across direction is what holds firmly.) Self-contained C99. Build: make emerge_minimal
  */
 #include <stdio.h>
 #include <stdlib.h>

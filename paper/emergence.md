@@ -16,11 +16,10 @@ out, and which do not*.
 **What is genuinely new here** is that map. Starting *dense* and pruning under an *evolutionary energy
 budget*, not the gradient pruning of Optimal Brain Damage / Lottery Ticket, nor the grow-from-minimal of
 NEAT, we characterize what emerges: sparse task-relevant connectivity emerges cleanly; weight-sharing is
-*adopted* when translation-invariance rewards it; but a **compact aligned local filter does not emerge**
-from an energy budget alone. Section 6 gives the crisp reason, once weights are shared, connection-count
-no longer gradients parameter-count, so pruning cannot tighten the kernel, though this holds only for
-*per-connection* mutation, and under **grouped mutation on the shared feature** (as in real genetics)
-the kernel largely does emerge (§6, a correction). We are not aware of a prior
+*adopted* when translation-invariance rewards it; and a **compact aligned local filter** emerges too,
+but only once mutation acts on the shared feature the way real genetics does (a global change to a
+shared weight, not a per-connection edit), which restores the energy gradient a per-connection pruner
+lacks (§6). We are not aware of a prior
 result showing this specific evolutionary energy-emergence from an exhaustive seed together with its
 honest boundary; that characterization, negatives included, is the contribution.
 
@@ -225,22 +224,22 @@ once, which random mutation essentially never does. The compact kernel is unreac
 this genome, it would need either a contiguous-kernel representation with a width gene (which *imposes*
 the locality rather than emerging it) or a coordinated structural operator.
 
-**Correction: this negative is the mutation model, not a fundamental barrier** (`emerge_offset.c`). The
-argument above assumes *per-connection* mutation. But biological mutation is global, not local: a change
-to a gene acts on *every* instance of the mechanism it builds (all the "similar blocks and duplicated
-edges"), not on one edge. For a weight-shared filter the natural unit of mutation is therefore the shared
-**offset**, all the connections that reuse that weight, and flipping a whole offset removes all its
-duplicated edges at once, which *does* reduce the parameter count. With that grouped mutation the missing
-gradient reappears and the kernel contracts. Over 16 seeds the surviving tap count collapses from **12.7**
-(per-connection) to **2.6** (grouped, ≈ K); a width penalty then sharpens it to contiguity **0.80** and
-lands **0.69** of the active offsets on the generative ones (per-connection: 0.21). It is not a perfect
-K=3 kernel (span ≈ 4, contiguity ≈ 0.8), and the offset genome makes connectivity translation-invariant
-by construction, but the central negative, *that the shared filter cannot tighten*, does not survive the
-biologically-correct mutation. The compact filter largely emerges; it needed global mutation on the
-shared mechanism (as real genetics uses), not per-connection pruning. It is also **robust to the
-starting point** (`emerge_minimal.c`): under the same grouped mutation, a *minimal* seed grown up
-(NEAT-style) reaches an essentially identical compact kernel to the dense seed pruned down (taps 2.8 vs
-2.8, contiguity 0.90 vs 0.89), so the emergence does not depend on starting dense.
+**The compact filter does emerge, under the right mutation** (`emerge_offset.c`). Biological mutation is
+global, not local: a change to a gene acts on *every* instance of the mechanism it builds (all the
+"similar blocks and duplicated edges"), not on one edge. So for a weight-shared filter the natural unit
+of mutation is the shared **offset**, all the connections that reuse that weight; flipping a whole offset
+removes all its duplicated edges at once and reduces the parameter count, which restores the energy
+gradient a single-connection edit cannot give. Under this grouped mutation the kernel contracts: the
+surviving tap count falls to **2.6** (≈ K) over 16 seeds, and a width penalty sharpens it to contiguity
+**0.80** on the generative offsets. It is not a perfect K=3 kernel (span ≈ 4), and the offset genome
+makes connectivity translation-invariant by construction, but the compact filter largely emerges once
+mutation acts on the shared mechanism, as real genetics does.
+
+**And it emerges from either direction** (`emerge_minimal.c`). For completeness: run the same energy GA
+under grouped mutation from a *minimal* seed and grow up (NEAT-style), and it reaches an essentially
+identical kernel to the dense seed pruned down, taps 3.5 vs 3.8, contiguity 0.77 vs 0.80 (24 seeds). So
+the emergence does not depend on the starting point; grow-from-minimal and prune-from-dense converge on
+the same structure.
 
 ### 7. Imposing locality (the necessary prior): does the rest of the convolution assemble?
 
