@@ -149,3 +149,5 @@ emerge_translate:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_translate validation/emerge_translate.c $(SMB_MATH)
 emerge_2d_compete:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_compete validation/emerge_2d_compete.c $(SMB_MATH)
+emerge_develop:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_develop validation/emerge_develop.c $(SMB_MATH)

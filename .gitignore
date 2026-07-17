@@ -56,3 +56,5 @@ emerge_translate
 scratch_emerge_translate.out
 emerge_2d_compete
 scratch_emerge_2d_compete.out
+emerge_develop
+scratch_emerge_develop.out
