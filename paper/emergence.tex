@@ -31,7 +31,9 @@ grow-from-minimal of NEAT --- we characterize what emerges: sparse task-relevant
 cleanly, and weight sharing is \emph{adopted} when translation-invariance rewards it, but a
 \textbf{compact aligned local filter does not emerge} from an energy budget alone. We give the crisp
 reason: once weights are shared, connection count no longer gradients parameter count, so pruning
-cannot tighten the kernel. On top of the priors a ConvNet also hardwires --- locality and
+cannot tighten the kernel --- though this holds only for \emph{per-connection} mutation, and under
+grouped mutation on the shared feature (as in real genetics) the kernel largely does emerge. On top of
+the priors a ConvNet also hardwires --- locality and
 translatability, the real symmetries of a signal --- the free dimensions then emerge to fit the task:
 compact local fields, the depth that matches a task's required receptive field, and the channel count
 that matches its number of distinct operations, up to an honest capacity limit that four interventions
@@ -125,6 +127,21 @@ all units at once, which per-connection mutation essentially never does. So unde
 budget cannot assemble a compact convolution: weight sharing decouples connection count from parameter
 count. Getting the compact kernel would mean either building the locality into the representation (which
 \emph{imposes} convolution rather than emerging it) or a coordinated structural operator.
+
+\paragraph{But this negative is the mutation model, not a fundamental barrier.} The argument above
+assumes \emph{per-connection} mutation. Biological mutation, however, is global, not local: a change to a
+gene acts on every instance of the mechanism it builds (all the ``similar blocks and duplicated edges''),
+not on one edge. For a weight-shared filter the natural unit of mutation is therefore the shared
+\emph{offset} --- all the connections that reuse that weight --- and flipping a whole offset removes all
+its duplicated edges in one move, which \emph{does} reduce the parameter count. With that grouped
+mutation the missing gradient reappears, and the kernel contracts. Empirically (16 seeds), the surviving
+tap count collapses from $12.7$ under per-connection mutation to $2.6$ (near $K=3$) under grouped
+mutation; adding a width penalty sharpens it to contiguity $0.80$ and lands $0.69$ of the active offsets
+on the generative ones (per-connection: $0.21$). It is not a perfect $K=3$ kernel (span $\approx 4$,
+contiguity $\approx 0.8$), and the offset genome does make the connectivity translation-invariant by
+construction --- but the central negative, that the shared filter cannot tighten, does not survive the
+biologically-correct mutation. The compact filter largely emerges; it just needed global mutation on the
+shared mechanism, as real genetics uses, rather than per-connection pruning.
 
 \subsection{Emergent depth matches the required receptive field}
 

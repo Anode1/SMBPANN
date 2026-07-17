@@ -18,7 +18,9 @@ budget* — not the gradient pruning of Optimal Brain Damage / Lottery Ticket, n
 NEAT — we characterize what emerges: sparse task-relevant connectivity emerges cleanly; weight-sharing is
 *adopted* when translation-invariance rewards it; but a **compact aligned local filter does not emerge**
 from an energy budget alone. Section 6 gives the crisp reason — once weights are shared, connection-count
-no longer gradients parameter-count, so pruning cannot tighten the kernel. We are not aware of a prior
+no longer gradients parameter-count, so pruning cannot tighten the kernel — though this holds only for
+*per-connection* mutation, and under **grouped mutation on the shared feature** (as in real genetics)
+the kernel largely does emerge (§6, a correction). We are not aware of a prior
 result showing this specific evolutionary energy-emergence from an exhaustive seed together with its
 honest boundary; that characterization, negatives included, is the contribution.
 
@@ -222,6 +224,20 @@ would require *coordinated* removal of every connection at the extreme offsets a
 once, which random mutation essentially never does. The compact kernel is unreachable by pruning under
 this genome — it would need either a contiguous-kernel representation with a width gene (which *imposes*
 the locality rather than emerging it) or a coordinated structural operator.
+
+**Correction: this negative is the mutation model, not a fundamental barrier** (`emerge_offset.c`). The
+argument above assumes *per-connection* mutation. But biological mutation is global, not local: a change
+to a gene acts on *every* instance of the mechanism it builds (all the "similar blocks and duplicated
+edges"), not on one edge. For a weight-shared filter the natural unit of mutation is therefore the shared
+**offset** — all the connections that reuse that weight — and flipping a whole offset removes all its
+duplicated edges at once, which *does* reduce the parameter count. With that grouped mutation the missing
+gradient reappears and the kernel contracts. Over 16 seeds the surviving tap count collapses from **12.7**
+(per-connection) to **2.6** (grouped, ≈ K); a width penalty then sharpens it to contiguity **0.80** and
+lands **0.69** of the active offsets on the generative ones (per-connection: 0.21). It is not a perfect
+K=3 kernel (span ≈ 4, contiguity ≈ 0.8), and the offset genome makes connectivity translation-invariant
+by construction — but the central negative, *that the shared filter cannot tighten*, does not survive the
+biologically-correct mutation. The compact filter largely emerges; it needed global mutation on the
+shared mechanism (as real genetics uses), not per-connection pruning.
 
 ### 7. Imposing locality (the necessary prior): does the rest of the convolution assemble?
 
