@@ -10,6 +10,7 @@
 /nasxover
 /nb101
 /nb101_extract
+/emerge_prove
 
 # -- legacy/java --
 legacy/java/build/
@@ -70,3 +71,7 @@ scratch_emerge_2d_grow_strong.out
 scratch_emerge_offset.out
 emerge_minimal
 scratch_emerge_minimal.out
+scratch_emerge_prove.out
+scratch_emerge_prove_scaling.out
+scratch_emerge_prove_scaled.out
+scratch_prove_sweep.out
