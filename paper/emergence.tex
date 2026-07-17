@@ -45,9 +45,12 @@ mechanisms it reproduces. Every number regenerates from one \texttt{make}; the d
 
 \section{Introduction}
 
-The 1997 ambition behind this project was that a network's architecture should \emph{emerge} from a
-search, not be hand-designed, in the best case rediscovering the convolutional receptive field
-(Figure~\ref{fig:main}). A companion study on that side of the idea, \emph{searching} whole
+This project has a long fuse. A 1997 thesis argued only that heuristics, inductive bias built into the
+architecture by hand, are a \emph{necessity} for a trainable, generalizing network~\cite{bpfnn97}. The
+ambition to instead let the architecture \emph{emerge} from a genetic-algorithm search, not be
+hand-designed, in the best case rediscovering the convolutional receptive field (Figure~\ref{fig:main}),
+came in 2002, after the author had worked with genetic algorithms in industry; the project was created in
+2015 and first implemented only now, in pure C. A companion study on that side of the idea, \emph{searching} whole
 topologies and cells, reached a firmly negative conclusion: on the real NAS-Bench-101 cell space, no
 crossover meaningfully beats random search, and structure-aware operators do worse than a structure-blind
 one, because good cells are common and the gap to the optimum sits inside the benchmark's own training
