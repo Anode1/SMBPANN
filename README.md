@@ -423,6 +423,21 @@ train weights by backprop):*
  back-propagating errors.* Nature 323, 1986.
 - V. Gavrilov. *Backpropagation Feed-Forward Neural Networks.* Seminar thesis,
  1997 (the mathematics the engine implements, cited by section in the source).
+ DOI: 10.5281/zenodo.20450526.
+
+*Companion work by the author (cited in the paper):*
+- V. Gavrilov. *Intelligence Is the Discovery of Compressors.* 2026. DOI:
+ 10.5281/zenodo.20440111 (the compression / description-length frame the energy
+ budget instantiates; evolutionary search is one of its substrate levels of
+ compressor discovery).
+- V. Gavrilov. *Emergence Does Not Care About Substrate.* Companion essay, 2026.
+ https://gavr144.substack.com/p/emergence-does-not-care-about-substrate
+
+*Grow-and-prune / dynamic sparse training (nearest neighbors to the path-independence test):*
+- D. C. Mocanu, E. Mocanu, P. Stone, et al. *Scalable training of artificial neural
+ networks with adaptive sparse connectivity* (SET). Nature Communications 9, 2018.
+- U. Evci, T. Gale, J. Menick, P. S. Castro, E. Elsen. *Rigging the Lottery: Making
+ All Tickets Winners* (RigL). ICML 2020.
 
 ## License
 

@@ -88,7 +88,11 @@ evolved by a genetic algorithm from an all-ones (dense) seed. Fitness is validat
 training set; the objective is to minimize energy (the number of connections, or free parameters) subject
 to accuracy $\geq$ target. Mutation is mostly-prune, rarely-grow, an annealing schedule, in which a
 prune is a downhill move in energy and a rare added connection is an uphill thermal fluctuation. All
-numbers below are means over independent seeds; each experiment is a self-contained C99 probe.
+numbers below are means over independent seeds; each experiment is a self-contained C99
+probe.\footnote{Pure C is what makes iterating on this many-tiny-models workload practical: the identical
+training loop is ${\sim}130\times$ slower in naive Python (or per-sample NumPy, overhead-bound at this
+array size) than in C (measured), turning a few hours on 8 cores into a couple of weeks. A compiled Python
+path (Numba, JAX) closes most of that gap, so the advantage is over typical interpreted Python, not fundamental.}
 
 \section{What emerges, and what does not}
 
