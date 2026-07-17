@@ -286,6 +286,15 @@ from exhaustive. \textbf{Cell-based NAS} (ENAS, regularized evolution) reuses on
 which our reuse observations echo. We claim the honest characterization of what an evolutionary energy
 budget does and does not produce, and the negatives, not the underlying mechanisms, which are known.
 
+\medskip\noindent Two framings place this experiment in a longer line. The view of network topology as
+problem-specific inductive bias that must be engineered by hand goes back decades~\cite{bpfnn97}; here we
+ask the complementary question, whether that structure can instead \emph{emerge} from the energy budget
+rather than be built in.\footnote{The broader claim that such emergence is substrate-independent is
+argued informally in a companion essay~\cite{emergence_sub}.} Viewed more broadly, the energy budget is a
+description-length pressure: the emergent weight-shared filter is a compressor whose inductive bias,
+locality and sharing, matches the task's translation symmetry, an instance of the evolutionary-search
+route to compressor discovery set out in~\cite{compressors}.
+
 \section{Limitations}
 
 The tasks are small synthetic constructions built so the intended structure is optimal; they demonstrate
@@ -300,8 +309,9 @@ workshop, not a novelty venue.
 \section{Conclusion}
 
 Impose the domain's real symmetries; let a few biological operators assemble the rest. Under an energy
-budget on an exhaustive seed, sparsity and feature selection emerge and weight sharing is adopted, but a
-compact convolution does not, for a decoupling reason we can state in a line. On top of imposed priors,
+budget on an exhaustive seed, sparsity and feature selection emerge and weight sharing is adopted, and a
+compact convolution emerges too, but only once mutation acts on the shared feature rather than the single
+edge, for a decoupling reason we can state in a line. On top of imposed priors,
 depth emerges to match the receptive field, reuse beats a free search at equal compute, recombination is
 required only when a task needs a genuinely different operation, and weight-shared tiling is
 data-efficient at a degree that grows with scale then saturates. Where it runs out, a three-way
@@ -324,6 +334,12 @@ the reproducibility; every number regenerates from one command.
  \emph{Science} 220, 1983.
 \bibitem{repo} V.~Gavrilov. SMBPANN reference implementation, 2001--2015--2026.
  \url{https://github.com/Anode1/SMBPANN}.
+\bibitem{compressors} V.~Gavrilov. Intelligence Is the Discovery of Compressors. 2026.
+ \url{https://doi.org/10.5281/zenodo.20440111}.
+\bibitem{bpfnn97} V.~Gavrilov. Backpropagation Feed-Forward Neural Networks. Seminar thesis, Open
+ University of Israel, 1997 (digitized 2026). \url{https://doi.org/10.5281/zenodo.20450526}.
+\bibitem{emergence_sub} V.~Gavrilov. Emergence Does Not Care About Substrate. Companion essay, 2026.
+ \url{https://gavr144.substack.com/p/emergence-does-not-care-about-substrate}.
 \end{thebibliography}
 
 \end{document}
