@@ -153,3 +153,5 @@ emerge_develop:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_develop validation/emerge_develop.c $(SMB_MATH)
 emerge_scale:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_scale validation/emerge_scale.c $(SMB_MATH)
+emerge_baseline:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_baseline validation/emerge_baseline.c $(SMB_MATH)

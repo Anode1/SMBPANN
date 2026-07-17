@@ -60,3 +60,5 @@ emerge_develop
 scratch_emerge_develop.out
 emerge_scale
 scratch_emerge_scale.out
+emerge_baseline
+scratch_emerge_baseline.out
