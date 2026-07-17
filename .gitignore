@@ -58,3 +58,5 @@ emerge_2d_compete
 scratch_emerge_2d_compete.out
 emerge_develop
 scratch_emerge_develop.out
+emerge_scale
+scratch_emerge_scale.out
