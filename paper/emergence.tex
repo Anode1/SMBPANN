@@ -21,26 +21,26 @@ optimizer built for industrial use in 2002. Reference implementation:
 \maketitle
 
 \begin{abstract}
-A network's structure should \emph{emerge}, not be designed, but from what, and how much of it?
-We grow a network's topology from an \textbf{exhaustive (fully-connected) seed under an energy
-budget}, an evolutionary search that pays for every connection, and ask honestly which pieces of
-convolution fall out and which do not. Starting dense and pruning under an evolutionary energy budget,
-not the gradient pruning of Optimal Brain Damage or the Lottery Ticket line, nor the
-grow-from-minimal of NEAT, we characterize what emerges: sparse task-relevant connectivity emerges
-cleanly, and weight sharing is \emph{adopted} when translation-invariance rewards it, and a
-\textbf{compact aligned local filter} emerges too, but only once mutation acts on the shared feature the
-way real genetics does (a global change to a shared weight, not a per-connection edit), which restores
-the energy gradient a per-connection pruner lacks. On top of
-the priors a ConvNet also hardwires, locality and
-translatability, the real symmetries of a signal, the free dimensions then emerge to fit the task:
-compact local fields, the depth that matches a task's required receptive field, and the channel count
-that matches its number of distinct operations, up to an honest capacity limit that four interventions
-fail to move. These latter results reproduce known inductive-bias facts (weight sharing is
-data-efficient; receptive field $\approx$ depth), which we verify with a fair baseline and full
-reproducibility rather than claim as new. We frame the whole as a small set of biological operators,
-prune, clone, translate, recombine, and are careful to separate the genuinely new characterization
-(the evolutionary energy-emergence map from an exhaustive seed, and its negatives) from the textbook
-mechanisms it reproduces. Every number regenerates from one \texttt{make}; the dead-ends are kept.
+A network's structure should \emph{emerge}, not be designed, but from what, and how much of it? We grow a
+network's topology from an \textbf{exhaustive, fully-connected seed under an evolutionary energy budget}
+that pays for every connection, and ask honestly which pieces of convolution fall out. Sparse
+task-relevant connectivity emerges cleanly; weight sharing is \emph{adopted} when translation invariance
+rewards it; and a compact aligned local filter emerges too, but only once mutation acts on the shared
+feature the way real genetics does, not on a single edge. On top of the priors a ConvNet hardwires
+(locality and translatability), the free dimensions then organize to the task: compact fields, depth that
+matches the required receptive field, channels that match the number of distinct operations, up to a
+capacity limit four interventions fail to move.
+
+\medskip\noindent\textbf{What is new:}
+-the sharing/energy \emph{decoupling}, why a compact filter cannot emerge under per-connection pruning yet
+does once mutation acts on the shared feature, which restores the missing energy gradient;
+-that \emph{directed} evolutionary search beats random sampling of structures, and the advantage
+\emph{holds across scale} once its search budget scales with the problem, reversing the near-null our
+companion crossover study found on a real benchmark;
+-the honest energy-emergence map from an exhaustive seed, its negatives kept.
+The rest reproduces textbook inductive-bias facts (weight sharing is data-efficient, receptive
+field~$\approx$~depth), verified with a fair baseline rather than claimed as new. Every number regenerates
+from one \texttt{make}; the dead-ends are kept.
 \end{abstract}
 
 \section{Introduction}
@@ -72,8 +72,8 @@ prune, clone, translate, and recombine assemble and refine the rest.}
 
 \paragraph{Contribution, stated honestly.} The genuinely new part is the map: the specific
 \emph{evolutionary energy-emergence from an exhaustive seed}, and its boundaries. We are not aware of a
-prior result showing this together with its honest characterization of what does not emerge (the compact
-filter, and its mechanism). This is distinct from gradient pruning (Optimal Brain Damage; the Lottery
+prior result showing this together with the mechanism the compact filter needs in order to emerge at all
+(grouped mutation on the shared feature, not the single edge). This is distinct from gradient pruning (Optimal Brain Damage; the Lottery
 Ticket), from DARTS' gradient-relaxed supernet, and from NEAT's grow-from-minimal, which augment rather
 than prune. Much of the rest, weight sharing is data-efficient; receptive field $\approx$ depth,
 reproduces known inductive-bias facts, which we verify carefully rather than claim as new. The value is
@@ -102,8 +102,8 @@ the outcome of the pruning literature (sparse subnetworks, not convolutions).
 \centering
 \includegraphics[width=0.9\textwidth]{fig1_pruning.pdf}
 \caption{Sections 2--3. An energy budget prunes a dense connectivity seed to a sparse mask whose
-surviving connections land on the task-relevant inputs. Feature selection emerges; a compact aligned
-convolution does not.}
+surviving connections land on the task-relevant inputs. Feature selection and sparsity emerge; the
+compact aligned filter needs mutation on the shared feature to emerge (Sec.~2.3).}
 \label{fig:prune}
 \end{figure}
 
@@ -141,6 +141,57 @@ mutation from a \emph{minimal} seed and grow up (a NEAT-style direction), and it
 identical kernel to the dense seed pruned down (taps $3.5$ vs $3.8$, contiguity $0.77$ vs $0.80$,
 24 seeds). The emergence does not depend on the starting point: grow-from-minimal and prune-from-dense
 converge on the same structure.
+
+\subsection{Directed search vs.\ random, and the budget it needs}
+
+Does the \emph{directed} energy search do real work, or would random sampling of the same structures find
+the compact filter just as well? The question is sharp because on a real benchmark our companion crossover
+study found evolution barely edges random, inside the noise. \textbf{Method.} At a \emph{matched
+evaluation budget}, we run the grouped-mutation GA against random offset masks (drawn across densities,
+kept by the same objective) over 50 \emph{paired} seeds (same task per seed) at five input sizes $N$, once
+at a fixed budget and once at a budget that scales with $N$ (Figure~\ref{fig:directed}, Table~\ref{tab:directed}).
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{@{}rccccc@{}}
+\toprule
+ & \multicolumn{2}{c}{contiguity} & \multicolumn{2}{c}{paired GA${-}$random gap} & \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+$N$ & GA & random & fixed budget & scaled budget & win/tie/loss \\
+\midrule
+12 & 0.73 & 0.71 & $+0.02{\pm}0.03$ & $+0.02{\pm}0.03$ & 12/29/9 \\
+16 & 0.68 & 0.61 & $+0.07{\pm}0.04$ & $+0.06{\pm}0.04$ & 23/11/16 \\
+20 & 0.67 & 0.46 & $+0.21{\pm}0.04$ & $+0.22{\pm}0.03$ & 37/6/7 \\
+24 & 0.56 & 0.41 & $+0.15{\pm}0.04$ & $+0.17{\pm}0.03$ & 37/2/11 \\
+28 & 0.52 & 0.45 & $+0.07{\pm}0.04$ & $\mathbf{+0.15{\pm}0.04}$ & 33/1/16 \\
+\bottomrule
+\end{tabular}
+\caption{Directed GA vs random at matched evaluations, 50 paired seeds. Contiguity and win/tie/loss are
+at fixed budget; the last two columns give the paired advantage under a fixed budget and under one scaled
+to $N$. The fixed-budget gap erodes at $N{=}28$; with budget scaled to the problem it holds.}
+\label{tab:directed}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{fig6_directed.pdf}
+\caption{Directed search vs random, across scale. \emph{Left:} the paired GA${-}$random contiguity gap; the
+fixed-budget curve falls at $N{=}28$ (the GA is starved as the space grows to $2^{54}$ masks), the
+scaled-budget curve holds. \emph{Right:} the GA's own contiguity recovers with budget while random stays
+flat. 50 paired seeds, matched evaluations per arm.}
+\label{fig:directed}
+\end{figure}
+
+\textbf{Result.} Directed search wins, and the win \emph{holds across scale} once its budget is fair. At
+trivial size the two tie ($N{=}12$, gap $+0.02$): the filter is easy, random finds it too. The gap is
+decisive by $N{=}20$ (paired $+0.21{\pm}0.04$, 37 wins to 7 losses of 50). Under a fixed budget it appears
+to fall back at $N{=}28$ ($+0.07$), but that is the GA being starved, not random catching up: scale the
+budget with $N$ and the $N{=}28$ gap doubles to $+0.15{\pm}0.04$ while the GA's contiguity recovers
+($0.52{\to}0.59$) and random stays flat ($\approx 0.44$). So directed search holds a clear advantage over
+random across scale ($\approx +0.15$ to $+0.22$, all ${\geq}3.7$ SEM from $N{=}20$ to $28$) \emph{provided
+its budget scales with the problem}; the advantage is sustained, not monotonically growing. This reverses
+the crossover null: there evolution only tied random inside the benchmark's noise; here, under an energy
+budget, it beats random outright.
 
 \subsection{Emergent depth matches the required receptive field}
 

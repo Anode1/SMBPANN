@@ -46,5 +46,5 @@
     <text x="100" y="110" font-size="11" fill="#94a3b8" text-anchor="middle">(chance 33%, drift 34%)</text>
   </g>
 
-  <text x="20" y="248" font-size="11.5" fill="#94a3b8">Result: feature selection emerges cleanly. Sparsity and weight-sharing also emerge; a compact aligned local filter does not (Sec. 6).</text>
+  <text x="20" y="248" font-size="11.5" fill="#94a3b8">Result: feature selection emerges cleanly. Sparsity and weight-sharing also emerge; the compact aligned filter needs mutation on the shared feature (Sec. 2.3).</text>
 </svg>
