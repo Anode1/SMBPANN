@@ -475,6 +475,36 @@ multiplicative wall. Real vision beats this with *scale* — depth, normalizatio
 and vast data — not a single clever pressure. The honest lesson of the worsening is that some limits
 are not tricks waiting to be found; they are the architecture running out, and saying so is the result.
 
+### 19. The whole sequence, chained: reuse beats re-search, and jitter is not needed
+
+Every operator so far was tested alone. `emerge_develop.c` finally chains them into one developmental
+run and asks the integrative question: once you have a stable working block, is it better to *reuse and
+refine* it than to search structure from scratch — and do you still need jitter (annealing) to escape
+local minima? On a translation-invariant motif task with scarce data:
+
+| phase | test acc | |
+|---|---|---|
+| (1) search from scratch — P independent detectors | 0.629 | the worsening: starves |
+| (2) find a stable block → (3) translate/tile it | **0.899** | reuse, no re-search |
+| (4) refine in place, no jitter | 0.876 | |
+| (4) refine in place, **+ jitter** (annealed) | 0.786 | |
+
+**Reuse crushes re-search:** the developmental path (find one block, tile it) reaches 0.90 versus 0.63
+for searching P independent detectors from random — +0.27, because the block learns from all positions
+while independent search starves per position. This is the whole thesis in one run: *do not re-search
+structure you can reuse.*
+
+**And jitter is not needed — it hurts.** Jitter drops the solution to 0.79, and even plain in-place
+refinement drops it to 0.88. Two honest reasons, and they tie the arc together: reuse lands you *at* the
+optimum, so there is no bad minimum for jitter to escape — perturbation only kicks the good structure
+off it; and letting the tiled copies fine-tune independently **re-introduces the per-position starvation
+of Section 17** (breaking the very weight-sharing that made reuse pay). So the developmental rule is
+sharper than "refine what exists": once reuse gives a good shared structure, **keep the sharing
+coordinated** — do not let copies drift, and do not add jitter you do not need. Jitter is for when you
+are stuck; reuse is *how you avoid getting stuck*. Nature keeps serial homologs coordinated (Hox), it
+does not let every segment drift alone. (Caveat: on a genuinely multimodal task jitter could help; here
+the developmental assembly finds the optimum directly, so it has nothing to escape.)
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
