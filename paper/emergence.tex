@@ -38,8 +38,9 @@ exploitable objective and which \emph{reconciles} the near-null our companion cr
 flat benchmark landscape;
 -the sharing/energy \emph{decoupling}, why a compact filter cannot emerge under per-connection pruning yet
 does once mutation acts on the shared feature, which restores the missing energy gradient;
--the \emph{specific evolutionary energy-emergence from an exhaustive seed}, and its honest boundary, a
-characterization, negatives kept, that we are not aware of a prior result showing.
+-the \emph{specific evolutionary energy-emergence from an exhaustive seed}, and that it is
+\emph{path-independent} (the same structure emerges from a minimal seed grown up), a characterization with
+its honest boundary, negatives kept, that we are not aware of a prior result showing.
 The rest reproduces textbook inductive-bias facts (weight sharing is data-efficient, receptive
 field~$\approx$~depth), verified with a fair baseline rather than claimed as new. Every number regenerates
 from one \texttt{make}; the dead-ends are kept.
@@ -139,11 +140,12 @@ the generative offsets. It is not a perfect $K=3$ kernel (span $\approx 4$), and
 the connectivity translation-invariant by construction, but the compact filter largely emerges once
 mutation acts on the shared mechanism, as real genetics does.
 
-\paragraph{And it emerges from either direction.} For completeness: run the same energy GA under grouped
-mutation from a \emph{minimal} seed and grow up (a NEAT-style direction), and it reaches an essentially
-identical kernel to the dense seed pruned down (taps $3.5$ vs $3.8$, contiguity $0.77$ vs $0.80$,
-24 seeds). The emergence does not depend on the starting point: grow-from-minimal and prune-from-dense
-converge on the same structure.
+\paragraph{And it emerges from either direction.} Run the same energy GA under grouped mutation from a
+\emph{minimal} seed and grow up (a NEAT-style direction), and it reaches an essentially identical kernel to
+the dense seed pruned down (24 seeds); the emergence does not depend on the starting point. Grow-and-prune
+sparse training (SET, RigL) moves both ways too, but toward accuracy and sparsity; this
+\emph{path-independence} of the emergent \emph{structure}, one objective reaching it from an exhaustive and
+a minimal seed alike, we are not aware of being reported.
 
 \subsection{Directed search vs.\ random: tidier, not better}
 

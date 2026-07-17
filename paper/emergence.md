@@ -23,8 +23,9 @@ lacks (§6). A second finding (§6b): under this budget a directed search finds 
 random sampling at *equal task accuracy* (tidier, not better, and it survives a denoising control), which
 reconciles this repo's earlier crossover null, directed search beats random when the objective can be
 climbed and ties it when the landscape is flat. We are not aware of a prior
-result showing this specific evolutionary energy-emergence from an exhaustive seed together with its
-honest boundary; that characterization, negatives included, is the contribution.
+result showing this specific evolutionary energy-emergence from an exhaustive seed, *path-independent*
+(the same structure emerges from a minimal seed grown up), together with its honest boundary; that
+characterization, negatives included, is the contribution.
 
 **What we reproduce rather than claim as new.** On top of the priors a ConvNet also hardwires,
 **locality** and **translatability**, the *real symmetries* of a signal, the free dimensions then emerge
@@ -240,9 +241,11 @@ mutation acts on the shared mechanism, as real genetics does.
 
 **And it emerges from either direction** (`emerge_minimal.c`). For completeness: run the same energy GA
 under grouped mutation from a *minimal* seed and grow up (NEAT-style), and it reaches an essentially
-identical kernel to the dense seed pruned down, taps 3.5 vs 3.8, contiguity 0.77 vs 0.80 (24 seeds). So
-the emergence does not depend on the starting point; grow-from-minimal and prune-from-dense converge on
-the same structure.
+identical kernel to the dense seed pruned down (24 seeds). So the emergence does not depend on the
+starting point; grow-from-minimal and prune-from-dense converge on the same structure. Grow-and-prune
+sparse training (SET, RigL) moves both ways too, but toward accuracy and sparsity; this
+*path-independence* of the emergent *structure*, one objective reaching it from an exhaustive and a
+minimal seed alike, we are not aware of being reported.
 
 ### 6b. Directed search vs random: tidier, not better (`emerge_prove.c`)
 
