@@ -176,7 +176,7 @@ From the [AIS](https://github.com/Anode1/ais) project:
 validation/       standalone probes: bbtest (trap control), nasxover (NAS-Bench-201),
                   nb101 + nb101_extract (NAS-Bench-101 crossover study),
                   emerge_* (the emergence study: energy-budget growth + the operators)
-paper/            the write-ups (nas_crossover, emergence) + the companion essay + figures
+paper/            the write-ups (emergence: .md note + .tex/.pdf paper; nas_crossover) + essay + figures
 legacy/java/      the original early-2000s Java prototype (object-graph design)
 ```
 
@@ -295,16 +295,16 @@ TARGET=0.12 RUNS=30 GENS=60 scripts/errortest.sh
 
 ## Paper
 
-A short write-up in the style of the 1997 thesis, with the full method, exact
-settings, and per-run statistics:
-[`paper/nas_crossover.pdf`](paper/nas_crossover.pdf) (source
-[`paper/nas_crossover.tex`](paper/nas_crossover.tex)). It pairs a trap-function
-positive control (crossover wins decisively where separable building blocks exist)
-with a real-space negative (on NAS-Bench-101 no crossover meaningfully beats random,
-and the structure-aware operators are worse than a plain uniform one), and explains
-why: good cells are common and the gap to the optimum is smaller than the
-benchmark's training noise, so random search is hard to beat. The companion essay is
-[`paper/essay.md`](paper/essay.md).
+The write-up is the emergence study, in two forms: the paper
+[`paper/emergence.pdf`](paper/emergence.pdf) (source [`paper/emergence.tex`](paper/emergence.tex)) and
+the full reproducible note [`paper/emergence.md`](paper/emergence.md) — *what does, and does not, emerge
+when a network's structure is grown from an exhaustive seed under an energy budget*, framed by the
+prune/clone/translate/recombine operators, with the negatives kept and every number reproducible from
+one `make`. It opens from the companion negative that motivates it, studied in detail in the earlier
+[`paper/nas_crossover.pdf`](paper/nas_crossover.pdf): on the real NAS-Bench-101 cell space *searching*
+for structure does not beat random search (a trap-function positive control shows crossover helps only
+where separable building blocks exist), so instead of searching for the architecture, the paper grows
+it. The companion essay is [`paper/essay.md`](paper/essay.md).
 
 ## The emergence study
 
@@ -333,7 +333,7 @@ boundaries — distinct from gradient pruning (Optimal Brain Damage, Lottery Tic
 gradient-relaxed supernet, and from NEAT's grow-from-minimal. The rest reproduces known inductive-bias
 results (weight-sharing is data-efficient, LeCun 1989; receptive field ≈ depth) with a *fair baseline*
 and full reproducibility. Every claim is a small, seeded, one-`make` probe — the negatives kept, for
-honesty. See [`paper/emergence.md`](paper/emergence.md) (`validation/emerge_*.c`).
+honesty. See [`paper/emergence.pdf`](paper/emergence.pdf) (paper) and [`paper/emergence.md`](paper/emergence.md) (full note) — `validation/emerge_*.c`.
 
 ## Roadmap
 
@@ -363,7 +363,7 @@ honesty. See [`paper/emergence.md`](paper/emergence.md) (`validation/emerge_*.c`
    building blocks exist (traps) but not on the real cell space, where nothing
    meaningfully beats random. *(done)*
 
-9. **The emergence study** (`validation/emerge_*`, [`paper/emergence.md`](paper/emergence.md)): coming
+9. **The emergence study** (`validation/emerge_*`, [`paper/emergence.tex`](paper/emergence.tex) + [`.md`](paper/emergence.md)): coming
    at the 1997 ambition from the other side — *growing* a topology from an exhaustive seed under an
    energy budget, an honest map of what does and does not emerge, and the prune/clone/translate/
    recombine operators, each a small reproducible probe with its negatives kept. *(in progress)*

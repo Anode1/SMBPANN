@@ -86,8 +86,9 @@ static double train_indep(uint32_t seed)
         double o=1.0/(1.0+exp(-(rsc*best+rb))); if((o>0.5)==(yte[s]==1)) c++; }
     return (double)c/NTE;
 }
-static double best_of(int shared, uint32_t seed)
-{ int r; double b=0; for(r=0;r<RESTARTS;r++){ double a= shared? train_shared(seed*131u+(uint32_t)r*97u+1u) : train_indep(seed*131u+(uint32_t)r*97u+1u); if(a>b)b=a; } return b; }
+/* MEAN over restarts (fair expected performance -- no optimistic best-of selection). */
+static double mean_of(int shared, uint32_t seed)
+{ int r; double s=0; for(r=0;r<RESTARTS;r++){ double a= shared? train_shared(seed*131u+(uint32_t)r*97u+1u) : train_indep(seed*131u+(uint32_t)r*97u+1u); s+=a; } return s/RESTARTS; }
 
 int main(void)
 {
@@ -97,14 +98,18 @@ int main(void)
     printf("SCALE: does 'reuse beats re-search' GROW with problem size? (%d train examples, %d seeds x %d restarts)\n", g_ntr, seeds, RESTARTS);
     printf("translation-invariant motif task. DEVELOPMENTAL = one tiled block (K=%d weights, N-invariant).\n", K);
     printf("SEARCH-FROM-SCRATCH = one filter per position (K*P weights, grows with N).\n\n");
-    printf("  input N | positions | develop (shared) | scratch (indep) | gap   | scratch weights\n");
+    printf("fair statistics: MEAN over restarts (no best-of selection), reported as mean +/- std over seeds.\n");
+    printf("  input N | positions | develop (shared) mean+/-sd | scratch (indep) mean+/-sd | gap   | scratch weights\n");
     for(t=0;t<6;t++){ g_n=Ns[t]; g_p=g_n-K+1;
-        double ss=0, si=0;
+        double ss=0,ss2=0, si=0,si2=0;
         for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+(unsigned)g_n*17u+1u));
-            ss+=best_of(1,(uint32_t)(sd*7u+1u)); si+=best_of(0,(uint32_t)(sd*7u+1u)); }
-        ss/=seeds; si/=seeds;
-        printf("  %-4d    | %-4d      | %.3f            | %.3f           | %+.3f | %d\n",
-               g_n, g_p, ss, si, ss-si, K*g_p);
+            double vs=mean_of(1,(uint32_t)(sd*7u+1u)), vi=mean_of(0,(uint32_t)(sd*7u+1u));
+            ss+=vs; ss2+=vs*vs; si+=vi; si2+=vi*vi; }
+        { double ms=ss/seeds, mi=si/seeds;
+          double sds = seeds>1? sqrt((ss2-ss*ss/seeds)/(seeds-1)) : 0.0;
+          double sdi = seeds>1? sqrt((si2-si*si/seeds)/(seeds-1)) : 0.0;
+          printf("  %-4d    | %-4d      | %.3f +/- %.3f            | %.3f +/- %.3f           | %+.3f | %d\n",
+                 g_n, g_p, ms, sds, mi, sdi, ms-mi, K*g_p); }
     }
     printf("\nreuse-beats-re-search STRENGTHENS with scale if 'develop' stays flat while 'scratch' falls and\n");
     printf("the gap widens -- one tiled block is size-independent; independent detectors starve harder as N grows.\n");
