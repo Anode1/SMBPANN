@@ -1,4 +1,4 @@
-# Directed emergence: growing a network's topology under an energy budget
+# Directed Emergence of Network Structure Under an Energy Budget
 
 *Research note. Positive-and-honest counterpart to the NAS-Bench-101 crossover study
 (`paper/nas_crossover.tex`). Reproduce: `make conv_emerge &&./conv_emerge`

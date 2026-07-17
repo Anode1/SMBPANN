@@ -297,8 +297,8 @@ TARGET=0.12 RUNS=30 GENS=60 scripts/errortest.sh
 
 The write-up is the emergence study, in two forms: the paper
 [`paper/emergence.pdf`](paper/emergence.pdf) (source [`paper/emergence.tex`](paper/emergence.tex)) and
-the full reproducible note [`paper/emergence.md`](paper/emergence.md), *what does, and does not, emerge
-when a network's structure is grown from an exhaustive seed under an energy budget*, framed by the
+the full reproducible note [`paper/emergence.md`](paper/emergence.md): *Directed Emergence of Network
+Structure Under an Energy Budget*, on what does, and does not, emerge, framed by the
 prune/clone/translate/recombine operators, with the negatives kept and every number reproducible from
 one `make`. It opens from the companion negative that motivates it, studied in detail in the earlier
 [`paper/nas_crossover.pdf`](paper/nas_crossover.pdf): on the real NAS-Bench-101 cell space *searching*
