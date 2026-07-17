@@ -188,35 +188,27 @@ the task. 50 paired seeds, bands $\pm 1$ SEM.}
 \end{figure}
 
 \textbf{Result: tidier, not better.} The GA produces a markedly more contiguous filter than random from
-$N{=}20$ on (paired gap $+0.20$, $+0.14$, $+0.12$ at $N{=}20,24,28$, each ${\geq}3$ SEM;
-Figure~\ref{fig:directed} left), \emph{but the two arms are tied on held-out accuracy at every $N$}
-(right panel; the GA is marginally higher, always within the per-seed SD). So the GA is not a better
-network, it is a \emph{tidier} one at equal performance, which is exactly what a directed optimizer should
-do on an objective it can climb: accuracy saturates without needing a tight kernel, so the only thing left
-to win is the energy term, and the GA descends it by mutation where random can only sample. Two honest
-limits: at scale the GA is \emph{less diffuse than random}, not compact (on-relevance falls to $0.21$ at
-$N{=}28$, only ${\sim}3$ of $14$ taps on the true offsets), and ``a compact filter emerges'' holds
-literally only at $N{=}12$.
+$N{=}20$ on (Table~\ref{tab:directed}, each gap ${\geq}3$ SEM), \emph{but the two arms are tied on
+held-out accuracy at every $N$}. So the GA is not a better network, it is a \emph{tidier} one at equal
+performance, exactly what a directed optimizer should do on an objective it can climb: accuracy saturates
+without a tight kernel, so the only thing left to win is the energy term, which the GA descends by mutation
+where random can only sample. At scale it is \emph{less diffuse than random}, not compact (on-relevance
+$0.21$ at $N{=}28$); a compact filter truly emerges only at $N{=}12$.
 
-\textbf{The edge is direction, not denoising.} A skeptic's confound: the GA re-evaluates each survivor
-with a fresh initialization every generation, so a marginal mask gets many attempts at the hard accuracy
-gate, while random evaluates each mask once. We remove it by giving the random arm $r{=}8$ evaluations per
-mask (best-of-$r$) at the same total budget; the gap does not shrink, it \emph{grows}
-($+0.20\to+0.32$ at $N{=}20$), because best-of-$r$ costs random eight-fold fewer distinct masks and
-exploration matters more than noise-averaging here. Scaling the budget with $N$ firms the large-$N$ gap
-slightly ($+0.12\to+0.17$ at $N{=}28$) but does not change the picture.
+\textbf{The edge is direction, not denoising.} The GA re-evaluates each survivor afresh every generation,
+so a marginal mask gets many attempts at the accuracy gate while random gets one. Give random $r{=}8$
+evaluations per mask (best-of-$r$) at the same budget and the gap does not shrink, it \emph{widens}
+(Table~\ref{tab:directed}): best-of-$r$ costs random distinct masks, and exploration matters more than
+noise-averaging. A budget scaled with $N$ firms the large-$N$ gap only slightly.
 
 \textbf{Why it matters.} This \emph{reconciles} the crossover null and confirms the project's founding
-conjecture, that a directed search beats random, with the condition it always quietly assumed: the
-objective must have structure to climb. On NAS-Bench-101 the objective was flat near the top (good cells
-common, differences inside training noise), so directed search had nothing to climb and tied random; here
-the energy objective is exploitable, so it climbs and wins. (``Tidier is really
-\emph{energy-efficient}: fewer, tighter connections, the more compressed solution at equal accuracy, so
-the GA is the better \emph{search}, finding a lower-energy structure than random for the same effort.)
-The margin should only widen with scale, where random sampling covers a vanishing fraction of a space that
-grows like $2^{2N}$ while a directed search keeps climbing, which is why large-scale architecture search
-uses evolution or gradients and not random; but we test $N{\le}28$, so that widening is a prediction the
-trend supports, not a large-net result we measure.
+conjecture, that a directed search beats random, under the condition it always assumed: the objective must
+have structure to climb. On NAS-Bench-101 it was flat near the top, so directed search tied random; here
+the energy objective is exploitable, so it climbs and wins. (``Tidier'' is really \emph{energy-efficient},
+the more compressed structure at equal accuracy, so the GA is the better \emph{search}.) The margin should
+widen with scale, where random covers a vanishing fraction of a space growing like $2^{2N}$ while directed
+search keeps climbing, which is why large-scale search uses evolution or gradients, not random; but at
+$N{\le}28$ that is a prediction, not a measurement.
 
 \subsection{Emergent depth matches the required receptive field}
 
@@ -361,8 +353,10 @@ Brain Damage} and the \textbf{Lottery Ticket Hypothesis} prune dense to sparse, 
 magnitude, and find sparse subnetworks, not convolutions. \textbf{NEAT}, \textbf{HyperNEAT}, and
 Cellular Encoding evolve topology but \emph{grow from a minimal seed}, the opposite direction to pruning
 from exhaustive. \textbf{Cell-based NAS} (ENAS, regularized evolution) reuses one cell and stacks it,
-which our reuse observations echo. We claim the honest characterization of what an evolutionary energy
-budget does and does not produce, and the negatives, not the underlying mechanisms, which are known.
+which our reuse observations echo. The essential difference is the \emph{use} of the GA: evolutionary NAS
+runs it as an \emph{optimizer} to find a performant architecture, whereas we run it as a \emph{lens} to
+characterize which pieces of convolution emerge, and which refuse, under an energy budget from an
+exhaustive seed. That characterization, and its negatives, is the claim, not the mechanisms, which are known.
 
 \medskip\noindent Two framings place this experiment in a longer line. The view of network topology as
 problem-specific inductive bias that must be engineered by hand goes back decades~\cite{bpfnn97}; here we
