@@ -105,7 +105,7 @@ the outcome of the pruning literature (sparse subnetworks, not convolutions).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig1_pruning.pdf}
+\includegraphics[width=0.74\textwidth]{fig1_pruning.pdf}
 \caption{Sec.~2.1. An energy budget prunes a dense connectivity seed to a sparse mask whose
 surviving connections land on the task-relevant inputs. Feature selection and sparsity emerge; the
 compact aligned filter needs mutation on the shared feature to emerge (Sec.~2.3).}
@@ -182,7 +182,7 @@ Test accuracy is tied throughout: the GA is marginally higher but always within 
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\textwidth]{fig6_directed.pdf}
+\includegraphics[width=0.8\textwidth]{fig6_directed.pdf}
 \caption{Directed search is \emph{tidier, not better}. \emph{Left:} filter contiguity, GA vs random at
 matched budget, the GA is clearly more contiguous. \emph{Right:} held-out accuracy on the same seeds and
 the same axis honesty, the arms are tied. The GA wins on the structural term the objective rewards, not on
@@ -225,7 +225,7 @@ task.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig3_depth.pdf}
+\includegraphics[width=0.74\textwidth]{fig3_depth.pdf}
 \caption{Emergent depth matches the required receptive field. Accuracy is at chance until the stack is
 deep enough for its receptive field to span the spike pair, then rises sharply at depth $\approx s/2$.}
 \label{fig:depth}
@@ -233,7 +233,7 @@ deep enough for its receptive field to span the spike pair, then rises sharply a
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig_operators.pdf}
+\includegraphics[width=0.76\textwidth]{fig_operators.pdf}
 \caption{The four structural operators as $A \to B$, each with its exact action. Prune (remove
 connections under an energy budget), clone (duplicate and stack, for depth), translate (copy to every
 position with shared weights, a convolution), recombine (swap in a different block where one kind will
@@ -271,7 +271,7 @@ part, runners when the structure repeats, seeds when it must change.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\textwidth]{fig4_reuse.pdf}
+\includegraphics[width=0.8\textwidth]{fig4_reuse.pdf}
 \caption{Reuse vs recombination, and the clone/recombine trade-off nature also makes. One reused block
 suffices for repetitive structure; a task needing two different operations forces recombination of
 different blocks.}
@@ -307,15 +307,11 @@ by training-set size. The advantage is largest at the scarcest data.}
 \label{tab:translate}
 \end{table}
 
-\subsection{The advantage widens with input size, then saturates}
-
-Sweeping input size $N$, the shared arm stays flat ($\approx 0.94$, always 3 weights, size-independent)
-while the locally-connected baseline falls to chance and bloats to hundreds of weights, because each
-per-position filter starves on the few examples that land there (Figure~\ref{fig:scale}, $250$ seeds, gap
-4--6$\times$ the SD). The advantage \emph{widens then saturates}, most growth at $N{=}16\to32$, after which
-the baseline has hit the chance floor. It survives even an oracle-supervised baseline handed the motif
-locations ($+0.14$ at $N{=}16$ up to $+0.38$ at $N{=}128$), so it is not an artifact of the baseline's
-training rule.
+And the advantage grows with input size: sweeping $N$ (Figure~\ref{fig:scale}, $250$ seeds), the shared arm
+stays flat ($\approx 0.94$, size-independent) while the locally-connected baseline falls to chance and
+bloats to hundreds of weights; the gap \emph{widens then saturates} (4--6$\times$ the SD, most growth at
+$N{=}16\to32$) and survives an oracle-supervised baseline ($+0.14$ at $N{=}16$ to $+0.38$ at $N{=}128$), so
+it is not a training-rule artifact.
 
 \begin{figure}[t]
 \centering
@@ -349,29 +345,26 @@ decomposition itself is the question of Sec.~3.6.
 
 \subsection{Does composition emerge when the search must find it? A boundary}
 
-The developmental chain above, like the reuse and translation results, hands the search a decomposition
-and asks it to assemble the pieces. The sharper, honest question is whether the \emph{search itself},
-given only the composite label and an energy budget, discovers the decomposition, both how many parts and
-which. We test this on a two-operation task (a motif $A$ \emph{and} a motif $B$, each planted at a random
-position; positive iff both are present, negative iff exactly one), where a single weight-shared tiled
-channel caps at $0.75$ by construction. We sweep the channel count $C$ under an energy budget (the
-energy-selection of Sec.~2.5, now on channels), train each candidate's shared filters and read-out jointly
-by SGD on the composite label \emph{alone}, and compare against an auxiliary-label \emph{curriculum} (find
-$A$ on a per-operation label, find $B$, freeze, combine) as a supervised upper bound and an unshared
-per-position search as the floor ($40$ paired seeds).
+The chain above, like the reuse and translation results, hands the search a decomposition and asks it to
+assemble the pieces. The sharper question is whether the \emph{search itself}, given only the composite
+label and an energy budget, discovers the decomposition, both how many parts and which. We test it on a
+two-operation task (motif $A$ \emph{and} $B$, each at a random position; positive iff both present), where
+one weight-shared tiled channel caps at $0.75$ by construction: sweep the channel count $C$ under an energy
+budget (the energy-selection of Sec.~2.5, now on channels), train each candidate's shared filters and
+read-out jointly on the composite label \emph{alone}, against an auxiliary-label \emph{curriculum} (find
+$A$, find $B$, freeze, combine) as a supervised ceiling and an unshared per-position search as the floor
+($40$ paired seeds).
 
-\textbf{Result: composition does not cleanly emerge without supervision.} On a one-operation task the
-energy-selected count is $C^\ast{=}1$; but on the two-operation task the two channels spontaneously
-specialize to the two motifs in only $55\%$ of runs (the rest collapse onto one), so $C{=}2$ plateaus at
-$0.81$ (exactly a fair shared baseline), the supervised curriculum reaches $0.87$, and the energy-selected
-count \emph{overshoots} to $C^\ast{=}3$. So directed search under an energy budget does not, on its own,
-discover the two-part decomposition: it under-specializes and pays for a redundant channel; the clean
-decomposition appears only once per-operation supervision is added. This is the honest answer to the
-chained-recombination question, and it draws the paper's sharpest internal boundary: emergent \emph{depth}
-matches the required receptive field cleanly (Sec.~2.5), but emergent \emph{composition} on the channel
-axis needs supervision or imposed structure; it does not fall out of the energy budget alone. It also
-explains a developmental chain that only \emph{appears} to recombine: hand it the decomposition (per-task
-labels, a fixed combine) and its gain is weight sharing plus that supervision, not emergent composition.
+\textbf{Result: composition does not cleanly emerge without supervision.} A one-operation task selects
+$C^\ast{=}1$; but on the two-operation task the two channels specialize to the two motifs in only $55\%$ of
+runs (the rest collapse onto one), so $C{=}2$ plateaus at $0.81$ (a fair shared baseline), the curriculum
+reaches $0.87$, and the energy-selected count \emph{overshoots} to $C^\ast{=}3$. Directed search under an
+energy budget does not, on its own, find the two-part decomposition, it under-specializes and pays for a
+redundant channel; the clean split appears only with per-operation supervision. This draws the paper's
+sharpest boundary: emergent \emph{depth} matches the receptive field cleanly (Sec.~2.5), but emergent
+\emph{composition} on the channel axis needs supervision or imposed structure. It also explains a chain
+that only \emph{appears} to recombine, hand it the decomposition and its gain is weight sharing plus that
+supervision, not emergent composition.
 
 \section{Related work, and how we differ}
 
