@@ -305,7 +305,7 @@ The write-up is the emergence study, in two forms: the paper
 the full reproducible note [`paper/emergence.md`](paper/emergence.md): *Directed Emergence of Network
 Structure Under an Energy Budget*, on what does, and does not, emerge, framed by the
 prune/clone/translate/recombine operators, with the negatives kept and every number reproducible from
-one `make`. It opens from the companion negative that motivates it: on the real NAS-Bench-101 cell space
+one `make`. It opens from the negative result that motivates it: on the real NAS-Bench-101 cell space
 *searching* for structure does not beat random search (a trap-function positive control shows crossover
 helps only where separable building blocks exist), so instead of searching for the architecture, the
 paper grows it, and §2.4 reconciles the two, directed search beats random only when the objective can be
@@ -323,7 +323,10 @@ emerge, and which do not*.
 
 The frame is: **impose the priors that are real symmetries of the domain**, *locality* (information is
 local) and *translatability* (a signal is the same shifted over), and let a few biological operators
-(**prune, clone, translate, recombine**) assemble and refine the rest.
+(**prune, clone, translate, recombine**) assemble and refine the rest. Those four operators are studied
+here one at a time and then **chained in a core developmental run** (find a block, then clone and translate
+it, which beats searching structure from scratch by +0.25); chaining in recombination of a *second*
+discovered block is the open next step.
 
 ![The four operators as A → B: prune, clone, translate, recombine, each with the exact action written under the arrow.](paper/images/fig_operators.svg)
 
