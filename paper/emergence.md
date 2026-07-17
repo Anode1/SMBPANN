@@ -1,7 +1,7 @@
 # Directed Emergence of Network Structure Under an Energy Budget
 
-*Research note. Positive-and-honest counterpart to the NAS-Bench-101 crossover study
-(`paper/nas_crossover.tex`). Reproduce: `make conv_emerge &&./conv_emerge`
+*Research note. Positive-and-honest counterpart to this repo's NAS-Bench-101 crossover null (reconciled
+in §6b; its code is in `validation/`). Reproduce: `make conv_emerge &&./conv_emerge`
 (env: `SEEDS`, `GENS`, `TARGET`, `PADD`). All numbers below: 24 seeds × 150 generations.*
 
 ## Abstract

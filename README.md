@@ -181,7 +181,7 @@ From the [AIS](https://github.com/Anode1/ais) project:
 validation/ standalone probes: bbtest (trap control), nasxover (NAS-Bench-201),
  nb101 + nb101_extract (NAS-Bench-101 crossover study),
  emerge_* (the emergence study: energy-budget growth + the operators)
-paper/ the write-ups (emergence:.md note +.tex/.pdf paper; nas_crossover) + essay + figures
+paper/ the write-ups (emergence: .md note + .tex/.pdf paper) + essay + figures
 legacy/java/ the original early-2000s Java prototype (object-graph design)
 ```
 
@@ -305,11 +305,12 @@ The write-up is the emergence study, in two forms: the paper
 the full reproducible note [`paper/emergence.md`](paper/emergence.md): *Directed Emergence of Network
 Structure Under an Energy Budget*, on what does, and does not, emerge, framed by the
 prune/clone/translate/recombine operators, with the negatives kept and every number reproducible from
-one `make`. It opens from the companion negative that motivates it, studied in detail in the earlier
-[`paper/nas_crossover.pdf`](paper/nas_crossover.pdf): on the real NAS-Bench-101 cell space *searching*
-for structure does not beat random search (a trap-function positive control shows crossover helps only
-where separable building blocks exist), so instead of searching for the architecture, the paper grows
-it. The companion essay is [`paper/essay.md`](paper/essay.md).
+one `make`. It opens from the companion negative that motivates it: on the real NAS-Bench-101 cell space
+*searching* for structure does not beat random search (a trap-function positive control shows crossover
+helps only where separable building blocks exist), so instead of searching for the architecture, the
+paper grows it, and §2.4 reconciles the two, directed search beats random only when the objective can be
+climbed. That crossover study's code lives in `validation/` (`nb101*`, `nasxover`); its standalone
+write-up has been folded into this paper. The companion essay is [`paper/essay.md`](paper/essay.md).
 
 ## The emergence study
 
