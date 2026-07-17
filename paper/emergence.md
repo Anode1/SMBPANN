@@ -481,19 +481,24 @@ reached by replication rather than design. `emerge_translate.c` asks whether it 
 translation-invariant motif task, comparing **SHARED** (one filter tiled = a convolution, 3 weights)
 against **INDEP** (a separate filter per position, 42 weights), over training-set size:
 
-| train size | SHARED (translate) | INDEP (per-position) | gap |
-|---|---|---|---|
-| 16 | **0.872** | 0.653 | +0.220 |
-| 32 | 0.856 | 0.644 | +0.212 |
-| 64 | 0.892 | 0.711 | +0.181 |
-| 128 | 0.889 | 0.725 | +0.164 |
+Fair statistics: mean over restarts, ±1 SD over 40 seeds.
 
-**Translation pays, and it is the antidote to the worsening.** SHARED beats INDEP at every train size
-with 14× fewer weights, and the gap *grows as data shrinks* (+0.16 → +0.22). The reason is data
-efficiency: one tiled working module learns the motif from *every* position's examples, while
-independent per-position detectors each starve on their fraction and leave unseen positions random.
-This is precisely why growing independent structure everywhere *worsens* results and why nature does
-not do it: it replicates a module that works, rather than evolving a fresh one per location.
+| train size | SHARED (weight-shared) | INDEP (per-position) | gap |
+|---|---|---|---|
+| 16 | 0.820 ± 0.122 | 0.581 ± 0.065 | **+0.239** |
+| 32 | 0.838 ± 0.094 | 0.615 ± 0.071 | +0.224 |
+| 64 | 0.866 ± 0.082 | 0.672 ± 0.076 | +0.195 |
+| 128 | 0.867 ± 0.081 | 0.724 ± 0.086 | +0.143 |
+
+**Weight-sharing is data-efficient — most so when data is scarcest.** The shared filter (3 weights)
+beats the per-position baseline (42 weights) at every train size, and the gap is *largest at the
+smallest data* (+0.24 at 16 examples, shrinking to +0.14 at 128 as the baseline slowly catches up). The
+reason is data efficiency: one tiled filter learns the motif from *every* position's examples, while
+each independent per-position filter starves on the fraction that lands on it and leaves unseen
+positions random. This is the textbook argument for weight sharing (LeCun 1989), here quantified with a
+fair estimator; it is not a claim about architecture *search* (the two arms are weight-tied vs untied,
+both trained by plain SGD). It is, though, exactly why replicating a working module beats growing an
+independent one per location — the biological strategy of tiling one thing that works.
 
 ### 18. Why K=3 worsens — and why no single fix moves it (a capacity wall)
 
@@ -523,35 +528,30 @@ deeper net clears K=3 is genuinely open. What the evidence supports is narrow an
 runs out at a three-way conjunction, and no cheap refinement on the channel axis rescues it. Real vision
 clears such tasks with scale — depth, normalization, residuals, vast data — not one clever pressure.
 
-### 19. The whole sequence, chained: reuse beats re-search, and jitter is not needed
+### 19. The whole sequence, chained: the shared block wins, and jitter is not needed
 
-Every operator so far was tested alone. `emerge_develop.c` finally chains them into one developmental
-run and asks the integrative question: once you have a stable working block, is it better to *reuse and
-refine* it than to search structure from scratch — and do you still need jitter (annealing) to escape
-local minima? On a translation-invariant motif task with scarce data:
+Every operator so far was tested alone. `emerge_develop.c` chains them into one run: grow a block, tile
+it (weight-shared), then refine in place — and asks whether you still need jitter (annealing) to escape
+local minima. On a translation-invariant motif task with scarce data (fair mean ± SD, 40 seeds):
 
-| phase | test acc | |
-|---|---|---|
-| (1) search from scratch — P independent detectors | 0.629 | the worsening: starves |
-| (2) find a stable block → (3) translate/tile it | **0.899** | reuse, no re-search |
-| (4) refine in place, no jitter | 0.876 | |
-| (4) refine in place, **+ jitter** (annealed) | 0.786 | |
+| phase | test acc |
+|---|---|
+| (1) independent per-position detectors from random | 0.607 ± 0.057 |
+| (2) grow one block → (3) tile it (weight-shared) | **0.856 ± 0.079** |
+| (4) refine in place, no jitter | 0.836 ± 0.090 |
+| (4) refine in place, **+ jitter** (annealed) | 0.751 ± 0.090 |
 
-**Reuse crushes re-search:** the developmental path (find one block, tile it) reaches 0.90 versus 0.63
-for searching P independent detectors from random — +0.27, because the block learns from all positions
-while independent search starves per position. This is the whole thesis in one run: *do not re-search
-structure you can reuse.*
-
-**And jitter is not needed — it hurts.** Jitter drops the solution to 0.79, and even plain in-place
-refinement drops it to 0.88. Two honest reasons, and they tie the arc together: reuse lands you *at* the
-optimum, so there is no bad minimum for jitter to escape — perturbation only kicks the good structure
-off it; and letting the tiled copies fine-tune independently **re-introduces the per-position starvation
-of Section 17** (breaking the very weight-sharing that made reuse pay). So the developmental rule is
-sharper than "refine what exists": once reuse gives a good shared structure, **keep the sharing
-coordinated** — do not let copies drift, and do not add jitter you do not need. Jitter is for when you
-are stuck; reuse is *how you avoid getting stuck*. Nature keeps serial homologs coordinated (Hox), it
-does not let every segment drift alone. (Caveat: on a genuinely multimodal task jitter could help; here
-the developmental assembly finds the optimum directly, so it has nothing to escape.)
+**The shared, tiled block wins large:** 0.86 versus 0.61 for independent per-position detectors — a
++0.25 gap, ~3 SD, because the shared block learns from all positions while the independent ones starve.
+(This is the same weight-sharing data-efficiency effect as §17, now inside the full pipeline; it is not
+architecture search.) **And jitter is not needed — it hurts:** annealed jitter drops the solution to
+0.75 (−0.10, robust), because the assembly already lands *at* the optimum, so perturbation only kicks
+the good structure off it. Refining the tiled copies independently also nudges it down (0.836 vs 0.856),
+by re-introducing the §17 per-position starvation — but that particular difference (−0.02) is **within
+noise** and we do not lean on it. The robust rule: once tiling gives a good shared structure, keep the
+sharing *coordinated* (nature keeps serial homologs coordinated — Hox — rather than letting each segment
+drift), and do not add jitter you do not need. (Caveat: on a genuinely multimodal task jitter could
+help; here the assembly finds the optimum directly, so it has nothing to escape.)
 
 ### 20. Scale: the weight-sharing advantage widens with input size, then saturates
 

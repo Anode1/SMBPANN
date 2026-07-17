@@ -115,12 +115,13 @@ static double train_eval(int C, uint32_t seed)
     }
     return (double)cc/NTE;
 }
+/* mean over restarts (fair -- no optimistic best-of). */
 static double best_eval(int C, uint32_t seed)
-{ int r; double best=0; for(r=0;r<RESTARTS;r++){ double a=train_eval(C,seed*131u+(uint32_t)r*97u+1u); if(a>best) best=a; } return best; }
+{ int r; double s=0; for(r=0;r<RESTARTS;r++){ double a=train_eval(C,seed*131u+(uint32_t)r*97u+1u); s+=a; } return s/RESTARTS; }
 
 int main(void)
 {
-    int seeds=envint("SEEDS",8), sd, t, C;
+    int seeds=envint("SEEDS",24), sd, t, C;
     int chans[4]={1,2,3,4};
     const char *tn[2]={"ONE-OP (orientation of one bar)","TWO-OP (both orientations present)"};
     g_target=envdbl("TARGET",0.85);

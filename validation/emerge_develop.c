@@ -119,25 +119,27 @@ static double refine(Net net, double jit0, uint32_t seed)
 
 int main(void)
 {
-    int seeds=envint("SEEDS",12), sd;
+    int seeds=envint("SEEDS",30), sd;
     g_ntr=envint("NTR",24);
-    double a1=0,a2=0,a3=0,a4=0;   /* scratch, block+translate, refine no-jitter, refine +jitter */
+    double a1=0,a2=0,a3=0,a4=0, q1=0,q2=0,q3=0,q4=0;   /* means and sum-of-squares over seeds */
     for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+1u));
-        double bs=0,bb=0,brn=0,brj=0; int r;
+        double s1=0,s2=0,s3=0,s4=0; int r;
         for(r=0;r<RESTARTS;r++){ uint32_t sd2=(uint32_t)(sd*7u+1u)*131u+(uint32_t)r*97u+1u;
-            double s1=search_scratch(sd2); if(s1>bs)bs=s1;
-            Net blk=find_block_and_translate(sd2); double s2=test_acc(&blk); if(s2>bb)bb=s2;
-            double s3=refine(blk,0.0,sd2);  if(s3>brn)brn=s3;
-            double s4=refine(blk,0.15,sd2); if(s4>brj)brj=s4; }
-        a1+=bs; a2+=bb; a3+=brn; a4+=brj; }
-    a1/=seeds; a2/=seeds; a3/=seeds; a4/=seeds;
-    printf("THE WHOLE SEQUENCE, chained: search-from-scratch vs developmental (block -> translate -> refine)\n");
-    printf("translation-invariant motif task, %d train examples (scarce), %d seeds x %d restarts.\n\n", g_ntr, seeds, RESTARTS);
-    printf("  phase                                   | test acc\n");
-    printf("  (1) search from scratch (P independent) | %.3f   <- the worsening: starves\n", a1);
-    printf("  (2) find a stable block + (3) translate | %.3f   <- reuse, no re-search\n", a2);
-    printf("  (4) refine in place, no jitter          | %.3f\n", a3);
-    printf("  (4) refine in place, + jitter (anneal)  | %.3f\n", a4);
-    printf("\ndevelopmental payoff = (2) over (1); jitter matters only if (4)+jitter clearly beats no-jitter.\n");
+            s1+=search_scratch(sd2);
+            { Net blk=find_block_and_translate(sd2); s2+=test_acc(&blk);
+              s3+=refine(blk,0.0,sd2); s4+=refine(blk,0.15,sd2); } }
+        s1/=RESTARTS; s2/=RESTARTS; s3/=RESTARTS; s4/=RESTARTS;   /* mean over restarts (no best-of) */
+        a1+=s1; q1+=s1*s1; a2+=s2; q2+=s2*s2; a3+=s3; q3+=s3*s3; a4+=s4; q4+=s4*s4; }
+    { double m1=a1/seeds,m2=a2/seeds,m3=a3/seeds,m4=a4/seeds;
+      double d1=seeds>1?sqrt((q1-a1*a1/seeds)/(seeds-1)):0, d2=seeds>1?sqrt((q2-a2*a2/seeds)/(seeds-1)):0,
+             d3=seeds>1?sqrt((q3-a3*a3/seeds)/(seeds-1)):0, d4=seeds>1?sqrt((q4-a4*a4/seeds)/(seeds-1)):0;
+      printf("THE WHOLE SEQUENCE, chained: search-from-scratch vs developmental (block -> translate -> refine)\n");
+      printf("translation-invariant motif task, %d train examples (scarce), %d seeds x %d restarts (fair mean +/- std).\n\n", g_ntr, seeds, RESTARTS);
+      printf("  phase                                   | test acc (mean +/- std)\n");
+      printf("  (1) search from scratch (P independent) | %.3f +/- %.3f   <- the worsening: starves\n", m1,d1);
+      printf("  (2) find a stable block + (3) translate | %.3f +/- %.3f   <- weight-shared block, reused\n", m2,d2);
+      printf("  (4) refine in place, no jitter          | %.3f +/- %.3f\n", m3,d3);
+      printf("  (4) refine in place, + jitter (anneal)  | %.3f +/- %.3f\n", m4,d4);
+      printf("\npayoff = (2) over (1); jitter is a large effect (4+jitter vs 2); (3) vs (2) refine diff may be within noise.\n"); }
     return 0;
 }

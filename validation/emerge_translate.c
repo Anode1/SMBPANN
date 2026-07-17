@@ -110,8 +110,9 @@ static double train_indep(uint32_t seed)
         double o=1.0/(1.0+exp(-(rsc*best+rb))); if((o>0.5)==(yte[s]==1)) c++; }
     return (double)c/NTE;
 }
-static double best_of(int shared, uint32_t seed)
-{ int r; double b=0; for(r=0;r<RESTARTS;r++){ double a= shared? train_shared(seed*131u+(uint32_t)r*97u+1u) : train_indep(seed*131u+(uint32_t)r*97u+1u); if(a>b)b=a; } return b; }
+/* MEAN over restarts (fair -- no optimistic best-of selection). */
+static double mean_of(int shared, uint32_t seed)
+{ int r; double s=0; for(r=0;r<RESTARTS;r++){ double a= shared? train_shared(seed*131u+(uint32_t)r*97u+1u) : train_indep(seed*131u+(uint32_t)r*97u+1u); s+=a; } return s/RESTARTS; }
 
 int main(void)
 {
@@ -122,13 +123,16 @@ int main(void)
     printf("N=%d K=%d, %d positions, %d seeds x %d restarts. translation-invariant motif task.\n", N, K, P, seeds, RESTARTS);
     printf("SHARED = one filter tiled at every position (a convolution), %d filter weights.\n", K);
     printf("INDEP  = a separate filter per position (locally connected), %d filter weights.\n\n", K*P);
-    printf("  train size | SHARED (translate) test | INDEP (per-position) test | gap\n");
+    printf("fair stats: mean over restarts (no best-of), mean +/- std over seeds.\n");
+    printf("  train size | SHARED (weight-shared) | INDEP (per-position)  | gap\n");
     for(t=0;t<4;t++){ g_ntr=sizes[t];
-        double ss=0, si=0;
+        double ss=0,ss2=0, si=0,si2=0;
         for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+(unsigned)g_ntr*17u+1u));
-            ss+=best_of(1,(uint32_t)(sd*7u+1u)); si+=best_of(0,(uint32_t)(sd*7u+1u)); }
-        ss/=seeds; si/=seeds;
-        printf("  %-4d       | %.3f                   | %.3f                     | %+.3f\n", sizes[t], ss, si, ss-si);
+            double vs=mean_of(1,(uint32_t)(sd*7u+1u)), vi=mean_of(0,(uint32_t)(sd*7u+1u));
+            ss+=vs; ss2+=vs*vs; si+=vi; si2+=vi*vi; }
+        { double ms=ss/seeds, mi=si/seeds;
+          double ds=seeds>1?sqrt((ss2-ss*ss/seeds)/(seeds-1)):0, di=seeds>1?sqrt((si2-si*si/seeds)/(seeds-1)):0;
+          printf("  %-4d       | %.3f +/- %.3f       | %.3f +/- %.3f      | %+.3f\n", sizes[t], ms,ds, mi,di, ms-mi); }
     }
     printf("\ntranslation pays if SHARED matches/beats INDEP at %dx fewer weights, and the gap grows as data\n", P);
     printf("shrinks -- one working module tiled across positions learns from all of them (data efficiency).\n");
