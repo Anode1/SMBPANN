@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title>The main idea: an exhaustive, tangled network becomes an ordered convolution through a few structural operators</title>
+  <rect x="0" y="0" width="900" height="320" fill="#ffffff"/>
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#1e293b">The idea: an exhaustive, tangled net &#8594; structure emerges through a few operators</text>
+
+  <!-- ===== A: exhaustive, messy ===== -->
+  <g>
+    <text x="140" y="72" font-size="13" font-weight="600" fill="#64748b" text-anchor="middle">exhaustive seed</text>
+    <text x="140" y="90" font-size="11.5" fill="#94a3b8" text-anchor="middle">dense, tangled, no structure</text>
+    <!-- all-to-all connections (messy) -->
+    <g stroke="#94a3b8" stroke-width="1" opacity="0.55">
+      <line x1="70" y1="130" x2="55" y2="250"/><line x1="70" y1="130" x2="95" y2="250"/><line x1="70" y1="130" x2="135" y2="250"/><line x1="70" y1="130" x2="175" y2="250"/><line x1="70" y1="130" x2="215" y2="250"/>
+      <line x1="140" y1="130" x2="55" y2="250"/><line x1="140" y1="130" x2="95" y2="250"/><line x1="140" y1="130" x2="135" y2="250"/><line x1="140" y1="130" x2="175" y2="250"/><line x1="140" y1="130" x2="215" y2="250"/>
+      <line x1="210" y1="130" x2="55" y2="250"/><line x1="210" y1="130" x2="95" y2="250"/><line x1="210" y1="130" x2="135" y2="250"/><line x1="210" y1="130" x2="175" y2="250"/><line x1="210" y1="130" x2="215" y2="250"/>
+    </g>
+    <g fill="#64748b">
+      <circle cx="70" cy="130" r="8"/><circle cx="140" cy="130" r="8"/><circle cx="210" cy="130" r="8"/>
+    </g>
+    <g fill="#cbd5e1" stroke="#94a3b8">
+      <circle cx="55" cy="250" r="6"/><circle cx="95" cy="250" r="6"/><circle cx="135" cy="250" r="6"/><circle cx="175" cy="250" r="6"/><circle cx="215" cy="250" r="6"/>
+    </g>
+  </g>
+
+  <!-- ===== operators arrow ===== -->
+  <g transform="translate(268,150)">
+    <line x1="0" y1="20" x2="330" y2="20" stroke="#e76f51" stroke-width="3"/>
+    <polygon points="330,11 350,20 330,29" fill="#e76f51"/>
+    <text x="175" y="4" font-size="13" font-weight="700" fill="#e76f51" text-anchor="middle" letter-spacing="0.5">PRUNE &#183; CLONE &#183; TRANSLATE &#183; RECOMBINE</text>
+    <text x="175" y="44" font-size="11.5" fill="#94a3b8" text-anchor="middle">impose locality + translatability;</text>
+    <text x="175" y="60" font-size="11.5" fill="#94a3b8" text-anchor="middle">the rest emerges under an energy budget</text>
+  </g>
+
+  <!-- ===== B: emerged, ordered ===== -->
+  <g>
+    <text x="760" y="72" font-size="13" font-weight="600" fill="#0d9488" text-anchor="middle">emerged structure</text>
+    <text x="760" y="90" font-size="11.5" fill="#64748b" text-anchor="middle">local receptive fields, weight-shared = convolution</text>
+    <!-- local, weight-shared connections: offset 0 teal, 1 amber, 2 orange, repeated (translation-invariant) -->
+    <g stroke-width="2">
+      <!-- 5 hidden units, each reads a 3-wide local window from the inputs below -->
+      <!-- inputs x: 650..858 step 26 (9 inputs). hidden j at x=676+26j (j=0..4), reads inputs j,j+1,j+2 -->
+      <g>
+        <line x1="676" y1="130" x2="650" y2="250" stroke="#0d9488"/><line x1="676" y1="130" x2="676" y2="250" stroke="#f4a261"/><line x1="676" y1="130" x2="702" y2="250" stroke="#e76f51"/>
+        <line x1="702" y1="130" x2="676" y2="250" stroke="#0d9488"/><line x1="702" y1="130" x2="702" y2="250" stroke="#f4a261"/><line x1="702" y1="130" x2="728" y2="250" stroke="#e76f51"/>
+        <line x1="728" y1="130" x2="702" y2="250" stroke="#0d9488"/><line x1="728" y1="130" x2="728" y2="250" stroke="#f4a261"/><line x1="728" y1="130" x2="754" y2="250" stroke="#e76f51"/>
+        <line x1="754" y1="130" x2="728" y2="250" stroke="#0d9488"/><line x1="754" y1="130" x2="754" y2="250" stroke="#f4a261"/><line x1="754" y1="130" x2="780" y2="250" stroke="#e76f51"/>
+        <line x1="780" y1="130" x2="754" y2="250" stroke="#0d9488"/><line x1="780" y1="130" x2="780" y2="250" stroke="#f4a261"/><line x1="780" y1="130" x2="806" y2="250" stroke="#e76f51"/>
+        <line x1="806" y1="130" x2="780" y2="250" stroke="#0d9488"/><line x1="806" y1="130" x2="806" y2="250" stroke="#f4a261"/><line x1="806" y1="130" x2="832" y2="250" stroke="#e76f51"/>
+      </g>
+    </g>
+    <g fill="#0d9488">
+      <circle cx="676" cy="130" r="7"/><circle cx="702" cy="130" r="7"/><circle cx="728" cy="130" r="7"/><circle cx="754" cy="130" r="7"/><circle cx="780" cy="130" r="7"/><circle cx="806" cy="130" r="7"/>
+    </g>
+    <g fill="#ccfbf1" stroke="#0d9488">
+      <circle cx="650" cy="250" r="5"/><circle cx="676" cy="250" r="5"/><circle cx="702" cy="250" r="5"/><circle cx="728" cy="250" r="5"/><circle cx="754" cy="250" r="5"/><circle cx="780" cy="250" r="5"/><circle cx="806" cy="250" r="5"/><circle cx="832" cy="250" r="5"/>
+    </g>
+    <!-- shared-weight legend -->
+    <g font-size="10" fill="#64748b">
+      <rect x="700" y="272" width="10" height="10" fill="#0d9488"/><rect x="740" y="272" width="10" height="10" fill="#f4a261"/><rect x="780" y="272" width="10" height="10" fill="#e76f51"/>
+      <text x="714" y="281">=</text><text x="754" y="281">=</text><text x="794" y="281" >the same 3 weights, reused everywhere</text>
+    </g>
+  </g>
+</svg>

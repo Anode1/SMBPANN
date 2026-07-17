@@ -4,45 +4,48 @@
 (`paper/nas_crossover.tex`). Reproduce: `make conv_emerge && ./conv_emerge`
 (env: `SEEDS`, `GENS`, `TARGET`, `PADD`). All numbers below: 24 seeds × 150 generations.*
 
-## The path, in short
+## Abstract
 
-**Thesis.** A network's structure should *emerge* — but not from nothing. Impose the priors that are
-real symmetries of the domain — **locality** (information is local) and **translatability** (a signal is
-the same shifted over) — and a small set of structural operators, each with a direct biological analog,
-then assemble and refine a working architecture on top of them:
+A network's structure should *emerge*, not be designed — but from what, and how much of it? This note
+grows a network's topology from an **exhaustive (fully-connected) seed under an energy budget** — an
+evolutionary search that pays for every connection — and asks honestly *which pieces of convolution fall
+out, and which do not*.
 
-- **Prune** — a dense seed under an energy budget → sparse, task-relevant connectivity; feature
-  selection emerges (§1–6). *[synaptic overproduction then pruning]*
-- **Impose locality** → a **compact local block** falls right out; weight-sharing is adopted (§7).
-- **Clone / stack** → the network's **depth emerges to match the task's compositional depth** (§8), and
-  reusing one block type beats searching architectures (§9). *[gene / segment duplication]*
-- **Recombine** → when a task needs two *different* operations, mixing different blocks is required;
-  reuse alone breaks (§10), and a staged searcher clones-then-recombines to get both (§11). *[sexual
-  recombination]*
-- **Translate / tile** → replicating one working block across positions is hugely **data-efficient** — a
-  convolution reached by replication, +0.22 over independent detectors (§17). *[transposons, serial
-  homology, cortical maps]*
+![The main idea: an exhaustive, tangled network becomes an ordered convolution through a few structural operators.](images/fig_main_idea.svg)
 
-**Chained end to end (§19):** find one stable block, reuse it (clone + translate) instead of
-re-searching — **0.90 vs 0.63** for search-from-scratch. Jitter is *not* needed — reuse lands you at the
-optimum, so there is nothing to escape. **And it scales (§20):** as the input grows 16 → 64, the
-developmental path stays flat (~0.89, 3 weights) while search-from-scratch falls (0.70 → 0.55, up to 186
-weights) — **the reuse advantage nearly doubles with size** (+0.20 → +0.36). Not a toy effect.
+**What is genuinely new here** is that map. Starting *dense* and pruning under an *evolutionary energy
+budget* — not the gradient pruning of Optimal Brain Damage / Lottery Ticket, nor the grow-from-minimal of
+NEAT — we characterize what emerges: sparse task-relevant connectivity emerges cleanly; weight-sharing is
+*adopted* when translation-invariance rewards it; but a **compact aligned local filter does not emerge**
+from an energy budget alone. Section 6 gives the crisp reason — once weights are shared, connection-count
+no longer gradients parameter-count, so pruning cannot tighten the kernel. We are not aware of a prior
+result showing this specific evolutionary energy-emergence from an exhaustive seed together with its
+honest boundary; that characterization, negatives included, is the contribution.
 
-**What was tried and did not work** (kept below for honesty, pruned from the main line):
-a compact convolution does *not* emerge from an energy budget alone — it needs the locality prior (§5–6);
-a 2-D diagonal-distance task is **null** — the depth staircase does not reproduce (§12); a 3-way
-conjunction (K=3) is a **capacity wall** that four rescues — more channels, an MLP head, a 2nd conv
-layer, competition — all fail to move (§14–16, §18): an honest limit of a shallow net, not a missing
-operator.
+**What we reproduce rather than claim as new.** On top of the priors a ConvNet also hardwires —
+**locality** and **translatability**, the *real symmetries* of a signal — the free dimensions then emerge
+to fit the task: compact local fields, the *depth* that matches a task's required receptive field, and
+the *channel count* that matches its number of distinct operations (to a limit). These confirm known
+inductive-bias results — weight-sharing is data-efficient (LeCun 1989); receptive field ≈ depth — which we
+verify with a **fair baseline** (weight-sharing beats even a *fully-trained, oracle-supervised*
+locally-connected net; the advantage widens with input size, then **saturates** once the baseline hits
+chance) and full reproducibility. This is a phenomenon of weight-*sharing*, not of architecture *search*.
 
-**Next, and what's expected:** real data and larger inputs (expect the scaling advantage to widen); the
-full developmental GA running *all* operators on a genuinely compositional task (expect
-prune→clone→translate→recombine to assemble a working hierarchy that from-scratch search cannot reach at
-equal budget); and whether jitter ever earns its keep on a *multimodal* task, the one place §19's "no
-jitter" might flip.
+**The one-line idea:** *impose the domain's real symmetries; let a few biological operators — prune,
+clone, translate, recombine — assemble the rest.*
 
-*The rest of this note is the full record — every operator validated alone, the dead-ends included.*
+![The four operators as A → B: prune, clone, translate, recombine, with the exact action of each written under the arrow.](images/fig_operators.svg)
+
+**Closest prior work, and how we differ.** *DARTS* — exhaustive supernet → prune, but continuous gradient
+relaxation, not an energy GA. *OBD / Lottery Ticket* — gradient pruning to sparse subnetworks, not
+convolutions. *NEAT / HyperNEAT / Cellular Encoding* — evolve topology but *grow from minimal*, the
+opposite direction. *Cell-based NAS (ENAS)* — reuse one cell and stack it, which our reuse observations
+echo. We claim the honest *characterization* of what an evolutionary energy budget does and does not
+produce, and the negatives — not the underlying mechanisms, which are known.
+
+*Everything below is the **long way**: twenty small, seeded, one-`make` probes, each isolating a single
+operator or a single boundary (the dead-ends kept, for honesty). A reader after the idea can stop here —
+the trees are there for anyone who wants to walk them.*
 
 ## The idea
 
