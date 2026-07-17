@@ -174,8 +174,9 @@ From the [AIS](https://github.com/Anode1/ais) project:
 .                 the C99 engine: rng, act, net, train, data, arena, genome
                   smbpann (worker) + evolve (search); scripts/evaluate.sh (coordinator)
 validation/       standalone probes: bbtest (trap control), nasxover (NAS-Bench-201),
-                  nb101 + nb101_extract (NAS-Bench-101 crossover study)
-paper/            the write-up (nas_crossover) and the companion essay
+                  nb101 + nb101_extract (NAS-Bench-101 crossover study),
+                  emerge_* (the emergence study: energy-budget growth + the operators)
+paper/            the write-ups (nas_crossover, emergence) + the companion essay + figures
 legacy/java/      the original early-2000s Java prototype (object-graph design)
 ```
 
@@ -361,6 +362,11 @@ honesty. See [`paper/emergence.md`](paper/emergence.md) (`validation/emerge_*.c`
    brute-force canonicalization and self-tested. Finding: crossover wins where
    building blocks exist (traps) but not on the real cell space, where nothing
    meaningfully beats random. *(done)*
+
+9. **The emergence study** (`validation/emerge_*`, [`paper/emergence.md`](paper/emergence.md)): coming
+   at the 1997 ambition from the other side — *growing* a topology from an exhaustive seed under an
+   energy budget, an honest map of what does and does not emerge, and the prune/clone/translate/
+   recombine operators, each a small reproducible probe with its negatives kept. *(in progress)*
 
 See [`AGENTS.md`](AGENTS.md) for the developer contract and module map.
 
