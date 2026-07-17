@@ -157,3 +157,5 @@ emerge_baseline:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_baseline validation/emerge_baseline.c $(SMB_MATH)
 emerge_offset:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_offset validation/emerge_offset.c $(SMB_MATH)
+emerge_minimal:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_minimal validation/emerge_minimal.c $(SMB_MATH)

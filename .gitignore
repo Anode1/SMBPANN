@@ -68,3 +68,5 @@ scratch_chan_fair.out
 scratch_grow_fair.out
 scratch_emerge_2d_grow_strong.out
 scratch_emerge_offset.out
+emerge_minimal
+scratch_emerge_minimal.out
