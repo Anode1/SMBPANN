@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 520" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title>The four structural operators as A =operator=> B: what each one does to the structure</title>
+  <rect x="0" y="0" width="820" height="520" fill="#ffffff"/>
+  <text x="20" y="30" font-size="17" font-weight="600" fill="#1e293b">The operators: A &#8658; B, and exactly what each one does</text>
+  <text x="20" y="50" font-size="12.5" fill="#64748b">structure before (grey) &#8212; operator (orange) &#8212; structure after (teal)</text>
+
+  <!-- ===== PRUNE ===== -->
+  <g transform="translate(0,72)">
+    <!-- A: dense mask -->
+    <g transform="translate(40,10)">
+      <rect x="0" y="0" width="96" height="48" fill="#64748b" stroke="#475569"/>
+      <g stroke="#ffffff" stroke-width="1.2" opacity="0.8">
+        <line x1="16" y1="0" x2="16" y2="48"/><line x1="32" y1="0" x2="32" y2="48"/><line x1="48" y1="0" x2="48" y2="48"/><line x1="64" y1="0" x2="64" y2="48"/><line x1="80" y1="0" x2="80" y2="48"/>
+        <line x1="0" y1="16" x2="96" y2="16"/><line x1="0" y1="32" x2="96" y2="32"/>
+      </g>
+      <text x="48" y="64" font-size="11" fill="#64748b" text-anchor="middle">dense seed</text>
+    </g>
+    <!-- operator -->
+    <g transform="translate(180,10)">
+      <line x1="0" y1="24" x2="240" y2="24" stroke="#e76f51" stroke-width="2.5"/>
+      <polygon points="240,17 256,24 240,31" fill="#e76f51"/>
+      <text x="128" y="16" font-size="14" font-weight="700" fill="#e76f51" text-anchor="middle">PRUNE</text>
+      <text x="128" y="42" font-size="11" fill="#94a3b8" text-anchor="middle">remove connections under an energy budget</text>
+    </g>
+    <!-- B: sparse mask on relevant columns -->
+    <g transform="translate(468,10)">
+      <rect x="16" y="-5" width="16" height="58" fill="#fef3c7"/><rect x="48" y="-5" width="16" height="58" fill="#fef3c7"/><rect x="80" y="-5" width="16" height="58" fill="#fef3c7"/>
+      <rect x="0" y="0" width="96" height="48" fill="#f8fafc" stroke="#cbd5e1"/>
+      <g stroke="#e2e8f0" stroke-width="1"><line x1="16" y1="0" x2="16" y2="48"/><line x1="32" y1="0" x2="32" y2="48"/><line x1="48" y1="0" x2="48" y2="48"/><line x1="64" y1="0" x2="64" y2="48"/><line x1="80" y1="0" x2="80" y2="48"/><line x1="0" y1="16" x2="96" y2="16"/><line x1="0" y1="32" x2="96" y2="32"/></g>
+      <rect x="17" y="1" width="14" height="14" fill="#0d9488"/><rect x="49" y="17" width="14" height="14" fill="#0d9488"/><rect x="81" y="33" width="14" height="14" fill="#0d9488"/>
+      <text x="48" y="64" font-size="11" fill="#0d9488" text-anchor="middle">sparse, task-relevant</text>
+    </g>
+  </g>
+
+  <!-- ===== CLONE ===== -->
+  <g transform="translate(0,182)">
+    <g transform="translate(64,4)">
+      <rect x="0" y="10" width="48" height="30" rx="4" fill="#e2e8f0" stroke="#64748b"/><text x="24" y="30" font-size="13" fill="#334155" text-anchor="middle">blk</text>
+      <text x="24" y="60" font-size="11" fill="#64748b" text-anchor="middle">one block</text>
+    </g>
+    <g transform="translate(180,4)">
+      <line x1="0" y1="24" x2="240" y2="24" stroke="#e76f51" stroke-width="2.5"/>
+      <polygon points="240,17 256,24 240,31" fill="#e76f51"/>
+      <text x="128" y="16" font-size="14" font-weight="700" fill="#e76f51" text-anchor="middle">CLONE</text>
+      <text x="128" y="42" font-size="11" fill="#94a3b8" text-anchor="middle">duplicate the block and stack it (grow depth)</text>
+    </g>
+    <g transform="translate(468,0)">
+      <rect x="0" y="4" width="48" height="20" rx="4" fill="#ccfbf1" stroke="#0d9488"/><text x="24" y="19" font-size="11" fill="#0f766e" text-anchor="middle">blk</text>
+      <rect x="0" y="26" width="48" height="20" rx="4" fill="#ccfbf1" stroke="#0d9488"/><text x="24" y="41" font-size="11" fill="#0f766e" text-anchor="middle">blk</text>
+      <rect x="0" y="48" width="48" height="20" rx="4" fill="#ccfbf1" stroke="#0d9488"/><text x="24" y="63" font-size="11" fill="#0f766e" text-anchor="middle">blk</text>
+      <text x="96" y="40" font-size="11" fill="#0d9488">depth stack</text>
+    </g>
+  </g>
+
+  <!-- ===== TRANSLATE ===== -->
+  <g transform="translate(0,292)">
+    <g transform="translate(40,10)">
+      <g stroke="#cbd5e1" fill="#f8fafc">
+        <rect x="0" y="0" width="12" height="24"/><rect x="12" y="0" width="12" height="24"/><rect x="24" y="0" width="12" height="24"/><rect x="36" y="0" width="12" height="24"/><rect x="48" y="0" width="12" height="24"/><rect x="60" y="0" width="12" height="24"/><rect x="72" y="0" width="12" height="24"/><rect x="84" y="0" width="12" height="24"/>
+      </g>
+      <rect x="0" y="0" width="36" height="24" fill="#64748b" opacity="0.8"/>
+      <text x="48" y="40" font-size="11" fill="#64748b" text-anchor="middle">block at one place</text>
+    </g>
+    <g transform="translate(180,10)">
+      <line x1="0" y1="14" x2="240" y2="14" stroke="#e76f51" stroke-width="2.5"/>
+      <polygon points="240,7 256,14 240,21" fill="#e76f51"/>
+      <text x="128" y="6" font-size="14" font-weight="700" fill="#e76f51" text-anchor="middle">TRANSLATE</text>
+      <text x="128" y="32" font-size="11" fill="#94a3b8" text-anchor="middle">copy to every position &#8212; weights shared</text>
+    </g>
+    <g transform="translate(468,10)">
+      <g stroke="#cbd5e1" fill="#f8fafc">
+        <rect x="0" y="0" width="12" height="24"/><rect x="12" y="0" width="12" height="24"/><rect x="24" y="0" width="12" height="24"/><rect x="36" y="0" width="12" height="24"/><rect x="48" y="0" width="12" height="24"/><rect x="60" y="0" width="12" height="24"/><rect x="72" y="0" width="12" height="24"/><rect x="84" y="0" width="12" height="24"/>
+      </g>
+      <g fill="#0d9488" opacity="0.85"><rect x="0" y="0" width="36" height="24"/><rect x="24" y="0" width="36" height="24"/><rect x="48" y="0" width="36" height="24"/></g>
+      <text x="48" y="40" font-size="11" fill="#0d9488" text-anchor="middle">tiled everywhere = convolution</text>
+    </g>
+  </g>
+
+  <!-- ===== RECOMBINE ===== -->
+  <g transform="translate(0,392)">
+    <g transform="translate(52,4)">
+      <rect x="0" y="10" width="26" height="30" rx="4" fill="#e2e8f0" stroke="#64748b"/><text x="13" y="30" font-size="12" fill="#334155" text-anchor="middle">3</text>
+      <rect x="30" y="10" width="26" height="30" rx="4" fill="#e2e8f0" stroke="#64748b"/><text x="43" y="30" font-size="12" fill="#334155" text-anchor="middle">3</text>
+      <rect x="60" y="10" width="26" height="30" rx="4" fill="#e2e8f0" stroke="#64748b"/><text x="73" y="30" font-size="12" fill="#334155" text-anchor="middle">3</text>
+      <text x="43" y="60" font-size="11" fill="#64748b" text-anchor="middle">one block type</text>
+    </g>
+    <g transform="translate(180,4)">
+      <line x1="0" y1="24" x2="240" y2="24" stroke="#e76f51" stroke-width="2.5"/>
+      <polygon points="240,17 256,24 240,31" fill="#e76f51"/>
+      <text x="128" y="16" font-size="14" font-weight="700" fill="#e76f51" text-anchor="middle">RECOMBINE</text>
+      <text x="128" y="42" font-size="11" fill="#94a3b8" text-anchor="middle">swap in a different block where one kind won't do</text>
+    </g>
+    <g transform="translate(468,4)">
+      <rect x="0" y="10" width="26" height="30" rx="4" fill="#ccfbf1" stroke="#0d9488"/><text x="13" y="30" font-size="12" fill="#0f766e" text-anchor="middle">1</text>
+      <rect x="30" y="10" width="26" height="30" rx="4" fill="#ccfbf1" stroke="#0d9488"/><text x="43" y="30" font-size="12" fill="#0f766e" text-anchor="middle">3</text>
+      <text x="43" y="60" font-size="11" fill="#0d9488" text-anchor="middle">mixed &#8212; two operations</text>
+    </g>
+  </g>
+</svg>
