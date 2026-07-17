@@ -4,6 +4,46 @@
 (`paper/nas_crossover.tex`). Reproduce: `make conv_emerge && ./conv_emerge`
 (env: `SEEDS`, `GENS`, `TARGET`, `PADD`). All numbers below: 24 seeds × 150 generations.*
 
+## The path, in short
+
+**Thesis.** A network's structure should *emerge* — but not from nothing. Impose the priors that are
+real symmetries of the domain — **locality** (information is local) and **translatability** (a signal is
+the same shifted over) — and a small set of structural operators, each with a direct biological analog,
+then assemble and refine a working architecture on top of them:
+
+- **Prune** — a dense seed under an energy budget → sparse, task-relevant connectivity; feature
+  selection emerges (§1–6). *[synaptic overproduction then pruning]*
+- **Impose locality** → a **compact local block** falls right out; weight-sharing is adopted (§7).
+- **Clone / stack** → the network's **depth emerges to match the task's compositional depth** (§8), and
+  reusing one block type beats searching architectures (§9). *[gene / segment duplication]*
+- **Recombine** → when a task needs two *different* operations, mixing different blocks is required;
+  reuse alone breaks (§10), and a staged searcher clones-then-recombines to get both (§11). *[sexual
+  recombination]*
+- **Translate / tile** → replicating one working block across positions is hugely **data-efficient** — a
+  convolution reached by replication, +0.22 over independent detectors (§17). *[transposons, serial
+  homology, cortical maps]*
+
+**Chained end to end (§19):** find one stable block, reuse it (clone + translate) instead of
+re-searching — **0.90 vs 0.63** for search-from-scratch. Jitter is *not* needed — reuse lands you at the
+optimum, so there is nothing to escape. **And it scales (§20):** as the input grows 16 → 64, the
+developmental path stays flat (~0.89, 3 weights) while search-from-scratch falls (0.70 → 0.55, up to 186
+weights) — **the reuse advantage nearly doubles with size** (+0.20 → +0.36). Not a toy effect.
+
+**What was tried and did not work** (kept below for honesty, pruned from the main line):
+a compact convolution does *not* emerge from an energy budget alone — it needs the locality prior (§5–6);
+a 2-D diagonal-distance task is **null** — the depth staircase does not reproduce (§12); a 3-way
+conjunction (K=3) is a **capacity wall** that four rescues — more channels, an MLP head, a 2nd conv
+layer, competition — all fail to move (§14–16, §18): an honest limit of a shallow net, not a missing
+operator.
+
+**Next, and what's expected:** real data and larger inputs (expect the scaling advantage to widen); the
+full developmental GA running *all* operators on a genuinely compositional task (expect
+prune→clone→translate→recombine to assemble a working hierarchy that from-scratch search cannot reach at
+equal budget); and whether jitter ever earns its keep on a *multimodal* task, the one place §19's "no
+jitter" might flip.
+
+*The rest of this note is the full record — every operator validated alone, the dead-ends included.*
+
 ## The idea
 
 ![The 1997 thesis redrawing of a local, weight-shared feature detector — one unit wired to a small window of the input, which convolution generalizes.](../doc/feature_detector_field.png)
@@ -505,6 +545,25 @@ are stuck; reuse is *how you avoid getting stuck*. Nature keeps serial homologs 
 does not let every segment drift alone. (Caveat: on a genuinely multimodal task jitter could help; here
 the developmental assembly finds the optimum directly, so it has nothing to escape.)
 
+### 20. Scale: the reuse advantage grows with problem size
+
+The developmental result (§19) could be a small-task artifact. `emerge_scale.c` sweeps the input size N
+(so the number of positions to cover grows), holding the data scarce, comparing the developmental path
+(one tiled block, 3 weights, size-independent) against search-from-scratch (independent per-position
+detectors, weights growing with N):
+
+| input N | positions | developmental (shared) | search-from-scratch (indep) | gap | scratch weights |
+|---|---|---|---|---|---|
+| 16 | 14 | 0.900 | 0.703 | +0.197 | 42 |
+| 32 | 30 | 0.867 | 0.572 | +0.295 | 90 |
+| 48 | 46 | 0.898 | 0.534 | **+0.363** | 138 |
+| 64 | 62 | 0.886 | 0.550 | +0.336 | 186 |
+
+**Reuse-beats-re-search strengthens with scale.** The developmental path stays flat (~0.89, always 3
+weights) as the problem grows 4×; search-from-scratch *falls* (0.70 → 0.55) and bloats to 186 weights,
+because more positions starve harder on the same data. The gap nearly doubles. The advantage is not a
+toy of small problems — it is a property that grows with size, which is what makes it worth having.
+
 ## Honest bottom line
 
 Directed emergence under an energy budget **works as a sparsifier, a feature selector, and — with a
@@ -543,10 +602,15 @@ a searcher that clones by default and recombines only when cloning stalls detect
 own, and — because clone and recombine catch different cases — is *more reliable than either strategy
 alone*. The adaptive policy is not just a convenience; it is strictly the more robust one.
 
-## Next steps
+## Next steps, and what is expected
 
-- **Larger N and 2-D inputs**, where greedy enumeration fails and the GA earns its keep; then sound
-  and higher-dimensional tasks, to discover and reuse their topologies.
-- **A cost-aware stall signal**: STAGED currently pays a full failed clone sweep before switching;
-  detecting the stall sooner (without a plateau detector, which flat-then-jump tasks defeat) would cut
-  the adaptivity overhead. The open question is a cheaper regime-detector than "clone sweep exhausted."
+- **The full developmental GA** — all four operators (prune, clone, translate, recombine) chained on a
+  genuinely compositional task, growing structure once and refining in place rather than re-searching.
+  *Expected:* it assembles a working hierarchy that from-scratch search cannot reach at equal budget,
+  the developmental margin of §19–20 widening with task complexity.
+- **Real data and larger, 2-D inputs**, where greedy enumeration fails and the operators earn their
+  keep. *Expected:* the scaling advantage of §20 (reuse flat, re-search falling) holds and widens.
+- **Does jitter ever earn its keep?** §19 found it unneeded — harmful, even — because reuse lands at the
+  optimum. *Expected to flip only* on a genuinely multimodal task, where reuse *can* get stuck and an
+  annealed jitter has a real minimum to escape. That is the one place the "no jitter" result should not
+  hold, and testing it is how we bound the claim.
