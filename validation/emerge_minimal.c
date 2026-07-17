@@ -127,13 +127,17 @@ static void run_ga(int minimal, uint32_t seed, double out[5])
       { int taps,span,rel; offset_stats(m,&taps,&span,&rel);
         out[0]+=taps; out[1]+=span; out[2]+= taps?(double)rel/taps:0.0;
         out[3]+=run_net(m,seed+999u,1);
-        out[4]+= span?(double)taps/span:0.0; } }
+        out[4]+= span?(double)taps/span:0.0;
+        if(getenv("DBG")) printf("  [dbg minimal=%d seed=%u taps=%d contig=%.2f onrel=%.2f test=%.3f]\n", minimal, seed, taps, span?(double)taps/span:0.0, taps?(double)rel/taps:0.0, run_net(m,seed+999u,1)); } }
 }
 
 int main(void)
 {
     int seeds=envint("SEEDS",16), sd, k;
     g_gens=envint("GENS",200); g_target=envdbl("TARGET",0.90); g_width=envdbl("WIDTH",1.0);
+    if(getenv("PROBE")){ char off[NOFF]; char m[H][N]; int q; new_task(132u);
+        for(q=0;q<NOFF;q++) off[q]=0; off[10]=1; off[11]=1; off[12]=1; mask_from_off(off,m);
+        printf("PROBE minimal: acc(off 10,11,12)=%.4f  acc2=%.4f\n", run_net(m,42u,0), run_net(m,7u,0)); return 0; }
     printf("MINIMAL vs DENSE seed under the SAME energy GA (grouped per-offset mutation, width penalty=%.1f)\n", g_width);
     printf("local K=%d generative filter, N=%d hidden=%d, %d seeds x %d gens, target %.2f\n", K, N, H, seeds, g_gens, g_target);
     printf("does the compact filter emerge from EITHER direction? compact = taps->K, span->K, contig->1, on-rel->1\n\n");
