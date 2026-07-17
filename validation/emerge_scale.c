@@ -12,10 +12,11 @@
  * same data -> harder starvation); the GAP widens with scale. If so, "reuse beats re-search" is a
  * property that strengthens with size, not a toy effect. Translation-invariant motif task, scarce data.
  *
- * FINDING (10 seeds): confirmed and strong. As input N grows 16 -> 64, DEVELOPMENTAL (one tiled block,
- * 3 weights) stays flat at 0.87-0.90, while SEARCH-FROM-SCRATCH (independent, up to 186 weights) falls
- * 0.70 -> 0.55, and the gap nearly doubles (+0.20 -> +0.36). One tiled block is size-independent;
- * independent detectors starve harder as positions multiply. The developmental advantage grows with size.
+ * FINDING (16 seeds, 600 epochs): confirmed and strong. As input N grows 16 -> 128, DEVELOPMENTAL (one
+ * tiled block, 3 weights) stays flat at ~0.98, while SEARCH-FROM-SCRATCH (independent, up to 378 weights)
+ * collapses toward chance 0.77 -> 0.54, and the gap MORE THAN DOUBLES (+0.21 -> +0.43). One tiled block
+ * is size-independent; independent detectors starve harder as positions multiply. The developmental
+ * advantage grows with size -- and it is decisive: 3 weights at 0.98 beats 378 weights at 0.54.
  * Self-contained C99. Build: make emerge_scale
  */
 #include <stdio.h>
@@ -25,14 +26,14 @@
 #include <stdint.h>
 
 #define K     3
-#define NMAX  64
+#define NMAX  128
 #define PMAX  (NMAX-K+1)
 #define NTRMAX 64
-#define NTE   1500
-#define TEPOCHS 300
+#define NTE   2000
+#define TEPOCHS 600
 #define LR    0.05
-#define AMP   1.6
-#define RESTARTS 3
+#define AMP   2.6
+#define RESTARTS 4
 
 static uint32_t rs=1u; static uint32_t r32(void){uint32_t x=rs;x^=x<<13;x^=x>>17;x^=x<<5;rs=x;return x;}
 static void rseed(uint32_t s){rs=s?s:1u;} static double runif(void){return (double)r32()/4294967296.0*2.0-1.0;}
@@ -90,14 +91,14 @@ static double best_of(int shared, uint32_t seed)
 
 int main(void)
 {
-    int seeds=envint("SEEDS",10), sd, t;
-    int Ns[5]={16,24,32,48,64};
+    int seeds=envint("SEEDS",16), sd, t;
+    int Ns[6]={16,32,48,64,96,128};
     g_ntr=envint("NTR",32);
     printf("SCALE: does 'reuse beats re-search' GROW with problem size? (%d train examples, %d seeds x %d restarts)\n", g_ntr, seeds, RESTARTS);
     printf("translation-invariant motif task. DEVELOPMENTAL = one tiled block (K=%d weights, N-invariant).\n", K);
     printf("SEARCH-FROM-SCRATCH = one filter per position (K*P weights, grows with N).\n\n");
     printf("  input N | positions | develop (shared) | scratch (indep) | gap   | scratch weights\n");
-    for(t=0;t<5;t++){ g_n=Ns[t]; g_p=g_n-K+1;
+    for(t=0;t<6;t++){ g_n=Ns[t]; g_p=g_n-K+1;
         double ss=0, si=0;
         for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+(unsigned)g_n*17u+1u));
             ss+=best_of(1,(uint32_t)(sd*7u+1u)); si+=best_of(0,(uint32_t)(sd*7u+1u)); }
