@@ -34,9 +34,10 @@ capacity limit four interventions fail to move.
 \medskip\noindent\textbf{What is new:}
 -the sharing/energy \emph{decoupling}, why a compact filter cannot emerge under per-connection pruning yet
 does once mutation acts on the shared feature, which restores the missing energy gradient;
--that \emph{directed} evolutionary search beats random sampling of structures, and the advantage
-\emph{holds across scale} once its search budget scales with the problem, reversing the near-null our
-companion crossover study found on a real benchmark;
+-that \emph{directed} evolutionary search finds a \emph{tidier} filter than random sampling at
+\emph{equal task accuracy} (it is tidier, not better), which is what a directed optimizer should do on an
+exploitable objective and which \emph{reconciles} the near-null our companion crossover study found on a
+flat benchmark landscape;
 -the honest energy-emergence map from an exhaustive seed, its negatives kept.
 The rest reproduces textbook inductive-bias facts (weight sharing is data-efficient, receptive
 field~$\approx$~depth), verified with a fair baseline rather than claimed as new. Every number regenerates
@@ -54,7 +55,8 @@ came in 2002, after the author had worked with genetic algorithms in industry; t
 topologies and cells, reached a firmly negative conclusion: on the real NAS-Bench-101 cell space, no
 crossover meaningfully beats random search, and structure-aware operators do worse than a structure-blind
 one, because good cells are common and the gap to the optimum sits inside the benchmark's own training
-noise. Searching for structure did not beat random.
+noise. Searching for structure did not beat random \emph{there} (Section~2.4 returns to this under an
+energy budget, where the picture is different).
 
 This paper comes at the same ambition from the opposite end. Instead of searching for the architecture,
 we \emph{grow} one: start from an exhaustive, fully-connected seed, put a cost on every connection, and
@@ -101,7 +103,7 @@ the outcome of the pruning literature (sparse subnetworks, not convolutions).
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.9\textwidth]{fig1_pruning.pdf}
-\caption{Sections 2--3. An energy budget prunes a dense connectivity seed to a sparse mask whose
+\caption{Sec.~2.1. An energy budget prunes a dense connectivity seed to a sparse mask whose
 surviving connections land on the task-relevant inputs. Feature selection and sparsity emerge; the
 compact aligned filter needs mutation on the shared feature to emerge (Sec.~2.3).}
 \label{fig:prune}
@@ -142,56 +144,72 @@ identical kernel to the dense seed pruned down (taps $3.5$ vs $3.8$, contiguity 
 24 seeds). The emergence does not depend on the starting point: grow-from-minimal and prune-from-dense
 converge on the same structure.
 
-\subsection{Directed search vs.\ random, and the budget it needs}
+\subsection{Directed search vs.\ random: tidier, not better}
 
-Does the \emph{directed} energy search do real work, or would random sampling of the same structures find
-the compact filter just as well? The question is sharp because on a real benchmark our companion crossover
-study found evolution barely edges random, inside the noise. \textbf{Method.} At a \emph{matched
-evaluation budget}, we run the grouped-mutation GA against random offset masks (drawn across densities,
-kept by the same objective) over 50 \emph{paired} seeds (same task per seed) at five input sizes $N$, once
-at a fixed budget and once at a budget that scales with $N$ (Figure~\ref{fig:directed}, Table~\ref{tab:directed}).
+Does the \emph{directed} energy search do real work, or would random sampling find as good a filter? The
+question is sharp because on a real benchmark our companion crossover study found evolution barely edges
+random, inside the noise. \textbf{Method.} At a \emph{matched evaluation budget} we run the
+grouped-mutation GA against random offset masks (drawn across densities, kept by the same objective) over
+50 \emph{paired} seeds (same task per seed) at five input sizes $N$, and report both structure
+(contiguity) and task accuracy (Figure~\ref{fig:directed}, Table~\ref{tab:directed}).
 
 \begin{table}[t]
 \centering\small
 \begin{tabular}{@{}rccccc@{}}
 \toprule
- & \multicolumn{2}{c}{contiguity} & \multicolumn{2}{c}{paired GA${-}$random gap} & \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}
-$N$ & GA & random & fixed budget & scaled budget & win/tie/loss \\
+ & \multicolumn{3}{c}{paired contiguity gap (GA${-}$random)} & \multicolumn{2}{c}{test accuracy} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-6}
+$N$ & fixed & scaled & denoise ($r{=}8$) & GA & random \\
 \midrule
-12 & 0.73 & 0.71 & $+0.02{\pm}0.03$ & $+0.02{\pm}0.03$ & 12/29/9 \\
-16 & 0.68 & 0.61 & $+0.07{\pm}0.04$ & $+0.06{\pm}0.04$ & 23/11/16 \\
-20 & 0.67 & 0.46 & $+0.21{\pm}0.04$ & $+0.22{\pm}0.03$ & 37/6/7 \\
-24 & 0.56 & 0.41 & $+0.15{\pm}0.04$ & $+0.17{\pm}0.03$ & 37/2/11 \\
-28 & 0.52 & 0.45 & $+0.07{\pm}0.04$ & $\mathbf{+0.15{\pm}0.04}$ & 33/1/16 \\
+12 & $+0.02$ & $+0.02$ & $+0.13$ & $0.885$ & $0.880$ \\
+16 & $+0.06$ & $+0.08$ & $+0.19$ & $0.882$ & $0.877$ \\
+20 & $+0.20$ & $+0.20$ & $+0.32$ & $0.874$ & $0.866$ \\
+24 & $+0.14$ & $+0.16$ & $+0.19$ & $0.866$ & $0.862$ \\
+28 & $+0.12$ & $+0.17$ & $+0.16$ & $0.862$ & $0.853$ \\
 \bottomrule
 \end{tabular}
-\caption{Directed GA vs random at matched evaluations, 50 paired seeds. Contiguity and win/tie/loss are
-at fixed budget; the last two columns give the paired advantage under a fixed budget and under one scaled
-to $N$. The fixed-budget gap erodes at $N{=}28$; with budget scaled to the problem it holds.}
+\caption{Directed GA vs random at matched evaluations, 50 paired seeds (SEM ${\approx}0.04$ on each gap).
+The contiguity advantage is significant from $N{=}20$ and survives both a budget scaled with $N$ and a
+denoising control (random given $r{=}8$ evaluations per mask, which if anything \emph{widens} the gap).
+Test accuracy is tied throughout: the GA is marginally higher but always within the per-seed SD
+(${\approx}0.04$).}
 \label{tab:directed}
 \end{table}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\textwidth]{fig6_directed.pdf}
-\caption{Directed search vs random, across scale. \emph{Left:} the paired GA${-}$random contiguity gap; the
-fixed-budget curve falls at $N{=}28$ (the GA is starved as the space grows to $2^{54}$ masks), the
-scaled-budget curve holds. \emph{Right:} the GA's own contiguity recovers with budget while random stays
-flat. 50 paired seeds, matched evaluations per arm.}
+\caption{Directed search is \emph{tidier, not better}. \emph{Left:} filter contiguity, GA vs random at
+matched budget, the GA is clearly more contiguous. \emph{Right:} held-out accuracy on the same seeds and
+the same axis honesty, the arms are tied. The GA wins on the structural term the objective rewards, not on
+the task. 50 paired seeds, bands $\pm 1$ SEM.}
 \label{fig:directed}
 \end{figure}
 
-\textbf{Result.} Directed search wins, and the win \emph{holds across scale} once its budget is fair. At
-trivial size the two tie ($N{=}12$, gap $+0.02$): the filter is easy, random finds it too. The gap is
-decisive by $N{=}20$ (paired $+0.21{\pm}0.04$, 37 wins to 7 losses of 50). Under a fixed budget it appears
-to fall back at $N{=}28$ ($+0.07$), but that is the GA being starved, not random catching up: scale the
-budget with $N$ and the $N{=}28$ gap doubles to $+0.15{\pm}0.04$ while the GA's contiguity recovers
-($0.52{\to}0.59$) and random stays flat ($\approx 0.44$). So directed search holds a clear advantage over
-random across scale ($\approx +0.15$ to $+0.22$, all ${\geq}3.7$ SEM from $N{=}20$ to $28$) \emph{provided
-its budget scales with the problem}; the advantage is sustained, not monotonically growing. This reverses
-the crossover null: there evolution only tied random inside the benchmark's noise; here, under an energy
-budget, it beats random outright.
+\textbf{Result: tidier, not better.} The GA produces a markedly more contiguous filter than random from
+$N{=}20$ on (paired gap $+0.20$, $+0.14$, $+0.12$ at $N{=}20,24,28$, each ${\geq}3$ SEM;
+Figure~\ref{fig:directed} left), \emph{but the two arms are tied on held-out accuracy at every $N$}
+(right panel; the GA is marginally higher, always within the per-seed SD). So the GA is not a better
+network, it is a \emph{tidier} one at equal performance, which is exactly what a directed optimizer should
+do on an objective it can climb: accuracy saturates without needing a tight kernel, so the only thing left
+to win is the energy term, and the GA descends it by mutation where random can only sample. Two honest
+limits: at scale the GA is \emph{less diffuse than random}, not compact (on-relevance falls to $0.21$ at
+$N{=}28$, only ${\sim}3$ of $14$ taps on the true offsets), and ``a compact filter emerges'' holds
+literally only at $N{=}12$.
+
+\textbf{The edge is direction, not denoising.} A skeptic's confound: the GA re-evaluates each survivor
+with a fresh initialization every generation, so a marginal mask gets many attempts at the hard accuracy
+gate, while random evaluates each mask once. We remove it by giving the random arm $r{=}8$ evaluations per
+mask (best-of-$r$) at the same total budget; the gap does not shrink, it \emph{grows}
+($+0.20\to+0.32$ at $N{=}20$), because best-of-$r$ costs random eight-fold fewer distinct masks and
+exploration matters more than noise-averaging here. Scaling the budget with $N$ firms the large-$N$ gap
+slightly ($+0.12\to+0.17$ at $N{=}28$) but does not change the picture.
+
+\textbf{Why it matters.} This \emph{reconciles} the crossover null. There, on NAS-Bench-101, the objective
+was flat near the top (good cells common, differences inside training noise), so directed search had
+nothing to climb and tied random; here the energy objective is exploitable, so it climbs and wins on that
+axis. Directed search beats random exactly when the objective can be climbed, not when it is flat, the
+same principle read from both ends.
 
 \subsection{Emergent depth matches the required receptive field}
 

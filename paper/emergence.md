@@ -19,7 +19,10 @@ NEAT, we characterize what emerges: sparse task-relevant connectivity emerges cl
 *adopted* when translation-invariance rewards it; and a **compact aligned local filter** emerges too,
 but only once mutation acts on the shared feature the way real genetics does (a global change to a
 shared weight, not a per-connection edit), which restores the energy gradient a per-connection pruner
-lacks (§6). We are not aware of a prior
+lacks (§6). A second finding (§6b): under this budget a directed search finds a *tidier* filter than
+random sampling at *equal task accuracy* (tidier, not better, and it survives a denoising control), which
+reconciles this repo's earlier crossover null, directed search beats random when the objective can be
+climbed and ties it when the landscape is flat. We are not aware of a prior
 result showing this specific evolutionary energy-emergence from an exhaustive seed together with its
 honest boundary; that characterization, negatives included, is the contribution.
 
@@ -67,13 +70,13 @@ more interesting than a clean yes. Energy-constrained emergence reliably discove
 connections matter** (sparse, task-relevant connectivity, cleanly, for a sparse task), and with a
 weight-tying gene it even discovers **weight sharing** (turning on a convolution when
 translation-invariance rewards it, improving generalization). The annealing and energy/accuracy
-mechanics behave exactly as the physics predicts. What still does *not* fall out is the last,
-specific piece, a **compact aligned local filter**: pruning gives sparsity but not aligned windows,
-the tying gene gives sharing but not a tight kernel, and an explicit filter-width penalty *still*
-does not tighten it (because sharing decouples connection-count from parameter-count, so there is no
-gradient left to prune, Section 6). Convolution's parts emerge separately; the compact whole is
-unreachable by an energy budget on a general genome, matching the pruning literature and this
-project's other finding that structural cleverness does not come for free. But imposing the priors a
+mechanics behave exactly as the physics predicts. The subtle piece is the **compact aligned local
+filter**: under *per-connection* pruning it does not tighten, sparsity comes but not aligned windows,
+sharing comes but not a tight kernel, and a filter-width penalty *still* fails, because sharing
+decouples connection-count from parameter-count, so a single-edge mutation has no gradient left to
+prune (Section 6). The fix is the unit of mutation: act on the shared feature, all its duplicated edges
+at once, as real genetics does, and the compact filter *does* emerge (Section 6). Under per-connection
+pruning convolution's parts emerge separately; under grouped mutation the compact whole assembles. But imposing the priors a
 ConvNet always assumes, a **local receptive field** and a **feed-forward reused-block composition**,
 changes the picture: on top of those necessary priors, compact local fields and, most clearly, the
 **depth of the abstraction hierarchy** emerge to match the task (Sections 7–8).
@@ -241,12 +244,41 @@ identical kernel to the dense seed pruned down, taps 3.5 vs 3.8, contiguity 0.77
 the emergence does not depend on the starting point; grow-from-minimal and prune-from-dense converge on
 the same structure.
 
+### 6b. Directed search vs random: tidier, not better (`emerge_prove.c`)
+
+Does the *directed* energy search do real work, or would random sampling find as good a filter? At a
+**matched evaluation budget**, we run the grouped-mutation GA against random offset masks (drawn across
+densities, kept by the same objective) over 50 *paired* seeds at five input sizes N, reporting both
+structure (contiguity) and task accuracy.
+
+**Tidier, not better.** The GA produces a markedly more contiguous filter than random from N=20 on
+(paired contiguity gap +0.20, +0.14, +0.12 at N=20, 24, 28, each ≥ 3 SEM), **but the two arms are tied
+on held-out accuracy at every N** (GA marginally higher, always within the per-seed SD ≈ 0.04). So the GA
+is not a better network, it is a *tidier* one at equal performance, exactly what a directed optimizer
+should do on an objective it can climb: accuracy saturates without needing a tight kernel, so the only
+thing left to win is the energy term, which the GA descends by mutation where random can only sample. Two
+honest limits: at scale the GA is *less diffuse than random*, not compact (on-relevance falls to 0.21 at
+N=28, only ~3 of 14 taps on the true offsets); and "a compact filter emerges" holds literally only at N=12.
+
+**The edge is direction, not denoising.** A confound: the GA re-evaluates each survivor with a fresh
+init every generation, so a marginal mask gets many attempts at the accuracy gate while random gets one.
+Give the random arm r=8 evaluations per mask (best-of-r) at the same total budget and the gap does not
+shrink, it *grows* (+0.20 → +0.32 at N=20), because best-of-r costs random eight-fold fewer distinct
+masks and exploration matters more than noise-averaging here. Scaling the budget with N firms the large-N
+gap slightly (+0.12 → +0.17 at N=28) but does not change the picture.
+
+**Why it matters.** This *reconciles* the crossover null in this repo. There, on NAS-Bench-101, the
+objective was flat near the top (good cells common, differences inside training noise), so directed
+search had nothing to climb and tied random; here the energy objective is exploitable, so it climbs and
+wins on that axis. Directed search beats random exactly when the objective can be climbed, not when it is
+flat, the same principle read from both ends. Reproduce with `bash validation/run_prove_sweep.sh`.
+
 ### 7. Imposing locality (the necessary prior): does the rest of the convolution assemble?
 
 ![Impose a contiguous window per unit; a compact local filter (width ≈ K) and weight sharing emerge on top.](images/fig2_locality.svg)
 
-Sections 1–6 tried to let *everything* emerge and found the compact local filter does not. But a
-bounded receptive field is not something to wait out, it is a **necessary prior**, a law of the
+Sections 1–6 found the compact local filter emerges only under grouped mutation on the shared feature,
+not under per-connection pruning. Either way, a bounded receptive field is also a **necessary prior**, a law of the
 problem (information is local), imposed in every real ConvNet. So `emerge_local.c` imposes exactly
 that and nothing more: each hidden unit sees a **contiguous** window `[start, start+w)`. The window
 **width** and **weight sharing** (a `shared` gene tying weights by within-window offset, i.e.
@@ -612,16 +644,18 @@ Directed emergence under an energy budget **works as a sparsifier, a feature sel
 tying gene, a discoverer of weight sharing**: it finds sparse task-relevant connectivity, cleanly
 picks the informative inputs on a sparse task, turns on weight sharing when translation-invariance
 rewards it (improving generalization), obeys an annealing temperature, traces the accuracy/energy
-Pareto, and its structures reuse across a task family. What still does **not** fall out is the
-**compact aligned local receptive field**: connectivity pruning finds sparsity but not aligned
-windows, and the tying gene finds sharing but not a tight filter. Convolution's two halves emerge
-*separately and partially*; the *compact* convolution is not assembled by an energy budget alone.
+Pareto, and its structures reuse across a task family. The subtle piece is the **compact aligned local
+receptive field**: under *per-connection* pruning, sparsity and sharing come but not a tight aligned
+filter, because sharing decouples connection-count from parameter-count. Act on the shared feature
+instead (grouped mutation) and the compact filter *does* emerge; convolution's two halves, separate
+under per-connection pruning, assemble once mutation is grouped.
 
 This is consistent with the pruning literature (sparse subnetworks, not convolutions) and with the
 crossover study in this repo: the general, useful thing here is **automatic structural discovery under
 a resource budget** (sparsity, feature relevance, weight sharing). The last, specific piece, a tight
-local filter, is *not* reachable by any energy pressure on this genome (Section 6), because sharing
-decouples connection-count from parameter-count.
+local filter, is reachable only once mutation acts on the shared feature, not the single edge
+(Section 6), because sharing decouples connection-count from parameter-count, making the edge the wrong
+unit of mutation.
 
 Sections 7–8 draw the honest line between what must be *imposed* and what then *emerges*. A bounded
 local receptive field, and a feed-forward reused-block composition rule, are **necessary priors**, a

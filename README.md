@@ -37,11 +37,13 @@ XOR the search reliably finds, on its own, that a ReLU hidden layer with high
 momentum solves it near-exactly.)
 
 Layers are also **structural**: each hidden layer can evolve between a dense one
-and a weight-shared, locally-connected **convolution-like** kind. The **initial
-idea**, from the 1997 thesis, was that the architecture's inductive bias carries
-much of the work, so a search that finds and recombines good structure, in the best
-case **rediscovering LeCun's topology** (local receptive fields, shared weights) on
-its own, should beat plain random search. The thesis illustrated that structure with
+and a weight-shared, locally-connected **convolution-like** kind. The **1997 thesis**
+argued that the architecture's inductive bias carries much of the work, and that such
+heuristics often have to be built into the topology by hand. The further **bet**, that
+a *search* which finds and recombines good structure, in the best case **rediscovering
+LeCun's topology** (local receptive fields, shared weights) on its own, should beat
+plain random, came in **2002**, after I had built genetic algorithms in industry. The
+thesis illustrated that structure with
 my own 1997 redrawing of LeCun's receptive-field diagram, a single unit fed by a
 small window of the previous layer:
 
@@ -51,9 +53,12 @@ small window of the previous layer:
 unit fed by a small window of the previous layer. Shared across positions, this is a
 convolution.*
 
-**That bet was disproved.** On the real NAS-Bench-101 cell space a crossover that
-recombines the architecture's structure is no better than a structure-blind one, and
-worse at large budget, and no search meaningfully beats random (see the paper below).
+**On NAS-Bench-101, that bet did not hold.** On the real NAS-Bench-101 cell space a
+crossover that recombines the architecture's structure is no better than a
+structure-blind one, and worse at large budget, and no search meaningfully beats random
+*there* (see the paper below). Under an *energy budget*, though, the picture differs:
+a directed search does find more structured filters than random at equal accuracy
+(the emergence study below).
 Structure still matters to a network's accuracy; what does not hold is that a
 structure-aware search extracts an edge a random sampler cannot. The convolutional
 backprop is still verified by a numerical gradient check in the test suite.
@@ -323,14 +328,19 @@ local) and *translatability* (a signal is the same shifted over), and let a few 
 
 The honest map that comes out:
 sparse, task-relevant connectivity emerges cleanly, and weight-sharing is *adopted* when
-translation-invariance rewards it, but a **compact aligned local filter does not emerge** from an energy
-budget alone, with a crisp mechanism for *why* (once weights are shared, connection-count no longer
-gradients parameter-count, so pruning cannot tighten the kernel). On top of the imposed priors, the free
+translation-invariance rewards it, and a **compact aligned local filter emerges only under grouped
+mutation** on the shared feature, not under per-connection pruning, with a crisp mechanism for *why*
+(once weights are shared, connection-count no longer gradients parameter-count, so a single-edge mutation
+cannot tighten the kernel; the whole shared offset is the right unit). On top of the imposed priors, the free
 dimensions, depth, channel count, then emerge to fit the task, up to an honest capacity limit.
 
 What is genuinely new is that evolutionary energy-emergence map from an exhaustive seed and its
 boundaries, distinct from gradient pruning (Optimal Brain Damage, Lottery Ticket), from DARTS'
-gradient-relaxed supernet, and from NEAT's grow-from-minimal. The rest reproduces known inductive-bias
+gradient-relaxed supernet, and from NEAT's grow-from-minimal. A second finding, and the resolution of
+this repo's earlier crossover null: under the energy budget a directed search finds a **tidier** filter
+than random sampling at **equal task accuracy** (tidier, not better, and it survives a denoising control),
+which reconciles the two, directed search beats random exactly when the objective can be *climbed* and
+ties it when the landscape is flat (as on NAS-Bench-101). The rest reproduces known inductive-bias
 results (weight-sharing is data-efficient, LeCun 1989; receptive field ≈ depth) with a *fair baseline*
 and full reproducibility. Every claim is a small, seeded, one-`make` probe, the negatives kept, for
 honesty. See [`paper/emergence.pdf`](paper/emergence.pdf) (paper) and [`paper/emergence.md`](paper/emergence.md) (full note), `validation/emerge_*.c`.
