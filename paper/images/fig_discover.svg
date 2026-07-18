@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<title>Composition does not cleanly emerge without supervision</title>
+<rect x="0" y="0" width="820" height="300" fill="#ffffff"/>
+<text x="20" y="26" font-size="16" font-weight="600" fill="#1e293b">Composition does not cleanly emerge when the search must find the decomposition</text>
+<text x="20" y="45" font-size="12" fill="#64748b">Two-operation task (A AND B), no per-operation labels; 40 paired seeds. The search over-provisions channels and under-specializes.</text>
+<text x="66" y="71" font-size="12.5" font-weight="600" fill="#1e293b">Energy-selected channel count overshoots</text>
+<line x1="66" y1="240.0" x2="366" y2="240.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="60" y="244.0" font-size="10" text-anchor="end" fill="#64748b">0.5</text>
+<line x1="66" y1="208.0" x2="366" y2="208.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="60" y="212.0" font-size="10" text-anchor="end" fill="#64748b">0.6</text>
+<line x1="66" y1="176.0" x2="366" y2="176.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="60" y="180.0" font-size="10" text-anchor="end" fill="#64748b">0.7</text>
+<line x1="66" y1="144.0" x2="366" y2="144.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="60" y="148.0" font-size="10" text-anchor="end" fill="#64748b">0.8</text>
+<line x1="66" y1="112.0" x2="366" y2="112.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="60" y="116.0" font-size="10" text-anchor="end" fill="#64748b">0.9</text>
+<line x1="66" y1="80.0" x2="366" y2="80.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="60" y="84.0" font-size="10" text-anchor="end" fill="#64748b">1.0</text>
+<line x1="66" y1="128.0" x2="366" y2="128.0" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text x="364" y="123.0" font-size="9.5" text-anchor="end" fill="#64748b">target 0.85</text>
+<text x="66.0" y="256" font-size="10.5" text-anchor="middle" fill="#64748b">1</text>
+<text x="166.0" y="256" font-size="10.5" text-anchor="middle" fill="#64748b">2</text>
+<text x="266.0" y="256" font-size="10.5" text-anchor="middle" fill="#64748b">3</text>
+<text x="366.0" y="256" font-size="10.5" text-anchor="middle" fill="#64748b">4</text>
+<text x="216.0" y="271" font-size="11" text-anchor="middle" fill="#64748b">channel count C</text>
+<text transform="rotate(-90 28 160.0)" x="28" y="160.0" font-size="11" text-anchor="middle" fill="#64748b">test accuracy</text>
+<polyline points="66.0,89.0 166.0,82.9 266.0,81.3 366.0,80.6" fill="none" stroke="#1f7a8c" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="66.0" cy="89.0" r="3" fill="#1f7a8c"/>
+<circle cx="166.0" cy="82.9" r="3" fill="#1f7a8c"/>
+<circle cx="266.0" cy="81.3" r="3" fill="#1f7a8c"/>
+<circle cx="366.0" cy="80.6" r="3" fill="#1f7a8c"/>
+<polyline points="66.0,172.5 166.0,140.2 266.0,120.0 366.0,112.3" fill="none" stroke="#c56b3e" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="66.0" cy="172.5" r="3" fill="#c56b3e"/>
+<circle cx="166.0" cy="140.2" r="3" fill="#c56b3e"/>
+<circle cx="266.0" cy="120.0" r="3" fill="#c56b3e"/>
+<circle cx="366.0" cy="112.3" r="3" fill="#c56b3e"/>
+<circle cx="66.0" cy="89.0" r="6" fill="none" stroke="#1f7a8c" stroke-width="1.6"/>
+<circle cx="266.0" cy="120.0" r="6" fill="none" stroke="#c56b3e" stroke-width="1.6"/>
+<line x1="76" y1="200" x2="94" y2="200" stroke="#1f7a8c" stroke-width="2.6"/>
+<circle cx="85" cy="200" r="3" fill="#1f7a8c"/>
+<text x="100" y="203.5" font-size="10" fill="#1e293b">1 operation  →  C*=1</text>
+<line x1="76" y1="216" x2="94" y2="216" stroke="#c56b3e" stroke-width="2.6"/>
+<circle cx="85" cy="216" r="3" fill="#c56b3e"/>
+<text x="100" y="219.5" font-size="10" fill="#1e293b">2 operations  →  C*=3 (overshoot)</text>
+<text x="470" y="71" font-size="12.5" font-weight="600" fill="#1e293b">Where the discovered solution lands</text>
+<rect x="470" y="91.0" width="207.8" height="18" rx="3" fill="#c56b3e" opacity="0.95"/>
+<text x="683.8" y="104.0" font-size="10.5" fill="#1e293b" font-weight="600">0.87</text>
+<text x="470" y="87.0" font-size="9.7" fill="#64748b">aux-label curriculum (supervised)</text>
+<rect x="470" y="131.0" width="173.3" height="18" rx="3" fill="#1f7a8c" opacity="0.95"/>
+<text x="649.3" y="144.0" font-size="10.5" fill="#1e293b" font-weight="600">0.81</text>
+<text x="470" y="127.0" font-size="9.7" fill="#64748b">discovered (composite label only)</text>
+<rect x="470" y="171.0" width="138.9" height="18" rx="3" fill="#94a3b8" opacity="0.55"/>
+<text x="614.9" y="184.0" font-size="10.5" fill="#1e293b" font-weight="600">0.75</text>
+<text x="470" y="167.0" font-size="9.7" fill="#64748b">single channel (cap, by constr.)</text>
+<rect x="470" y="211.0" width="83.3" height="18" rx="3" fill="#94a3b8" opacity="0.55"/>
+<text x="559.3" y="224.0" font-size="10.5" fill="#1e293b" font-weight="600">0.65</text>
+<text x="470" y="207.0" font-size="9.7" fill="#64748b">unshared from-scratch (floor)</text>
+<line x1="664.4" y1="76" x2="664.4" y2="242" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text x="664.4" y="255" font-size="9.5" text-anchor="middle" fill="#64748b">target 0.85</text>
+<text x="470" y="274" font-size="10.5" fill="#1e293b">The two channels split the two motifs in only <tspan font-weight="700" fill="#c56b3e">55%</tspan> of runs;</text>
+<text x="470" y="288" font-size="10.5" fill="#64748b">the rest collapse onto one, so the honest split needs supervision.</text>
+</svg>

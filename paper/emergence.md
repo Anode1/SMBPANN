@@ -296,6 +296,8 @@ still lands ≥ 0.40 of its taps on the generative offsets; 8 seeds/cell, `emerg
 | 120 (2904) | 0.90 | 0.77 | 0.84 | 0.34 | 0.39 | 0.23 | 20 |
 | 360 (8664) | 0.90 | 0.77 | 0.82 | 0.67 | 0.52 | 0.43 | ≥ 32 |
 
+![The emergence boundary recedes as search budget grows: GA on-relevance falls with input size N, but a larger evaluation budget (darker line) sustains it to larger N — so the upper critical size N* is pushed outward, not fixed.](images/fig_boundary.svg)
+
 On-relevance rises **monotonically with budget at every N** (e.g. N=24: 0.22 → 0.34 → 0.67; N=28:
 0.15 → 0.39 → 0.52), so directed emergence has an **upper critical size N\*** that the search budget
 pushes outward: at ~1k evaluations the GA loses the generative offsets by N≈24 (N\*=20), while at ~9k it
@@ -494,6 +496,34 @@ noise** and we do not lean on it. The robust rule: once tiling gives a good shar
 sharing *coordinated* (nature keeps serial homologs coordinated, Hox, rather than letting each segment
 drift), and do not add jitter you do not need. (Caveat: on a genuinely multimodal task jitter could
 help; here the assembly finds the optimum directly, so it has nothing to escape.)
+
+### 13b. Does composition emerge when the search must find it? A boundary
+
+The chain in §13, like the reuse and translation results, *hands* the search a decomposition and asks it
+to assemble the pieces. A first attempt to close the loop honestly, `emerge_develop2.c`, discovered two
+blocks for a two-operation task (motif A **and** B) and recombined them, reaching 0.89 vs 0.65 for a
+from-scratch search — but a fair control overturns that story. Two *shared* channels trained jointly
+end-to-end on the composite label, with no per-operation labels and no freeze, already reach **0.81**; so
+of the +0.24 "recombination" win, ~two-thirds is weight sharing (§12, §14) and ~one-third is an
+auxiliary-label curriculum, with essentially nothing attributable to emergent *composition*. The
+experimenter, not the search, supplied the decomposition.
+
+So the honest question (`emerge_discover.c`): give the search only the composite label and a
+channel-energy budget — no per-operation labels — and let it decide the decomposition, both how many
+parts and which. Sweep the channel count C under the budget; each candidate trains its shared filters and
+read-out jointly on the composite label alone (40 paired seeds), against an aux-label curriculum (find A,
+find B, freeze, combine) as a supervised ceiling and an unshared per-position search as the floor.
+
+![Composition does not cleanly emerge when the search must find the decomposition: a one-operation task selects C*=1, but the two-operation task overshoots to C*=3, and the two channels specialize to the two motifs in only 55% of runs, so the unsupervised discovered solution (0.81) falls short of the supervised curriculum (0.87).](images/fig_discover.svg)
+
+**Composition does not cleanly emerge without supervision.** A one-operation task selects C\*=1, but the
+two-operation task overshoots: the two channels specialize in only **55%** of runs (the rest collapse onto
+one), so C=2 plateaus at **0.81** (a fair shared baseline), the supervised curriculum reaches **0.87**, and
+the energy-selected count overshoots to **C\*=3**. Directed search under an energy budget does not, on its
+own, find the two-part decomposition — it under-specializes and pays for a redundant channel; the clean
+split appears only with per-operation supervision. This is the sharpest boundary in the study: emergent
+*depth* matches the receptive field cleanly (§8), but emergent *composition* on the channel axis needs
+supervision or imposed structure, it does not fall out of the energy budget alone.
 
 ### 14. Scale: the weight-sharing advantage widens with input size, then saturates
 
