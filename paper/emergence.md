@@ -369,20 +369,22 @@ against a **FREE** GA over arbitrary dilation sequences. Same spike-distance tas
 
 | distance s | REUSE solve | REUSE energy | FREE solve | FREE energy | verdict |
 |---|---|---|---|---|---|
-| s=4 | 8/8 | 1.6 | 8/8 | **1.2** | tie-solve, FREE marginally cheaper |
-| s=8 | **8/8** | **2.8** | 7/8 | 3.0 | REUSE solves more |
-| s=12 | 7/8 | **2.7** | 7/8 | 3.1 | REUSE cheaper |
+| s=4 | 24/24 | 1.5 | 24/24 | **1.2** | tie-solve, FREE cheaper |
+| s=8 | **24/24** | 3.0 | 22/24 | 3.1 | REUSE solves more |
+| s=12 | 15/24 | 2.7 | **23/24** | 3.4 | FREE solves more |
 
-**The reuse heuristic is validated.** At matched compute the free heterogeneous search never solves
-*more reliably* or at *lower energy* than simply enumerating uniform reused blocks, and on the harder
-tasks (s=8, 12) reuse is strictly better on both. Its only edge is a marginal one on the *easiest*
-task (s=4), where a single block is optimal and FREE's extra wandering lands on it slightly more often.
-Block diversity buys nothing but a larger search: the good architectures here are uniform, so the
-combinatorial space is mostly wasted effort. This is the user's original intuition made quantitative,
-"the combinations are large, so use knowledge (reuse the same blocks)." Honest scope: this is a task
-whose difficulty is a single receptive-field requirement, which uniform stacks already meet optimally;
-a task genuinely needing two *different* operations composed is where heterogeneity would earn its keep,
-and where the reuse heuristic would finally cost something (the next step).
+**The reuse heuristic holds up to moderate difficulty, then breaks (24 seeds).** At matched compute,
+uniform reuse ties the free search on the easiest task (s=4, both 24/24, FREE marginally cheaper) and
+solves *more* at s=8 (24/24 vs 22/24): where the required reach is small, block diversity buys nothing but
+a larger search, and the good architectures are uniform. But at the hardest single-operation task the
+ordering **inverts**: at s=12 FREE solves **23/24** where uniform reuse manages only **15/24**, because a
+deep *uniform* stack is hard to train while a mixed-dilation sequence reaches the same span at a shallower,
+more trainable depth. So the reuse heuristic is the tractable near-optimum only while the task is shallow
+enough; its edge fades as the task deepens (the 8-seed run hid this as a 7/8 tie; 24 seeds reveal the
+split). This is the user's original intuition made quantitative, "the combinations are large, so use
+knowledge (reuse the same blocks)," now with an honest boundary: it holds for a *shallow* single
+receptive-field requirement, and already at s=12 the heterogeneous search wins, foreshadowing §10 where two
+*different* operations make heterogeneity not merely helpful but required.
 
 ### 10. Where reuse breaks: a task that needs two *different* operations
 
@@ -392,21 +394,21 @@ pattern to detect (anywhere, max-pool) needs **both**: a **fine motif** `(+A,−
 positions, visible only to a **dilation-1** block, since a dilated block skips the middle tap and
 cannot tell `(+,−,+)` from `(+,+,+)`, **and** a matching spike far away at distance `s`, reached
 cheaply only by a **dilation-3** block. Negatives break exactly one condition (wrong fine motif, or
-wrong distance), so both operations are necessary. Reuse vs recombination, equal compute, 8 seeds:
+wrong distance), so both operations are necessary. Reuse vs recombination, equal compute, 24 seeds:
 
 | distance s | uniform d=1 | uniform d=3 | REUSE (best uniform) | FREE (recombination) |
 |---|---|---|---|---|
-| s=8 | 3/8 (L=4.7) | **0/8** | 3/8 (L=4.7) | **8/8 (L=2.4)** |
-| s=12 | **0/8** | **0/8** | 1/8 (L=4.0) | **5/8 (L=3.6)** |
+| s=8 | 13/24 (L=4.8) | **0/24** | 13/24 (L=4.8) | **24/24 (L=2.2)** |
+| s=12 | 1/24 (L=6.0) | **0/24** | 5/24 (L=4.4) | **19/24 (L=3.3)** |
 
-**Reuse breaks, exactly as predicted.** Uniform d=3 solves **0/8** at both distances, it is blind to
-the fine motif. Uniform d=1 can see the motif but pays for the reach: 3/8 at s=8 (L≈4.7) and 0/8 at
-s=12 (the required depth is too large to train). The best of *any* single reused block tops out at 3/8
-and 1/8. Recombination, a GA over dilation sequences, solves **8/8** and **5/8** at about *half* the
-energy, and its solutions are literal two-op composites: at s=8 it finds **`[1 3]`**, one fine block
-then one coarse-reach block, the exact mix no single reused block can express. This is the crossover:
-when the task's difficulty is a single receptive-field requirement, cloning one block is the tractable
-near-optimum (Section 9); the moment it needs two *different* operations, that heuristic fails and the
+**Reuse breaks, exactly as predicted (24 seeds).** Uniform d=3 solves **0/24** at both distances, it is
+blind to the fine motif. Uniform d=1 can see the motif but pays for the reach: 13/24 at s=8 (L≈4.8) and
+only 1/24 at s=12 (the required depth is too large to train). The best of *any* single reused block tops
+out at 13/24 and 5/24. Recombination, a GA over dilation sequences, solves **24/24** and **19/24** at about
+*half* the energy, and its solutions are literal two-op composites: at s=8 it finds **`[1 3]`**, one fine
+block then one coarse-reach block, the exact mix no single reused block can express. This is the crossover:
+when the task's difficulty is a *shallow* single receptive-field requirement, cloning one block is the
+tractable near-optimum (§9); the moment it needs two *different* operations, that heuristic fails and the
 expensive heterogeneous search earns its keep.
 
 ### 11. An adaptive searcher: clone while it pays, recombine when it stalls
@@ -418,22 +420,24 @@ sweep finishes *without* solving, that is the stall signal (no single reused blo
 switches to **recombine**, the GA over heterogeneous sequences. (No accuracy-plateau detector: these
 tasks are flat-then-jump, so a plateau would misfire in the flat region; "clone sweep finished
 unsolved" is the robust signal.) Three strategies, pure REUSE, pure FREE, STAGED, on both regimes at
-the same s=8, 8 seeds:
+the same s=8, 24 seeds:
 
 | regime | REUSE (clone only) | FREE (recombine only) | STAGED |
 |---|---|---|---|
-| ONE-OP (repetitive) | 5/8, cost 63 | 5/8, cost 134 | **7/8**, cost 114 (5 clone + 2 recombine) |
-| TWO-OP (two ops) | 2/8, cost 79 | 8/8, cost 140 | **8/8**, cost 185 (2 clone + 6 recombine) |
+| ONE-OP (repetitive) | 15/24, cost 63 | 18/24, cost 135 | **22/24**, cost 114 (15 clone + 7 recombine) |
+| TWO-OP (two ops) | 11/24, cost 78 | **24/24**, cost 140 | **24/24**, cost 154 (11 clone + 13 recombine) |
 
-**STAGED beat both fixed strategies on solve rate in *both* regimes**, more than the "match the best
-in each regime" it was designed for. The reason is that clone and recombine have *partially
-non-overlapping success sets*: trying clone-then-recombine catches seeds that neither gets alone, so
-the fallback backstops training noise even in the easy regime, not just the hard one. **Honest cost:**
-adaptivity is not free, STAGED pays for the failed clone sweep before recombining (ONE-OP cost 114 vs
-REUSE's 63; TWO-OP 185 vs FREE's 140), and these are noisy 8-seed rates (REUSE's 5/8 here vs Section 9's
-8/8 reflects fewer restarts and early-exit taking a marginal low-energy stack). But STAGED never
-suffers either fixed strategy's worst-case failure, REUSE's 2/8 collapse on the two-op task, or FREE's
-wasted search on the repetitive one. It detects the regime from whether cloning stalls, and adapts.
+**STAGED matches or beats the best fixed strategy in each regime, and strictly beats *both* on the
+repetitive one (24 seeds).** On ONE-OP it solves 22/24, above both REUSE (15/24) and FREE (18/24); on
+TWO-OP it ties FREE at 24/24 (both at ceiling) while REUSE collapses to 11/24. It can *exceed* either fixed
+strategy because clone and recombine have *partially non-overlapping success sets*: STAGED's 22/24 on
+ONE-OP is 15 solved by cloning plus 7 more recovered by the recombine fallback, catching seeds that
+recombine-only (18/24) misses. **Honest cost and caveat:** adaptivity is not free, STAGED pays for the
+failed clone sweep before recombining (ONE-OP cost 114 vs REUSE's 63; TWO-OP 154 vs FREE's 140); and
+STAGED's clone arm uses early-exit with fewer restarts than §9's full enumeration, so its raw REUSE rate
+(15/24 on ONE-OP) sits below §9's. But STAGED never suffers either fixed strategy's worst-case failure,
+REUSE's 11/24 collapse on the two-op task, or FREE's wasted search on the repetitive one. It detects the
+regime from whether cloning stalls, and adapts.
 
 ### 12. The third operator: translation replicates a working detector
 

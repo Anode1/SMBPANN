@@ -28,7 +28,7 @@
     <rect x="0" y="4" width="46" height="34" rx="4" fill="#eef2f6" stroke="#94a3b8"/><text x="23" y="26" font-size="14" fill="#334155" text-anchor="middle">d3</text>
     <rect x="54" y="4" width="46" height="34" rx="4" fill="#eef2f6" stroke="#94a3b8"/><text x="77" y="26" font-size="14" fill="#334155" text-anchor="middle">d3</text>
     <rect x="108" y="4" width="46" height="34" rx="4" fill="#eef2f6" stroke="#94a3b8"/><text x="131" y="26" font-size="14" fill="#334155" text-anchor="middle">d3</text>
-    <text x="180" y="26" font-size="15" fill="#e76f51">&#10007; blind to fine motif (0/8)</text>
+    <text x="180" y="26" font-size="15" fill="#e76f51">&#10007; blind to fine motif (0/24)</text>
   </g>
 
   <!-- recombine solves -->
@@ -36,7 +36,7 @@
     <text x="0" y="-6" font-size="12.5" font-weight="600" fill="#0d9488">recombine: different blocks</text>
     <rect x="0" y="4" width="46" height="34" rx="4" fill="#ccfbf1" stroke="#0d9488"/><text x="23" y="26" font-size="14" fill="#0f766e" text-anchor="middle">d1</text>
     <rect x="54" y="4" width="46" height="34" rx="4" fill="#ccfbf1" stroke="#0d9488"/><text x="77" y="26" font-size="14" fill="#0f766e" text-anchor="middle">d3</text>
-    <text x="180" y="26" font-size="15" fill="#0d9488">&#10003; fine + reach (8/8)</text>
+    <text x="180" y="26" font-size="15" fill="#0d9488">&#10003; fine + reach (24/24)</text>
   </g>
 
   <!-- biology tie -->
@@ -52,5 +52,5 @@
     <text x="16" y="168" font-size="11" fill="#64748b">will not do</text>
   </g>
 
-  <text x="20" y="292" font-size="11.5" fill="#94a3b8">A staged searcher (Sec. 11) clones by default and recombines only when cloning stalls — and beats both fixed strategies.</text>
+  <text x="20" y="292" font-size="11.5" fill="#94a3b8">A staged searcher (Sec. 11) clones by default and recombines only when cloning stalls — and matches or beats both fixed strategies.</text>
 </svg>

@@ -257,26 +257,30 @@ sequences, not two-parent crossover).}
 
 \section{The operators: reuse, recombination, translation}
 
-\subsection{Reuse beats a free search at equal compute}
+\subsection{Reuse beats a free search at equal compute, up to a point}
 
 Composing blocks explodes combinatorially, so we adopt the heuristic LeCun did: reuse one block type,
-stacked, and search only the depth. At \emph{equal compute}, a free heterogeneous search (a GA over
-arbitrary block sequences, using a dilated-conv library) never solves more reliably than simply
-enumerating uniform reused blocks, and is cheaper only on the easiest task; on the harder tasks reuse is
-strictly better. Block
-diversity buys nothing but a larger search, the reuse heuristic is the tractable near-optimum, which
-is the user's intuition (``the combinations explode, so reuse the same block'') made quantitative. This
-mirrors cell-based NAS (ENAS, DARTS), which search one cell and stack it.
+stacked, and search only the depth. At \emph{equal compute} (24 seeds), reuse is the tractable near-optimum
+\emph{up to a point}: enumerating uniform reused blocks ties the free heterogeneous search (a GA over
+arbitrary dilated-block sequences) on the easiest task ($s{=}4$: both $24/24$, free marginally cheaper) and
+solves \emph{more} at $s{=}8$ ($24/24$ vs $22/24$). But at the hardest single-operation task the ordering
+inverts: at $s{=}12$ the free search solves $23/24$ where uniform reuse manages only $15/24$, because a deep
+\emph{uniform} stack is hard to train while a mixed-dilation sequence reaches the same span at a shallower,
+more trainable depth. So block diversity buys nothing while the required reach is small, the reuse heuristic
+is the near-optimum there (the user's intuition, ``the combinations explode, so reuse the same block,''
+made quantitative), but its edge fades as the task deepens, foreshadowing the two-operation task below
+where heterogeneity becomes not merely helpful but required. This mirrors cell-based NAS (ENAS, DARTS),
+which search one cell and stack it.
 
 \subsection{Recombination is required when a task needs two different operations}
 
 Reuse breaks exactly where the biology predicts. On a task that needs a fine local motif
 $(+,-,+)$ at adjacent positions (visible only to a dilation-1 block) \emph{and} a far spike at distance
 $s$ (reached cheaply only by a dilation-3 block), no single reused block serves both roles: a uniform
-dilation-3 stack is blind to the fine motif (solving 0/8), a uniform dilation-1 stack cannot afford the
-reach. Recombination, a GA over mixed block sequences, solves 8/8 at about half the energy, and its
-solutions are literal two-operation mixes such as $[1,3]$: one fine block, one coarse-reach block
-(Figure~\ref{fig:reuse}). Clone when scaling a working module; recombine only when you need a new kind of
+dilation-3 stack is blind to the fine motif (solving $0/24$), and the best single reused block tops out at
+$13/24$ ($s{=}8$) and $5/24$ ($s{=}12$). Recombination, a GA over mixed block sequences, solves $24/24$ and
+$19/24$ at about half the energy, and its solutions are literal two-operation mixes such as $[1,3]$: one
+fine block, one coarse-reach block (Figure~\ref{fig:reuse}). Clone when scaling a working module; recombine only when you need a new kind of
 part, runners when the structure repeats, seeds when it must change.
 
 \begin{figure}[t]
@@ -403,8 +407,9 @@ assemble the rest. Under an energy
 budget on an exhaustive seed, sparsity and feature selection emerge and weight sharing is adopted, and a
 compact convolution emerges too, but only once mutation acts on the shared feature rather than the single
 edge, for a decoupling reason we can state in a line. On top of imposed priors,
-depth grows with the receptive field (overshooting it), reuse beats a free search at equal compute, recombination is
-required only when a task needs a genuinely different operation, and weight-shared tiling is
+depth grows with the receptive field (overshooting it), reuse beats a free search at equal compute up to
+moderate depth (a heterogeneous search overtakes it on the deepest single-operation task), recombination is
+required outright once a task needs a genuinely different operation, and weight-shared tiling is
 data-efficient at a degree that grows with scale then saturates. Where the search must \emph{discover} a
 compositional decomposition itself it does not, the parts failing to specialize without supervision
 (Sec.~\ref{subsec:compose}), a boundary we mark rather than paper over. The contribution is the honest map, the negatives, and

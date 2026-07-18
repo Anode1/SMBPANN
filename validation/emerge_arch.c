@@ -22,7 +22,14 @@
  *   FREE : a GA over arbitrary dilation sequences and length. Combinatorial (up to 3^Lmax).
  * We report, per s, solve-rate and the energy (block count) among solved. The honest question: at
  * equal compute, does searching the big heterogeneous space solve MORE or CHEAPER than enumerating
- * uniform reused blocks -- or is reuse the tractable near-optimum? Self-contained C99. make emerge_arch
+ * uniform reused blocks -- or is reuse the tractable near-optimum?
+ *
+ * Finding (24 seeds, equal compute): reuse is the near-optimum UP TO A POINT. It ties FREE at s=4 (both
+ * 24/24, FREE marginally cheaper) and solves MORE at s=8 (24/24 vs 22/24) -- where the reach is small,
+ * block diversity buys nothing. But at s=12 the ordering INVERTS: FREE solves 23/24 vs uniform reuse's
+ * 15/24, because a deep uniform stack is hard to train while a mixed-dilation sequence reaches the same
+ * span at a shallower, more trainable depth. So reuse dominates only at shallow depth; its edge fades as
+ * the task deepens (an 8-seed run hid this as a 7/8 tie at s=12). Self-contained C99. make emerge_arch
  */
 #include <stdio.h>
 #include <stdlib.h>

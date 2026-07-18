@@ -21,10 +21,10 @@
  * blocks; a HETEROGENEOUS mix ([1,3]: one fine block, then coarse reach) does both at lower energy.
  * So this is the regime where searching different blocks (recombination) beats cloning one (reuse).
  *
- * Finding (8 seeds, equal compute): confirmed and stronger. Uniform d=3 solves 0/8 at every distance
- * (blind to the fine motif). Uniform d=1 solves only 3/8 at s=8 (L~4.7) and 0/8 at s=12 (needs a depth
- * too large to train). The best of any single reused block tops out at 3/8 and 1/8. Recombination
- * (a GA over dilation sequences) solves 8/8 at s=8 and 5/8 at s=12, at about HALF the energy (L~2.4),
+ * Finding (24 seeds, equal compute): confirmed and stronger. Uniform d=3 solves 0/24 at every distance
+ * (blind to the fine motif). Uniform d=1 solves 13/24 at s=8 (L~4.8) and only 1/24 at s=12 (needs a depth
+ * too large to train). The best of any single reused block tops out at 13/24 and 5/24. Recombination
+ * (a GA over dilation sequences) solves 24/24 at s=8 and 19/24 at s=12, at about HALF the energy (L~2.2),
  * and its solutions are literal two-op mixes -- e.g. [1 3]: one fine block, one coarse-reach block.
  * Reuse BREAKS here: two different operations force heterogeneity, and cloning one block cannot express
  * it. Self-contained C99 (reuses emerge_arch's dilated-conv engine). Build: make emerge_twoop

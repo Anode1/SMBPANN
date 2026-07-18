@@ -19,13 +19,14 @@
  *   ONE-OP : REUSE cheap+solves, FREE solves but wasteful, STAGED = cheap (solves in the clone phase).
  *   TWO-OP : REUSE fails, FREE solves but always pays, STAGED = solves (detects stall, recombines).
  *
- * Finding (8 seeds, s=8): STAGED did better than "match the best in each regime" -- it BEAT both fixed
- * strategies on solve rate in BOTH regimes: ONE-OP 7/8 (REUSE 5/8, FREE 5/8), TWO-OP 8/8 (REUSE 2/8,
- * FREE 8/8). Clone and recombine have partially non-overlapping success sets, so clone-then-recombine
- * catches seeds neither gets alone -- the fallback backstops noise in the easy regime too, not just the
- * hard one. Honest cost: adaptivity is not free -- STAGED pays the failed clone sweep before recombining
- * (ONE-OP cost 114 vs REUSE 63; TWO-OP cost 185 vs FREE 140). But it never has either fixed strategy's
- * worst-case failure. Reports solve rate, mean candidate-trainings, and which phase STAGED solved in.
+ * Finding (24 seeds, s=8): STAGED matches or beats the best fixed strategy in each regime, and BEATS both
+ * on the repetitive one: ONE-OP 22/24 (REUSE 15/24, FREE 18/24), TWO-OP 24/24 (ties FREE 24/24; REUSE
+ * 11/24). Clone and recombine have partially non-overlapping success sets, so clone-then-recombine
+ * catches seeds neither gets alone (ONE-OP 22 = 15 clone + 7 recombine, above FREE's 18) -- the fallback
+ * backstops noise in the easy regime too, not just the hard one. Honest cost: adaptivity is not free --
+ * STAGED pays the failed clone sweep before recombining (ONE-OP cost 114 vs REUSE 63; TWO-OP cost 154 vs
+ * FREE 140). But it never has either fixed strategy's worst-case failure. Reports solve rate, mean
+ * candidate-trainings, and which phase STAGED solved in.
  * Self-contained C99. Build: make emerge_staged
  */
 #include <stdio.h>
