@@ -2,7 +2,8 @@
 
 *Research note. Positive-and-honest counterpart to this repo's NAS-Bench-101 crossover null (reconciled
 in §6b; its code is in `validation/`). Reproduce: `make conv_emerge &&./conv_emerge`
-(env: `SEEDS`, `GENS`, `TARGET`, `PADD`). All numbers below: 24 seeds × 150 generations.*
+(env: `SEEDS`, `GENS`, `TARGET`, `PADD`). §1 uses 24 seeds × 150 generations; later sections state their
+own seed counts (e.g. 40 in §12–13, 50 in §6b, 250 in §14), each reproducible with the noted `SEEDS`.*
 
 ## Abstract
 
@@ -22,10 +23,9 @@ shared weight, not a per-connection edit), which restores the energy gradient a 
 lacks (§6). A second finding (§6b): under this budget a directed search finds a *tidier* filter than
 random sampling at *equal task accuracy* (tidier, not better, and it survives a denoising control), which
 reconciles this repo's earlier crossover null, directed search beats random when the objective can be
-climbed and ties it when the landscape is flat. We are not aware of a prior
-result showing this specific evolutionary energy-emergence from an exhaustive seed, *path-independent*
-(the same structure emerges from a minimal seed grown up), together with its honest boundary; that
-characterization, negatives included, is the contribution.
+climbed and ties it when the landscape is flat. The contribution is that map itself: an evolutionary
+energy-emergence from an exhaustive seed, *path-independent* (the same structure from a minimal seed grown
+up, with SET/RigL a near neighbor), together with its honest boundary, negatives included.
 
 **What we reproduce rather than claim as new.** On top of the priors a ConvNet also hardwires,
 **locality** and **translatability**, the *real symmetries* of a signal, the free dimensions then emerge
@@ -333,7 +333,7 @@ emerge separately; the clean compact *shared* whole still does not dominate.
 
 ### 8. Composition: does the emerged depth match the task's compositional depth?
 
-![Accuracy is at chance until the stack is deep enough for its receptive field to span the spike pair, then lifts off at depth ≈ s/2.](images/fig3_depth.svg)
+![Under a fair mean over restarts, accuracy rises with depth and the best depth grows with s, but it overshoots the required s/2 and never reaches the 0.85 target.](images/fig3_depth.svg)
 
 The next abstraction is **composition**, stacking a block to build deeper structure. "Which blocks,
 wired how" explodes combinatorially, so `emerge_compose.c` adopts LeCun's own heuristic (knowledge):
@@ -346,24 +346,16 @@ integrates globally, so a shallow block suffices, verified, it does). The fair t
 **receptive-field** requirement with a **max-pool** readout: detect two spikes at a specific distance
 `s` (both classes have two spikes, so position and count are useless, a unit must *see both at once*
 and check the spacing). That needs receptive field ≥ `s+1`, i.e. depth ≥ `s/2`. Under an energy
-budget (energy = depth), does the selected depth track `s`? (12 seeds × 4 restarts, target 0.85.)
+budget (energy = depth), does the selected depth track `s`? (30 seeds × 4 restarts, fair mean over restarts, target 0.85.)
 
 | distance s (needs L) | L=1 | L=2 | L=3 | L=4 | L=5 |
 |---|---|---|---|---|---|
-| s=2 (need L=1) | 0.729 | **0.902** | 0.923 | 0.869 | 0.897 |
-| s=4 (need L=2) | 0.551 | 0.711 | **0.908** | 0.830 | 0.797 |
-| s=6 (need L=3) | 0.555 | 0.595 | 0.695 | 0.765 | 0.786 |
-| s=8 (need L=4) | 0.539 | 0.591 | 0.657 | 0.711 | 0.783 |
+| s=2 (need L=1) | 0.608 | 0.745 | **0.814** | 0.760 | 0.695 |
+| s=4 (need L=2) | 0.524 | 0.628 | **0.730** | 0.708 | 0.638 |
+| s=6 (need L=3) | 0.522 | 0.551 | 0.624 | 0.662 | **0.666** |
+| s=8 (need L=4) | 0.519 | 0.544 | 0.589 | 0.626 | **0.648** |
 
-**Emergent depth tracks required depth.** Each task is pinned at **chance** until the stack is deep
-enough to see the pair, then accuracy **lifts off exactly at the receptive-field floor** L ≈ s/2
-(s=4 lifts at L=2, s=6 at L=3, s=8 at L=4); energy then selects the shallowest sufficient stack, and
-that depth rises **1:1 with s**. Abstraction layers appear exactly as deep as the composition demands,
-from one reused block. Honest caveats: the largest spacings (s=6, 8) keep climbing but do not cross
-0.85 within L ≤ 5 (deeper stacks / more training would be needed), and the 0.85-target depth sits ~1
-above the bare RF bound (robust detection needs a margin layer). This is the clearest positive in the
-note: when locality *and* the feed-forward composition rule are imposed (both necessary priors), the
-one thing left free, **how deep**, emerges to match the task.
+**Emergent depth grows with s, but overshoots.** Each task sits near **chance** while the stack is too shallow to see the pair, then accuracy rises with depth, and the best depth grows with s. But under a **fair mean over restarts** (no best-of), the match is only qualitative: peak accuracy falls with s (0.81, 0.73, 0.67, 0.65 for s=2,4,6,8) and **never crosses the 0.85 target**, so nothing is cleanly selected, and the best depth **overshoots** the required s/2 (peaks at L ≈ 3, 3, 4, 5 versus 1, 2, 3, 4 needed). The clean 1:1 staircase first reported was an artifact of **best-of-restarts** selection; fairly measured, depth emergence is a trend with the same overshoot the channel axis shows (§15).
 
 ### 9. Does the reuse heuristic pay? Reuse vs free composition at equal compute
 
@@ -497,34 +489,6 @@ sharing *coordinated* (nature keeps serial homologs coordinated, Hox, rather tha
 drift), and do not add jitter you do not need. (Caveat: on a genuinely multimodal task jitter could
 help; here the assembly finds the optimum directly, so it has nothing to escape.)
 
-### 13b. Does composition emerge when the search must find it? A boundary
-
-The chain in §13, like the reuse and translation results, *hands* the search a decomposition and asks it
-to assemble the pieces. A first attempt to close the loop honestly, `emerge_develop2.c`, discovered two
-blocks for a two-operation task (motif A **and** B) and recombined them, reaching 0.89 vs 0.65 for a
-from-scratch search — but a fair control overturns that story. Two *shared* channels trained jointly
-end-to-end on the composite label, with no per-operation labels and no freeze, already reach **0.81**; so
-of the +0.24 "recombination" win, ~two-thirds is weight sharing (§12, §14) and ~one-third is an
-auxiliary-label curriculum, with essentially nothing attributable to emergent *composition*. The
-experimenter, not the search, supplied the decomposition.
-
-So the honest question (`emerge_discover.c`): give the search only the composite label and a
-channel-energy budget — no per-operation labels — and let it decide the decomposition, both how many
-parts and which. Sweep the channel count C under the budget; each candidate trains its shared filters and
-read-out jointly on the composite label alone (40 paired seeds), against an aux-label curriculum (find A,
-find B, freeze, combine) as a supervised ceiling and an unshared per-position search as the floor.
-
-![Composition does not cleanly emerge when the search must find the decomposition: a one-operation task selects C*=1, but the two-operation task overshoots to C*=3, and the two channels specialize to the two motifs in only 55% of runs, so the unsupervised discovered solution (0.81) falls short of the supervised curriculum (0.87).](images/fig_discover.svg)
-
-**Composition does not cleanly emerge without supervision.** A one-operation task selects C\*=1, but the
-two-operation task overshoots: the two channels specialize in only **55%** of runs (the rest collapse onto
-one), so C=2 plateaus at **0.81** (a fair shared baseline), the supervised curriculum reaches **0.87**, and
-the energy-selected count overshoots to **C\*=3**. Directed search under an energy budget does not, on its
-own, find the two-part decomposition — it under-specializes and pays for a redundant channel; the clean
-split appears only with per-operation supervision. This is the sharpest boundary in the study: emergent
-*depth* matches the receptive field cleanly (§8), but emergent *composition* on the channel axis needs
-supervision or imposed structure, it does not fall out of the energy budget alone.
-
 ### 14. Scale: the weight-sharing advantage widens with input size, then saturates
 
 `emerge_scale.c` sweeps the input size N (so the number of positions to cover grows), holding the data
@@ -552,6 +516,29 @@ plateau. This is **weight-sharing data efficiency** (LeCun 1989), not architectu
 survives even a *fully-trained, oracle-supervised* locally-connected baseline (`emerge_baseline.c`: the
 shared arm still wins +0.14 at N=16 up to +0.38 at N=128), so it is not an artifact of the baseline's
 training rule.
+
+### 15. Does composition emerge when the search must discover it? A boundary (`emerge_discover.c`)
+
+Sections 8–13 hand the search a decomposition (impose the composition rule, or supply auxiliary
+per-operation labels) and ask it to assemble the pieces. The sharper question is whether the *search
+itself*, given only the composite label and an energy budget, discovers the decomposition, both how many
+parts and which. On a two-operation task (motifs A **and** B, positive iff both present, so one tiled
+channel caps at 0.75 by construction), sweep the channel count `C` under the energy budget, training each
+candidate's shared filters and read-out jointly on the composite label **alone**, against a supervised
+**curriculum** (find A, find B, freeze, combine) as ceiling and an unshared per-position search as floor
+(40 paired seeds).
+
+![Composition does not cleanly emerge when the search must find the decomposition: a one-operation task selects C*=1, but the two-operation task overshoots to C*=3, and the two channels specialize in only 55% of runs, so the unsupervised discovered solution (0.81) falls short of the supervised curriculum (0.87).](images/fig_discover.svg)
+
+**Composition does not cleanly emerge without supervision.** A one-operation task selects C\*=1; but on the
+two-operation task the two channels specialize to the two motifs in only **55%** of runs (the rest collapse
+onto one), so C=2 plateaus at **0.81** (a fair shared baseline), the curriculum reaches **0.87**, and the
+energy-selected count **overshoots** to C\*=3. Directed search under an energy budget does not, on its own,
+find the two-part decomposition; it under-specializes and pays for a redundant channel, and the clean split
+appears only with per-operation supervision. This is the note's sharpest boundary: emergent *depth* grows with
+the receptive field (§8, though it overshoots), but emergent *composition* on the channel axis needs supervision or
+imposed structure. It also retracts a chain that only *appears* to recombine (`emerge_develop2.c`): hand it
+the decomposition and its gain is weight sharing plus that supervision, not emergent composition.
 
 ## Honest bottom line
 
@@ -597,8 +584,10 @@ alone*. The adaptive policy is not just a convenience; it is strictly the more r
 
 - **The full developmental GA**, all four operators (prune, clone, translate, recombine) chained on a
  genuinely compositional task, growing structure once and refining in place rather than re-searching.
- *Expected:* it assembles a working hierarchy that from-scratch search cannot reach at equal budget,
- the developmental margin of §13–14 widening with task complexity.
+ *Expected, tempered by §15:* find/clone/translate chain cleanly (but that +0.25 is weight-sharing
+ data-efficiency, not reuse-beats-re-search); recombination of a *second discovered* block does **not**
+ emerge from the composite label alone (§15), so it needs per-operation supervision or imposed structure.
+ The honest next step is therefore real data and scale, not another operator.
 - **Real data and larger, 2-D inputs**, where greedy enumeration fails and the operators earn their
  keep. *Expected:* the scaling advantage of §14 (reuse flat, re-search falling) holds and widens.
 - **Does jitter ever earn its keep?** §13 found it unneeded, harmful, even, because reuse lands at the

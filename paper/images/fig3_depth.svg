@@ -1,47 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 270" font-family="Segoe UI, Helvetica, Arial, sans-serif">
-  <title>Section 8: the emergent stack depth grows to match the receptive field the task requires</title>
-  <rect x="0" y="0" width="820" height="270" fill="#ffffff"/>
-  <text x="20" y="28" font-size="16" font-weight="600" fill="#1e293b">8 · Emergent depth matches the required receptive field</text>
-  <text x="20" y="48" font-size="12.5" fill="#64748b">task: fire iff two spikes are exactly distance s apart &#8594; a unit must SEE BOTH &#8594; depth &#8805; s/2</text>
-
-  <!-- input strip with two spikes -->
-  <g transform="translate(40,86)">
-    <text x="0" y="-6" font-size="12.5" font-weight="600" fill="#334155">input (s = 8)</text>
-    <g stroke="#cbd5e1" fill="#f8fafc">
-      <rect x="0" y="0" width="20" height="20"/><rect x="20" y="0" width="20" height="20"/><rect x="40" y="0" width="20" height="20"/>
-      <rect x="60" y="0" width="20" height="20" fill="#e76f51"/><rect x="80" y="0" width="20" height="20"/><rect x="100" y="0" width="20" height="20"/>
-      <rect x="120" y="0" width="20" height="20"/><rect x="140" y="0" width="20" height="20"/><rect x="160" y="0" width="20" height="20"/>
-      <rect x="180" y="0" width="20" height="20"/><rect x="200" y="0" width="20" height="20"/><rect x="220" y="0" width="20" height="20" fill="#e76f51"/>
-      <rect x="240" y="0" width="20" height="20"/><rect x="260" y="0" width="20" height="20"/><rect x="280" y="0" width="20" height="20"/><rect x="300" y="0" width="20" height="20"/>
-    </g>
-    <!-- RF L=1 (too small) -->
-    <path d="M60,30 L60,40 L100,40 L100,30" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
-    <text x="80" y="54" font-size="11" fill="#94a3b8" text-anchor="middle">L=1 RF: misses</text>
-    <!-- RF L=4 (covers) -->
-    <path d="M60,66 L60,78 L240,78 L240,66" fill="none" stroke="#0d9488" stroke-width="2"/>
-    <text x="150" y="94" font-size="11.5" fill="#0d9488" text-anchor="middle">L&#8776;s/2 RF: sees the pair</text>
-  </g>
-
-  <!-- accuracy vs depth plot -->
-  <g transform="translate(470,80)">
-    <text x="120" y="-16" font-size="12.5" font-weight="600" fill="#334155" text-anchor="middle">accuracy vs stack depth (s=8)</text>
-    <!-- axes -->
-    <line x1="0" y1="120" x2="250" y2="120" stroke="#94a3b8"/>
-    <line x1="0" y1="0" x2="0" y2="120" stroke="#94a3b8"/>
-    <text x="-8" y="8" font-size="10" fill="#64748b" text-anchor="end">.85</text>
-    <text x="-8" y="122" font-size="10" fill="#64748b" text-anchor="end">.50</text>
-    <!-- target line at .85 -->
-    <line x1="0" y1="0" x2="250" y2="0" stroke="#e76f51" stroke-width="1" stroke-dasharray="4 3"/>
-    <text x="252" y="4" font-size="10" fill="#e76f51">target</text>
-    <!-- data: L=1..5 acc 0.539 0.591 0.657 0.711 0.783 ; map .50->y120 .85->y0 -> y=120-(a-.5)/.35*120 -->
-    <polyline points="20,106.6 80,88.9 140,66.2 200,47.7 250,22.6" fill="none" stroke="#0d9488" stroke-width="2.5"/>
-    <g fill="#0d9488">
-      <circle cx="20" cy="106.6" r="4"/><circle cx="80" cy="88.9" r="4"/><circle cx="140" cy="66.2" r="4"/><circle cx="200" cy="47.7" r="4"/><circle cx="250" cy="22.6" r="4"/>
-    </g>
-    <g font-size="10" fill="#64748b" text-anchor="middle">
-      <text x="20" y="134">L1</text><text x="80" y="134">L2</text><text x="140" y="134">L3</text><text x="200" y="134">L4</text><text x="250" y="134">L5</text>
-    </g>
-  </g>
-
-  <text x="20" y="252" font-size="11.5" fill="#94a3b8">Chance until the stack is deep enough to cover the pair, then accuracy lifts off at L &#8776; s/2. Larger s &#8594; deeper stack selected.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 320" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<title>Emergent depth grows with the receptive field but overshoots it</title>
+<rect x="0" y="0" width="560" height="320" fill="#ffffff"/>
+<text x="20" y="26" font-size="15.5" font-weight="600" fill="#1e293b">Emergent depth grows with the required receptive field, but overshoots it</text>
+<text x="20" y="44" font-size="11.5" fill="#64748b">test accuracy vs stack depth L, by required spike distance s; fair mean over 4 restarts, 30 seeds.</text>
+<line x1="60" y1="262.0" x2="420" y2="262.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="53" y="266.0" font-size="10.5" text-anchor="end" fill="#64748b">0.5</text>
+<line x1="60" y1="215.0" x2="420" y2="215.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="53" y="219.0" font-size="10.5" text-anchor="end" fill="#64748b">0.6</text>
+<line x1="60" y1="168.0" x2="420" y2="168.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="53" y="172.0" font-size="10.5" text-anchor="end" fill="#64748b">0.7</text>
+<line x1="60" y1="121.0" x2="420" y2="121.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="53" y="125.0" font-size="10.5" text-anchor="end" fill="#64748b">0.8</text>
+<line x1="60" y1="74.0" x2="420" y2="74.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="53" y="78.0" font-size="10.5" text-anchor="end" fill="#64748b">0.9</text>
+<line x1="60" y1="97.5" x2="420" y2="97.5" stroke="#c56b3e" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text x="418" y="92.5" font-size="10" text-anchor="end" fill="#c56b3e">target 0.85 (never reached)</text>
+<text x="60.0" y="278" font-size="10.5" text-anchor="middle" fill="#64748b">1</text>
+<text x="150.0" y="278" font-size="10.5" text-anchor="middle" fill="#64748b">2</text>
+<text x="240.0" y="278" font-size="10.5" text-anchor="middle" fill="#64748b">3</text>
+<text x="330.0" y="278" font-size="10.5" text-anchor="middle" fill="#64748b">4</text>
+<text x="420.0" y="278" font-size="10.5" text-anchor="middle" fill="#64748b">5</text>
+<text x="240.0" y="294" font-size="11" text-anchor="middle" fill="#64748b">stack depth L</text>
+<text transform="rotate(-90 22 168.0)" x="22" y="168.0" font-size="11" text-anchor="middle" fill="#64748b">test accuracy</text>
+<polyline points="60.0,211.2 150.0,146.9 240.0,114.4 330.0,139.8 420.0,170.4" fill="none" stroke="#9ecfd6" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="60.0" cy="211.2" r="2.8" fill="#9ecfd6"/>
+<circle cx="150.0" cy="146.9" r="2.8" fill="#9ecfd6"/>
+<circle cx="240.0" cy="114.4" r="2.8" fill="#9ecfd6"/>
+<circle cx="330.0" cy="139.8" r="2.8" fill="#9ecfd6"/>
+<circle cx="420.0" cy="170.4" r="2.8" fill="#9ecfd6"/>
+<circle cx="240.0" cy="114.4" r="5.5" fill="none" stroke="#9ecfd6" stroke-width="1.5"/>
+<polyline points="60.0,250.7 150.0,201.8 240.0,153.9 330.0,164.2 420.0,197.1" fill="none" stroke="#5ba3b0" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="60.0" cy="250.7" r="2.8" fill="#5ba3b0"/>
+<circle cx="150.0" cy="201.8" r="2.8" fill="#5ba3b0"/>
+<circle cx="240.0" cy="153.9" r="2.8" fill="#5ba3b0"/>
+<circle cx="330.0" cy="164.2" r="2.8" fill="#5ba3b0"/>
+<circle cx="420.0" cy="197.1" r="2.8" fill="#5ba3b0"/>
+<circle cx="240.0" cy="153.9" r="5.5" fill="none" stroke="#5ba3b0" stroke-width="1.5"/>
+<polyline points="60.0,251.7 150.0,238.0 240.0,203.7 330.0,185.9 420.0,184.0" fill="none" stroke="#2b8a9e" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="60.0" cy="251.7" r="2.8" fill="#2b8a9e"/>
+<circle cx="150.0" cy="238.0" r="2.8" fill="#2b8a9e"/>
+<circle cx="240.0" cy="203.7" r="2.8" fill="#2b8a9e"/>
+<circle cx="330.0" cy="185.9" r="2.8" fill="#2b8a9e"/>
+<circle cx="420.0" cy="184.0" r="2.8" fill="#2b8a9e"/>
+<circle cx="420.0" cy="184.0" r="5.5" fill="none" stroke="#2b8a9e" stroke-width="1.5"/>
+<polyline points="60.0,253.1 150.0,241.3 240.0,220.2 330.0,202.8 420.0,192.4" fill="none" stroke="#14506b" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="60.0" cy="253.1" r="2.8" fill="#14506b"/>
+<circle cx="150.0" cy="241.3" r="2.8" fill="#14506b"/>
+<circle cx="240.0" cy="220.2" r="2.8" fill="#14506b"/>
+<circle cx="330.0" cy="202.8" r="2.8" fill="#14506b"/>
+<circle cx="420.0" cy="192.4" r="2.8" fill="#14506b"/>
+<circle cx="420.0" cy="192.4" r="5.5" fill="none" stroke="#14506b" stroke-width="1.5"/>
+<line x1="72" y1="78" x2="88" y2="78" stroke="#9ecfd6" stroke-width="2.6"/>
+<text x="94" y="81.5" font-size="9.5" fill="#1e293b">s=2 (need L=1)</text>
+<line x1="72" y1="93" x2="88" y2="93" stroke="#5ba3b0" stroke-width="2.6"/>
+<text x="94" y="96.5" font-size="9.5" fill="#1e293b">s=4 (need L=2)</text>
+<line x1="72" y1="108" x2="88" y2="108" stroke="#2b8a9e" stroke-width="2.6"/>
+<text x="94" y="111.5" font-size="9.5" fill="#1e293b">s=6 (need L=3)</text>
+<line x1="72" y1="123" x2="88" y2="123" stroke="#14506b" stroke-width="2.6"/>
+<text x="94" y="126.5" font-size="9.5" fill="#1e293b">s=8 (need L=4)</text>
+<text x="20" y="308" font-size="10.5" fill="#64748b">Best depth (ringed) peaks at L≈3,3,4,5 for s=2,4,6,8 — deeper than the required 1,2,3,4: a trend that overshoots.</text>
 </svg>

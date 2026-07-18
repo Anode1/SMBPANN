@@ -1,6 +1,14 @@
 /* emerge_develop2.c -- the developmental chain extended to TWO discovered blocks + RECOMBINATION,
  * on a task that genuinely needs two DIFFERENT operations. Sibling of emerge_develop.c (one block).
  *
+ * >>> SUPERSEDED / CONFOUNDED PROBE -- kept as a documented dead-end, NOT a result. <<<
+ * The arm (4) "recombination win" below is a CONFOUND: its two blocks are trained from auxiliary
+ * per-operation labels (curriculum supervision) and then frozen, so the gain is weight-sharing
+ * data-efficiency PLUS that supervision, NOT emergent composition. emerge_discover.c is the fair
+ * control (two SHARED channels trained jointly end-to-end on the composite label ALONE, no aux labels,
+ * no freeze); it reaches ~0.81 by itself, leaving ~0 attributable to emergent composition. That fair
+ * negative is what the paper reports (Sec 3.6). Do not cite this file's arm (4) as a positive.
+ *
  * emerge_develop.c chained the whole sequence for ONE operation: search-from-scratch STARVES, while
  * finding one stable shared block and TRANSLATING it (a convolution) reuses data across positions and
  * wins (+0.25). But one reused block only buys ONE operation. emerge_twoop.c showed the regime where
@@ -46,7 +54,13 @@
  *   - Task validity: single-block arms (2),(3) must cap near 0.75 (neither op alone solves it); if a
  *     single block already solved the task the recombination would look falsely necessary -- checked.
  *
- * FINDING (SEEDS=__ x RESTARTS=__, NTR=__): __FILL_AFTER_RUN__
+ * FINDING: RETRACTED as a positive. Arm (4)'s apparent "recombination win" is a confound -- its blocks
+ * are trained on auxiliary per-operation labels and frozen, so the margin decomposes into weight-sharing
+ * data-efficiency (~2/3) + auxiliary-label curriculum (~1/3), with ~0 attributable to emergent
+ * composition. The fair control that isolates this is emerge_discover.c (two shared channels trained
+ * jointly on the composite label alone): it reaches ~0.81 unaided, and composition does NOT cleanly
+ * emerge without supervision (channels specialize in only ~55% of runs; the energy-selected channel
+ * count overshoots to C*=3). That negative is the paper's Sec 3.6. See emerge_discover.c.
  *
  * Self-contained C99. Build: make emerge_develop2 . Env overrides: SEEDS, NTR, RESTARTS.
  */

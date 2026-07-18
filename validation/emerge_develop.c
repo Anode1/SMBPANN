@@ -19,17 +19,19 @@
  * Reports test accuracy at each phase, and refine with vs without jitter, so the developmental payoff
  * and the need (or not) for jitter are both visible.
  *
- * FINDING (12 seeds, scarce data): the chained developmental path CRUSHES search-from-scratch --
- * find-block+translate reaches 0.90 vs 0.63 for P independent detectors searched from random (+0.27):
- * reuse beats re-search. And the answer to "do we need jitter?" is a clean NO here -- jitter HURTS
- * (0.79), and even plain in-place refinement hurts (0.88 < 0.90). Two reasons: reuse lands you AT the
- * optimum, so there is no bad minimum for jitter to escape (perturbation only kicks the good structure
- * off it); and letting the tiled copies fine-tune independently re-introduces the per-position
- * starvation of Sec 17 (breaking the weight-sharing that made reuse work). Lesson: once reuse gives a
- * good shared structure, keep the sharing coordinated -- do not let copies drift, do not add jitter you
- * do not need. Jitter is for when you are stuck; reuse is how you avoid getting stuck. (Caveat: on a
- * genuinely multimodal task jitter could help -- this task's developmental assembly finds the optimum
- * directly.) Self-contained C99. Build: make emerge_develop
+ * FINDING (40 seeds, scarce data; paper Sec 3.5): find-block+translate reaches 0.86 vs 0.60 for P
+ * independent detectors searched from random (+0.25). Stated honestly, that +0.25 is the SAME
+ * weight-sharing DATA-EFFICIENCY effect as the translate/scale results (one tiled block learns from every
+ * position while the independent per-position detectors starve), shown inside a chained pipeline -- NOT a
+ * separate "reuse beats re-search" mechanism, and a fair shared baseline trained end-to-end captures most
+ * of it. What the chain adds is two side findings: refining the tiled copies in place HURTS (0.84 < 0.86),
+ * because independent fine-tuning re-introduces per-position starvation and breaks the sharing; and
+ * annealing jitter hurts more (0.76), because reuse lands AT the optimum so perturbation only kicks it off.
+ * Lesson: once reuse gives a good shared structure keep the sharing coordinated, and add no jitter you do
+ * not need. (Caveat: on a genuinely multimodal task jitter could help -- here the assembly finds the
+ * optimum directly. Whether the FOURTH operator, recombination of a second block, EMERGES when the search
+ * must discover the decomposition itself is the negative of emerge_discover.c / Sec 3.6.)
+ * Self-contained C99. Build: make emerge_develop
  */
 #include <stdio.h>
 #include <stdlib.h>

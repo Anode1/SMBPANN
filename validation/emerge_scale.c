@@ -12,12 +12,14 @@
  * same data -> harder starvation); the GAP widens with scale. If so, "reuse beats re-search" is a
  * property that strengthens with size, not a toy effect. Translation-invariant motif task, scarce data.
  *
- * FINDING (16 seeds, 600 epochs): confirmed and strong. As input N grows 16 -> 128, DEVELOPMENTAL (one
- * tiled block, 3 weights) stays flat at ~0.98, while SEARCH-FROM-SCRATCH (independent, up to 378 weights)
- * collapses toward chance 0.77 -> 0.54, and the gap MORE THAN DOUBLES (+0.21 -> +0.43). One tiled block
- * is size-independent; independent detectors starve harder as positions multiply. The developmental
- * advantage grows with size -- and it is decisive: 3 weights at 0.98 beats 378 weights at 0.54.
- * Self-contained C99. Build: make emerge_scale
+ * FINDING (authoritative run: 250 seeds; paper Sec 3.4): as input N grows 16 -> 128, the SHARED arm (one
+ * tiled block, 3 weights) stays flat at ~0.94 (size-independent), while the LOCALLY-CONNECTED arm
+ * (independent per-position, up to 378 weights) starves toward chance (0.69 -> 0.52), so the gap WIDENS
+ * THEN SATURATES (+0.25 -> +0.42; most growth is N=16->32, then the baseline hits the floor). This is
+ * weight-sharing DATA-EFFICIENCY (LeCun 1989) -- a property of fixed shared-vs-unshared arms under SGD,
+ * NOT architecture search; it survives an oracle-supervised baseline (emerge_baseline.c). (The default
+ * SEEDS=16 run reads ~0.90-0.94 shared and a little noisier; the 250-seed figure is the reported one.)
+ * Self-contained C99. Build: make emerge_scale     (reported numbers: SEEDS=250)
  */
 #include <stdio.h>
 #include <stdlib.h>

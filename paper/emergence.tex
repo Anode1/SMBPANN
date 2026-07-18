@@ -9,7 +9,7 @@
 
 \graphicspath{{images/}}
 
-\title{\textbf{Directed Emergence of Network Structure Under an Energy Budget}}
+\title{\textbf{The Imposed and Emergent Pieces of Convolution Under an Energy Budget}}
 \author{Vasili Gavrilov\thanks{Independent researcher. Physics and computer
 science by education; a professional software engineer with a background in
 numerical optimization and machine learning, including a genetic-algorithm
@@ -21,28 +21,32 @@ optimizer built for industrial use in 2002. Reference implementation:
 \maketitle
 
 \begin{abstract}
-A network's structure should \emph{emerge}, not be designed, but from what, and how much of it? We grow a
-network's topology from an \textbf{exhaustive, fully-connected seed under an evolutionary energy budget}
-that pays for every connection, and ask honestly which pieces of convolution fall out. Sparse
-task-relevant connectivity emerges cleanly; weight sharing is \emph{adopted} when translation invariance
-rewards it; and a compact aligned local filter emerges too, but only once mutation acts on the shared
-feature the way real genetics does, not on a single edge. On top of the priors a ConvNet hardwires
-(locality and translatability), the free dimensions then organize to the task: compact fields and depth that
-matches the required receptive field.
+Which pieces of a convolution must be \emph{imposed} as priors, and which \emph{emerge} on their own under
+a resource budget? We grow a network's topology from an \textbf{exhaustive, fully-connected seed under an
+evolutionary energy budget} that pays for every connection, using the search as a \emph{lens} on that
+question rather than as an optimizer, and map the boundary honestly. Sparse task-relevant connectivity
+emerges cleanly, and weight sharing is \emph{adopted} when translation invariance rewards it; but the
+compact aligned local filter emerges only once mutation acts on the shared feature the way real genetics
+does, not on a single edge, and composition on the channel axis does not emerge from the task label alone
+at all. On top of the priors a ConvNet hardwires (locality, translatability), the free dimensions then
+organize to the task: compact fields and a depth that grows with (though overshoots) the required receptive field.
 
 \medskip\noindent\textbf{What is new:}
--that \emph{directed} evolutionary search finds a \emph{tidier} filter than random sampling at
-\emph{equal task accuracy} (it is tidier, not better), which is what a directed optimizer should do on an
-exploitable objective and which \emph{reconciles} the near-null our companion crossover study found on a
-flat benchmark landscape;
--the sharing/energy \emph{decoupling}, why a compact filter cannot emerge under per-connection pruning yet
-does once mutation acts on the shared feature, which restores the missing energy gradient;
--the \emph{specific evolutionary energy-emergence from an exhaustive seed}, and that it is
-\emph{path-independent} (the same structure emerges from a minimal seed grown up), a characterization with
-its honest boundary, negatives kept, that we are not aware of a prior result showing.
-The rest reproduces textbook inductive-bias facts (weight sharing is data-efficient, receptive
-field~$\approx$~depth), verified with a fair baseline rather than claimed as new. Every number regenerates
-from one \texttt{make}; the dead-ends are kept.
+-the sharing/energy \emph{decoupling}, our one mechanistic result: once weights are shared, connection
+count no longer gradients parameter count, so a compact filter \emph{cannot} emerge under per-connection
+pruning, and does only once mutation acts on the whole shared feature, which restores the missing energy
+gradient;
+-the resulting \emph{map} of convolution's imposed-versus-emergent pieces from an exhaustive seed, negatives
+kept, including the boundary where emergent \emph{composition} needs supervision, a characterization that
+treats the search as a lens, not an optimizer;
+-a control confirming the directed search does real work: at a matched budget it finds a \emph{tidier}
+(more energy-efficient) filter than random sampling at \emph{equal task accuracy}, which \emph{reconciles}
+the near-null our companion crossover study found on a flat benchmark landscape.
+Much of the rest reproduces textbook inductive-bias facts (weight sharing is data-efficient, receptive
+field~$\approx$~depth), verified with a fair baseline rather than claimed as new; path-independence (the
+same structure from a minimal seed grown up) is a robustness check, with grow-and-prune sparse training
+(SET, RigL) its near neighbor. Every number regenerates from one \texttt{make} at the per-section seed
+counts noted in the text (via \texttt{SEEDS}/\texttt{NTR}); the dead-ends are kept.
 \end{abstract}
 
 \section{Introduction}
@@ -63,23 +67,24 @@ benchmark's noise (Section~2.4 returns to this under an energy budget, where the
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\textwidth]{fig_main_idea.pdf}
+\includegraphics[width=0.8\textwidth]{fig_main_idea.pdf}
 \caption{The idea. An exhaustive, tangled network becomes an ordered convolution through a few structural
 operators. We impose the domain's real symmetries (locality, translatability); the operators, prune,
 clone, translate, recombine, are biological analogs we study individually and then \emph{chain} (find a
-block, then clone and translate it, Section~3.5). Chaining in the fourth, where the search must
-\emph{discover} the decomposition, does not cleanly emerge (Section~3.6).}
+block, then clone and translate it, Section~\ref{subsec:develop}). Chaining in the fourth, where the search
+must \emph{discover} the decomposition, does not cleanly emerge (Section~\ref{subsec:compose}).}
 \label{fig:main}
 \end{figure}
 
-\paragraph{Contribution, stated honestly.} The genuinely new part is the map: the specific
-\emph{evolutionary energy-emergence from an exhaustive seed}, and its boundaries. We are not aware of a
-prior result showing this together with the mechanism the compact filter needs in order to emerge at all
-(grouped mutation on the shared feature, not the single edge). This is distinct from gradient pruning (Optimal Brain Damage; the Lottery
-Ticket), from DARTS' gradient-relaxed supernet, and from NEAT's grow-from-minimal, which augment rather
-than prune. Much of the rest, weight sharing is data-efficient; receptive field $\approx$ depth,
-reproduces known inductive-bias facts, which we verify carefully rather than claim as new. The value is
-the honest characterization, the negatives, and the full reproducibility; not the underlying mechanisms.
+\paragraph{Contribution, stated honestly.} Our one mechanistic result is the sharing/energy
+\emph{decoupling}: a compact filter cannot emerge under per-connection pruning, because sharing decouples
+connection count from parameter count, and emerges only once mutation acts on the whole shared feature (as
+a gene acts on every instance it builds, not on one edge). Around it we draw a \emph{map}, using the energy
+GA as a \emph{lens} rather than an optimizer, of which pieces of convolution are imposed priors and which
+emerge from an exhaustive seed, with the boundary where emergent composition needs supervision marked
+rather than hidden. This use of evolution, and this map, is distinct from gradient pruning (Optimal Brain Damage; the Lottery Ticket), from DARTS' gradient-relaxed
+supernet, and from NEAT's grow-from-minimal, which augment rather than prune. Much of the rest, weight sharing is data-efficient; receptive field $\approx$ depth,
+reproduces known inductive-bias facts, which we verify carefully rather than claim as new.
 
 \paragraph{Method in one paragraph.} A one-hidden-layer network whose connectivity is a binary mask is
 evolved by a genetic algorithm from an all-ones (dense) seed. Fitness is validation accuracy on a scarce
@@ -87,9 +92,9 @@ training set; the objective is to minimize energy (the number of connections, or
 to accuracy $\geq$ target. Mutation is mostly-prune, rarely-grow, an annealing schedule, in which a
 prune is a downhill move in energy and a rare added connection is an uphill thermal fluctuation. All
 numbers below are means over independent seeds; each experiment is a self-contained C99
-probe.\footnote{The identical training loop is ${\sim}130\times$ slower in naive Python or per-sample NumPy
-than in C (measured), turning a few hours on 8 cores into a couple of weeks; a compiled path (Numba, JAX)
-closes most of that gap, so the advantage is over typical interpreted Python, not fundamental.}
+probe.\footnote{The identical training loop is ${\sim}130\times$ slower in naive Python/NumPy than in C
+(measured); a compiled path (Numba, JAX) closes most of the gap, so the edge is over interpreted Python,
+not fundamental.}
 
 \section{What emerges, and what does not}
 
@@ -105,7 +110,7 @@ the outcome of the pruning literature (sparse subnetworks, not convolutions).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.74\textwidth]{fig1_pruning.pdf}
+\includegraphics[width=0.66\textwidth]{fig1_pruning.pdf}
 \caption{Sec.~2.1. An energy budget prunes a dense connectivity seed to a sparse mask whose
 surviving connections land on the task-relevant inputs. Feature selection and sparsity emerge; the
 compact aligned filter needs mutation on the shared feature to emerge (Sec.~2.3).}
@@ -146,7 +151,7 @@ mutation acts on the shared mechanism, as real genetics does.
 the dense seed pruned down (24 seeds); the emergence does not depend on the starting point. Grow-and-prune
 sparse training (SET, RigL) moves both ways too, but toward accuracy and sparsity; this
 \emph{path-independence} of the emergent \emph{structure}, one objective reaching it from an exhaustive and
-a minimal seed alike, we are not aware of being reported.
+a minimal seed alike, we treat as a robustness check, not a novelty claim.
 
 \subsection{Directed search vs.\ random: tidier, not better}
 
@@ -182,7 +187,7 @@ Test accuracy is tied throughout: the GA is marginally higher but always within 
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\textwidth]{fig6_directed.pdf}
+\includegraphics[width=0.72\textwidth]{fig6_directed.pdf}
 \caption{Directed search is \emph{tidier, not better}. \emph{Left:} filter contiguity, GA vs random at
 matched budget, the GA is clearly more contiguous. \emph{Right:} held-out accuracy on the same seeds and
 the same axis honesty, the arms are tied. The GA wins on the structural term the objective rewards, not on
@@ -213,27 +218,32 @@ widen with scale, where random covers a vanishing fraction of a space growing li
 search keeps climbing, which is why large-scale search uses evolution or gradients, not random; but at
 $N{\le}28$ that is a prediction, not a measurement.
 
-\subsection{Emergent depth matches the required receptive field}
+\subsection{Emergent depth grows with the receptive field, but overshoots it}
 
-Impose the feed-forward composition rule too, stack one reused block type, and the one dimension
-left free, the depth, emerges to fit the task. On a task that fires only when two spikes are exactly
-distance $s$ apart (so a unit must see both at once, needing receptive field $\geq s{+}1$, i.e.\ depth
-$\geq s/2$), accuracy sits at chance until the stack is deep enough to span the pair, then rises sharply at
-depth $\approx s/2$; larger $s$ selects a deeper stack (Figure~\ref{fig:depth}). This is the clearest
-positive of the emergence side: given the necessary priors, the free dimension organizes itself to the
-task.
+Impose the feed-forward composition rule too, stack one reused block type, and the depth is the one free
+dimension. On a task that fires only when two spikes are exactly distance $s$ apart (a unit must see both
+at once, receptive field $\geq s{+}1$, i.e.\ depth $\geq s/2$), accuracy sits near chance while the stack
+is too shallow to span the pair and rises with depth, and the depth of best accuracy grows with $s$
+(Figure~\ref{fig:depth}). But, evaluated fairly (mean over restarts), the match is only
+\emph{qualitative}: peak accuracy falls with $s$ ($0.81, 0.73, 0.67, 0.65$ for $s{=}2,4,6,8$) and never
+reaches the $0.85$ target, so no depth is cleanly ``selected,'' and the best depth \emph{overshoots} the
+required $s/2$ ($L{\approx}3,3,4,5$ versus $1,2,3,4$). The clean target-crossing staircase we first
+reported was a best-of-restarts artifact; fairly measured, depth is a trend with the same overshoot the
+channel axis shows (Sec.~3.6).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.74\textwidth]{fig3_depth.pdf}
-\caption{Emergent depth matches the required receptive field. Accuracy is at chance until the stack is
-deep enough for its receptive field to span the spike pair, then rises sharply at depth $\approx s/2$.}
+\includegraphics[width=0.66\textwidth]{fig3_depth.pdf}
+\caption{Emergent depth grows with the required receptive field but overshoots it. Under a fair mean over
+restarts, accuracy is near chance for stacks too shallow to span the spike pair and rises with depth, the
+optimum deepening with $s$; but it never reaches the $0.85$ target and the best depth exceeds $s/2$ (the
+clean target-crossing staircase was a best-of-restarts artifact).}
 \label{fig:depth}
 \end{figure}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.76\textwidth]{fig_operators.pdf}
+\includegraphics[width=0.68\textwidth]{fig_operators.pdf}
 \caption{The four structural operators as $A \to B$, each with its exact action. Prune (remove
 connections under an energy budget), clone (duplicate and stack, for depth), translate (copy to every
 position with shared weights, a convolution), recombine (swap in a different block where one kind will
@@ -271,58 +281,39 @@ part, runners when the structure repeats, seeds when it must change.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\textwidth]{fig4_reuse.pdf}
+\includegraphics[width=0.7\textwidth]{fig4_reuse.pdf}
 \caption{Reuse vs recombination, and the clone/recombine trade-off nature also makes. One reused block
 suffices for repetitive structure; a task needing two different operations forces recombination of
 different blocks.}
 \label{fig:reuse}
 \end{figure}
 
-\subsection{Translation: weight sharing is data-efficient (a reproduction, fairly done)}
+\subsection{Translation and scale: weight sharing is data-efficient (a reproduction)}\label{subsec:translate}
 
-The third operator, translation, replicating one working detector across positions with shared
-weights (transposition, serial homology, cortical-map tiling), is exactly convolution's tiling,
-reached by replication. On a translation-invariant motif task we compare a weight-shared filter (3
-weights) against a locally-connected baseline (one filter per position). Table~\ref{tab:translate} gives
-the fair result (mean over restarts, $\pm 1$ SD over $40$ seeds): the shared filter wins at every train
-size, most when data is scarcest. This is the textbook argument for weight sharing (one filter learns the
-motif from every position's examples while each independent filter starves), here quantified with a fair
-estimator. It is a phenomenon of weight \emph{sharing}, not of architecture search: the two arms are
-weight-tied vs untied, both trained by plain SGD.
-
-\begin{table}[t]
-\centering
-\begin{tabular}{lccc}
-\toprule
-train size & weight-shared & locally-connected & gap \\
-\midrule
-16 & $0.820 \pm 0.122$ & $0.581 \pm 0.065$ & $+0.239$ \\
-32 & $0.838 \pm 0.094$ & $0.615 \pm 0.071$ & $+0.224$ \\
-64 & $0.866 \pm 0.082$ & $0.672 \pm 0.076$ & $+0.195$ \\
-128 & $0.867 \pm 0.081$ & $0.724 \pm 0.086$ & $+0.143$ \\
-\bottomrule
-\end{tabular}
-\caption{Weight sharing is data-efficient. Shared filter (3 weights) vs locally-connected (42 weights),
-by training-set size. The advantage is largest at the scarcest data.}
-\label{tab:translate}
-\end{table}
-
-And the advantage grows with input size: sweeping $N$ (Figure~\ref{fig:scale}, $250$ seeds), the shared arm
-stays flat ($\approx 0.94$, size-independent) while the locally-connected baseline falls to chance and
-bloats to hundreds of weights; the gap \emph{widens then saturates} (4--6$\times$ the SD, most growth at
-$N{=}16\to32$) and survives an oracle-supervised baseline ($+0.14$ at $N{=}16$ to $+0.38$ at $N{=}128$), so
-it is not a training-rule artifact.
+The third operator, translation, replicating one working detector across positions with shared weights
+(transposition, serial homology, cortical-map tiling), is exactly convolution's tiling reached by
+replication. On a translation-invariant motif task a weight-shared filter (3 weights) beats a
+locally-connected baseline (one filter per position) at every training-set size, most when data is
+scarcest: the paired gap runs from $+0.24$ at 16 training examples to $+0.14$ at 128 (mean over restarts,
+$\pm 1$ SD over 40 seeds). This is the textbook argument for weight sharing, one filter learns the motif
+from every position's examples while each independent filter starves, quantified with a fair estimator; a
+phenomenon of weight \emph{sharing}, not architecture search (both arms are weight-tied vs untied, plain
+SGD). The advantage \emph{grows with input size} (Figure~\ref{fig:scale}, 250 seeds): the shared arm stays
+flat at $\approx 0.94$ (size-independent) while the locally-connected baseline falls to chance and bloats
+to hundreds of weights; the gap widens then saturates (4--6$\times$ the SD, most growth at $N{=}16\to32$)
+and survives an oracle-supervised baseline ($+0.14$ at $N{=}16$ to $+0.38$ at $N{=}128$), so it is not a
+training-rule artifact.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.85\textwidth]{fig_scale_chart.pdf}
+\includegraphics[width=0.72\textwidth]{fig_scale_chart.pdf}
 \caption{The weight-sharing advantage as input size grows (mean of 250 seeds, error bars $\pm 1$ SD).
 The shared block is size-independent; the locally-connected baseline starves and falls to chance. The
 gap widens, then saturates once the baseline hits the floor.}
 \label{fig:scale}
 \end{figure}
 
-\subsection{The developmental chain: find a block, then clone and translate it}
+\subsection{The developmental chain: find a block, then clone and translate it}\label{subsec:develop}
 
 The operators above were each studied alone; here we \emph{chain} the core of them in one run and compare a
 developmental trajectory against searching structure from scratch. On a translation-invariant motif task
@@ -332,7 +323,7 @@ the same filter tiled at every position (a convolution assembled by replication,
 refine in place. Search-from-scratch \emph{starves}, each position sees few examples, and reaches only
 $0.60$; finding one block and tiling it reaches $0.86$ ($+0.25$, ${\sim}15$ SEM of the paired mean). We
 label this honestly: the $+0.25$ is the \emph{same} weight-sharing data-efficiency effect of
-Sec.~3.3--3.4 (one tiled block learns from every position while the $P$ independent per-position
+Sec.~\ref{subsec:translate} (one tiled block learns from every position while the $P$ independent per-position
 detectors starve), now shown inside a chained pipeline, not a separate ``reuse beats re-search''
 mechanism, and a fair \emph{shared} baseline trained end-to-end on the same label captures most of it.
 What the chain adds is the two side
@@ -341,9 +332,9 @@ re-introduces per-position starvation and breaks the sharing that made reuse wor
 hurts more ($0.76$), because reuse lands at the optimum, so perturbation only kicks it off, jitter is for
 escaping bad minima and reuse avoids them. This chains find, clone, and translate; whether the fourth
 operator, recombination of a \emph{second} discovered block, \emph{emerges} when the search must find the
-decomposition itself is the question of Sec.~3.6.
+decomposition itself is the question of Sec.~\ref{subsec:compose}.
 
-\subsection{Does composition emerge when the search must find it? A boundary}
+\subsection{Does composition emerge when the search must find it? A boundary}\label{subsec:compose}
 
 The chain above, like the reuse and translation results, hands the search a decomposition and asks it to
 assemble the pieces. The sharper question is whether the \emph{search itself}, given only the composite
@@ -360,9 +351,10 @@ $C^\ast{=}1$; but on the two-operation task the two channels specialize to the t
 runs (the rest collapse onto one), so $C{=}2$ plateaus at $0.81$ (a fair shared baseline), the curriculum
 reaches $0.87$, and the energy-selected count \emph{overshoots} to $C^\ast{=}3$. Directed search under an
 energy budget does not, on its own, find the two-part decomposition, it under-specializes and pays for a
-redundant channel; the clean split appears only with per-operation supervision. This draws the paper's
-sharpest boundary: emergent \emph{depth} matches the receptive field cleanly (Sec.~2.5), but emergent
-\emph{composition} on the channel axis needs supervision or imposed structure. It also explains a chain
+redundant channel; the clean split appears only with per-operation supervision. This sharpens the contrast
+between the axes: emergent \emph{depth} at least grows with the receptive field from the task label alone
+(Sec.~2.5, even if it overshoots), whereas emergent \emph{composition} on the channel axis does not
+organize at all without per-operation supervision. It also explains a chain
 that only \emph{appears} to recombine, hand it the decomposition and its gain is weight sharing plus that
 supervision, not emergent composition.
 
@@ -396,9 +388,9 @@ The tasks are small synthetic constructions built so the intended structure is o
 what emerges under an energy budget on a task shaped like convolution, and do not by themselves
 generalize to real data. The reuse and weight-sharing results are a property of \emph{fixed}
 shared-versus-unshared architectures (data efficiency under SGD), not evidence about what the evolutionary
-search discovers; we label them accordingly. The developmental chain (Section~3.5) covers find, clone, and
+search discovers; we label them accordingly. The developmental chain (Section~\ref{subsec:develop}) covers find, clone, and
 translate; when the search must \emph{discover} the recombination of a second block it does not cleanly do
-so (Sec.~3.6), so a real dataset and scale, not another operator, are the natural next steps. What limits
+so (Sec.~\ref{subsec:compose}), so a real dataset and scale, not another operator, are the natural next steps. What limits
 this work is scale, not the absence of an idea: the new
 parts, the sharing/energy decoupling and the directed-vs-random reconciliation, are real but small, and
 the tasks are toy, so its natural home is a workshop, reproducibility, or explainer track rather than a
@@ -411,14 +403,14 @@ assemble the rest. Under an energy
 budget on an exhaustive seed, sparsity and feature selection emerge and weight sharing is adopted, and a
 compact convolution emerges too, but only once mutation acts on the shared feature rather than the single
 edge, for a decoupling reason we can state in a line. On top of imposed priors,
-depth emerges to match the receptive field, reuse beats a free search at equal compute, recombination is
+depth grows with the receptive field (overshooting it), reuse beats a free search at equal compute, recombination is
 required only when a task needs a genuinely different operation, and weight-shared tiling is
 data-efficient at a degree that grows with scale then saturates. Where the search must \emph{discover} a
 compositional decomposition itself it does not, the parts failing to specialize without supervision
-(Sec.~3.6), a boundary we mark rather than paper over. The contribution is the honest map, the negatives, and
+(Sec.~\ref{subsec:compose}), a boundary we mark rather than paper over. The contribution is the honest map, the negatives, and
 the reproducibility; every number regenerates from one command.
 
-\begin{thebibliography}{9}\small\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+\begin{thebibliography}{9}\scriptsize\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
 \bibitem{obd} Y.~LeCun, J.~S. Denker, S.~A. Solla. Optimal Brain Damage. \emph{NeurIPS} 1990.
 \bibitem{lecun89} Y.~LeCun et al. Backpropagation Applied to Handwritten Zip Code Recognition.
  \emph{Neural Computation} 1(4), 1989.

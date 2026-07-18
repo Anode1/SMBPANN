@@ -111,8 +111,9 @@ static double train_eval(int L, uint32_t seed)
     }
     return (double)c/NTE;
 }
-static double best_eval(int L, uint32_t seed)
-{ int r; double best=0; for(r=0;r<RESTARTS;r++){ double a=train_eval(L,seed*131u+(uint32_t)r*97u+1u); if(a>best) best=a; } return best; }
+/* fair estimator: MEAN over restarts (no optimistic best-of selection), consistent with the other probes */
+static double mean_eval(int L, uint32_t seed)
+{ int r; double s=0; for(r=0;r<RESTARTS;r++) s+=train_eval(L,seed*131u+(uint32_t)r*97u+1u); return s/RESTARTS; }
 
 int main(void)
 {
@@ -128,7 +129,7 @@ int main(void)
     for(di=0;di<4;di++){ g_sep=seps[di];
         for(L=1;L<=LMAX;L++){ double sacc=0; int nv=0;
             for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+g_sep*17u+1u),g_sep);
-                if(len_at(L)>=1){ sacc+=best_eval(L,(uint32_t)(sd*7u+1u)); nv++; } }
+                if(len_at(L)>=1){ sacc+=mean_eval(L,(uint32_t)(sd*7u+1u)); nv++; } }
             acc[L]= nv? sacc/nv : 0; }
         { int Ls=-1; for(L=1;L<=LMAX;L++) if(acc[L]>=g_target){ Ls=L; break; }
           printf("  s=%d (need L=%d)      |", seps[di], reqL[di]);

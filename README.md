@@ -323,10 +323,17 @@ emerge, and which do not*.
 
 The frame is: **impose the priors that are real symmetries of the domain**, *locality* (information is
 local) and *translatability* (a signal is the same shifted over), and let a few biological operators
-(**prune, clone, translate, recombine**) assemble and refine the rest. Those four operators are studied
-here one at a time and then **chained in a core developmental run** (find a block, then clone and translate
-it, which beats searching structure from scratch by +0.25); chaining in recombination of a *second*
-discovered block is the open next step.
+(**prune, clone, translate, recombine**) assemble and refine the rest. Of the four, only *prune* runs
+inside the energy GA; *clone* and *translate* are studied as fixed shared-versus-unshared architectures,
+and *recombine* as a search over block sequences, each an isolated probe rather than one running
+developmental GA. They are studied one at a time and then **chained in a core developmental run** (find a
+block, then clone and translate it). That chain's +0.25 over search-from-scratch is, stated honestly, the
+*same weight-sharing data-efficiency* effect (one tiled block learns from every position while independent
+per-position detectors starve), shown inside a pipeline, not a separate "reuse beats re-search" mechanism.
+And when the search must **discover** the decomposition itself, given only the composite label and an
+energy budget, **composition does not cleanly emerge without supervision** (the channels under-specialize
+and the energy-selected count overshoots) -- the paper's sharpest boundary. Real data and scale, not
+another operator, are the next step.
 
 ![The four operators as A → B: prune, clone, translate, recombine, each with the exact action written under the arrow.](paper/images/fig_operators.svg)
 
