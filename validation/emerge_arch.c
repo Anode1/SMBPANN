@@ -167,7 +167,7 @@ static void fmt(const Arch*a,char*buf){ int i,n=0; n+=sprintf(buf+n,"["); for(i=
 
 int main(void)
 {
-    int seeds=envint("SEEDS",8), sd, di;
+    int seeds=envint("SEEDS",24), sd, di;
     int seps[3]={4,8,12};
     g_target=envdbl("TARGET",0.85);
     printf("REUSE vs FREE composition at EQUAL COMPUTE: does heterogeneity beat the reuse heuristic?\n");

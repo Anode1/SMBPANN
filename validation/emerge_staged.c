@@ -182,7 +182,7 @@ static Result staged(uint32_t seed,int nr,int pop,int gens,int gnr)
 
 int main(void)
 {
-    int seeds=envint("SEEDS",8), sd, t;
+    int seeds=envint("SEEDS",24), sd, t;
     const char *tn[2]={"ONE-OP (repetitive)","TWO-OP (two different ops)"};
     g_target=envdbl("TARGET",0.85); g_sep=envint("SEP",8);
     printf("STAGED searcher: clone while it pays, recombine when it stalls. s=%d, %d seeds, target %.2f\n", g_sep, seeds, g_target);

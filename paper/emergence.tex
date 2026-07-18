@@ -295,18 +295,15 @@ different blocks.}
 \subsection{Translation and scale: weight sharing is data-efficient (a reproduction)}\label{subsec:translate}
 
 The third operator, translation, replicating one working detector across positions with shared weights
-(transposition, serial homology, cortical-map tiling), is exactly convolution's tiling reached by
-replication. On a translation-invariant motif task a weight-shared filter (3 weights) beats a
-locally-connected baseline (one filter per position) at every training-set size, most when data is
-scarcest: the paired gap runs from $+0.24$ at 16 training examples to $+0.14$ at 128 (mean over restarts,
-$\pm 1$ SD over 40 seeds). This is the textbook argument for weight sharing, one filter learns the motif
-from every position's examples while each independent filter starves, quantified with a fair estimator; a
-phenomenon of weight \emph{sharing}, not architecture search (both arms are weight-tied vs untied, plain
-SGD). The advantage \emph{grows with input size} (Figure~\ref{fig:scale}, 250 seeds): the shared arm stays
-flat at $\approx 0.94$ (size-independent) while the locally-connected baseline falls to chance and bloats
-to hundreds of weights; the gap widens then saturates (4--6$\times$ the SD, most growth at $N{=}16\to32$)
-and survives an oracle-supervised baseline ($+0.14$ at $N{=}16$ to $+0.38$ at $N{=}128$), so it is not a
-training-rule artifact.
+(transposition, serial homology, cortical-map tiling), is convolution's tiling reached by replication. On
+a translation-invariant motif task a weight-shared filter (3 weights) beats a locally-connected baseline
+(one filter per position) at every training-set size, most when data is scarcest: the paired gap runs
+$+0.24$ at 16 examples to $+0.14$ at 128 (mean over restarts, $\pm 1$ SD, 40 seeds), the textbook
+weight-sharing argument, a phenomenon of \emph{sharing} not architecture search (both arms plain SGD). The
+advantage \emph{grows with input size} (Figure~\ref{fig:scale}, 250 seeds): the shared arm stays flat at
+$\approx 0.94$ while the locally-connected baseline falls to chance and bloats to hundreds of weights; the
+gap widens then saturates ($4$--$6\times$ the SD) and survives an oracle-supervised baseline ($+0.14$ to
+$+0.38$), so it is not a training-rule artifact.
 
 \begin{figure}[t]
 \centering
