@@ -238,6 +238,14 @@ surviving tap count falls to **2.6** (≈ K) over 16 seeds, and a width penalty 
 makes connectivity translation-invariant by construction, but the compact filter largely emerges once
 mutation acts on the shared mechanism, as real genetics does.
 
+![A dense connectivity tangle contracts onto the generative offsets: under the grouped-mutation energy GA the population's per-offset activation collapses from the full dense seed (top, every offset active) onto the generative band (offsets d=0..2), mean over 16 seeds at N=12.](images/fig_contraction.svg)
+
+The contraction is worth seeing directly (figure above): every offset starts active in the dense seed,
+and generation by generation the energy pressure prunes the population down onto the generative band
+(d=0..2) — the "exhaustive tangle becomes an ordered convolution" of the opening figure, now drawn from
+the run rather than by schematic. Honestly, it lands *mostly* on the generative offsets, not a razor-sharp
+K=3 delta (the span ≈ 4 above), which is exactly the imperfect compactness the numbers report.
+
 **And it emerges from either direction** (`emerge_minimal.c`). For completeness: run the same energy GA
 under grouped mutation from a *minimal* seed and grow up (NEAT-style), and it reaches an essentially
 identical kernel to the dense seed pruned down (24 seeds). So the emergence does not depend on the
@@ -274,6 +282,29 @@ objective was flat near the top (good cells common, differences inside training 
 search had nothing to climb and tied random; here the energy objective is exploitable, so it climbs and
 wins on that axis. Directed search beats random exactly when the objective can be climbed, not when it is
 flat, the same principle read from both ends. Reproduce with `bash validation/run_prove_sweep.sh`.
+
+### 6c. The emergence phase boundary: an upper critical size that budget pushes outward
+
+Section 6b noted the GA's on-relevance decays with N (0.61 at N=12 down to 0.21 at N=28): emergence
+weakens as the space grows. Is that a fixed ceiling, or does more search budget push it back? Sweeping
+input size against evaluation budget (order parameter = GA on-relevance; N\* = the largest N whose GA
+still lands ≥ 0.40 of its taps on the generative offsets; 8 seeds/cell, `emerge_prove.c` `BOUNDARY` mode):
+
+| budget (gens, evals) | N=12 | N=16 | N=20 | N=24 | N=28 | N=32 | N\* |
+|---|---|---|---|---|---|---|---|
+| 40 (984) | 0.90 | 0.43 | 0.43 | 0.22 | 0.15 | 0.10 | 20 |
+| 120 (2904) | 0.90 | 0.77 | 0.84 | 0.34 | 0.39 | 0.23 | 20 |
+| 360 (8664) | 0.90 | 0.77 | 0.82 | 0.67 | 0.52 | 0.43 | ≥ 32 |
+
+On-relevance rises **monotonically with budget at every N** (e.g. N=24: 0.22 → 0.34 → 0.67; N=28:
+0.15 → 0.39 → 0.52), so directed emergence has an **upper critical size N\*** that the search budget
+pushes outward: at ~1k evaluations the GA loses the generative offsets by N≈24 (N\*=20), while at ~9k it
+still lands on them at N=32, the largest size the engine tests (so N\* is right-censored at 32, the true
+critical size there is only bounded below). This makes *measured* what §6b and the paper's §2.4 could only
+predict from the 2^{2N} coverage argument: the emergence boundary is not fixed, it recedes as you spend
+more search. Honest caveats: the 0.40 cut for N\* is a chosen threshold (the on-relevance surface itself is
+the real result), and N\* at the top budget is censored by the 32-tap engine limit. Reproduce:
+`make emerge_prove && SEEDS=8 BOUNDARY=1 BUDGETS=40,120,360 NLIST=12,16,20,24,28,32 ./emerge_prove`.
 
 ### 7. Imposing locality (the necessary prior): does the rest of the convolution assemble?
 

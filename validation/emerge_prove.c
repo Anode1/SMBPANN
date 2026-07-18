@@ -47,6 +47,9 @@ static double Xtr[NTR][NMAX], Xval[NVAL][NMAX], Xte[NTE][NMAX];
 static int    ytr[NTR], yval[NVAL], yte[NTE];
 static double g_target=0.90, g_width=1.0, g_flip=0.06;
 static int    g_gens=150;
+static int    g_trace=0;   /* TRACE mode: accumulate per-generation population offset-activation frequencies */
+#define TRACEG 1024
+static double g_tracebuf[TRACEG][NOFFMAX];   /* [gen][offset] summed activation freq across trace runs */
 static int    envint(const char*k,int d){const char*e=getenv(k);return e&&*e?atoi(e):d;}
 static double envdbl(const char*k,double d){const char*e=getenv(k);return e&&*e?atof(e):d;}
 
@@ -107,6 +110,8 @@ static void run_ga(uint32_t seed, double out[4])
     for(p=0;p<POP;p++) for(o=0;o<g_noff;o++) pop[p][o]=(o!=0);   /* offset 0 is a phantom (no edge maps to it); never activate it, else off_stats pins span's lower bound to 0 and kills the contiguity gradient */
     for(p=0;p<POP;p++){ facc[p]=run_net(pop[p],(uint32_t)(seed+p*2654435761u+1u),0); fit[p]=objective(pop[p],facc[p]); }
     for(g=0;g<g_gens;g++){
+        if(g_trace && g<TRACEG){ int oo,pp;   /* accumulate population offset-activation freq entering gen g (g=0 = dense seed) */
+            for(oo=0;oo<g_noff;oo++){ int cnt=0; for(pp=0;pp<POP;pp++) cnt+=pop[pp][oo]; g_tracebuf[g][oo]+=(double)cnt/POP; } }
         for(p=0;p<POP;p++) idx[p]=p;
         for(p=0;p<POP;p++) for(q=p+1;q<POP;q++) if(fit[idx[q]]>fit[idx[p]]){int t=idx[p];idx[p]=idx[q];idx[q]=t;}
         for(p=0;p<ELITE;p++) memcpy(nxt[p],pop[idx[p]],sizeof nxt[p]);
@@ -153,6 +158,40 @@ int main(void)
         for(q=0;q<NOFFMAX;q++) t[q]=0;
         t[10]=1; t[11]=1; t[12]=1;
         printf("PROBE prove: acc(off 10,11,12)=%.4f  acc2=%.4f\n", run_net(t,42u,0), run_net(t,7u,0)); return 0; }
+    if(getenv("TRACE")){   /* GA runs over SEEDS seeds; emit the MEAN population offset-activation per generation */
+        int n0=envint("N",12), ts, gg, oo, ng=(g_gens<TRACEG?g_gens:TRACEG);
+        set_n(n0); g_trace=1;
+        for(gg=0;gg<TRACEG;gg++) for(oo=0;oo<NOFFMAX;oo++) g_tracebuf[gg][oo]=0;
+        for(ts=seed0;ts<seed0+seeds;ts++){ double out[4]={0,0,0,0};
+            new_task((uint32_t)(ts*131+1)); run_ga((uint32_t)(ts*7+1), out); }
+        printf("# TRACE N=%d noff=%d off0=%d gen_offsets=%d..%d gens=%d seeds=%d (mean activation)\n",
+               g_n,g_noff,g_off0,g_rlo,g_rhi,ng,seeds);
+        for(gg=0;gg<ng;gg++){ printf("TRACE %d", gg);
+            for(oo=0;oo<g_noff;oo++) printf(" %.4f", g_tracebuf[gg][oo]/seeds);
+            printf("\n"); }
+        return 0; }
+    if(getenv("BOUNDARY")){   /* phase boundary: N* (largest N whose GA still lands on the generative offsets) vs budget */
+        int Bl[8], nb=0, Nl[MAXN], nNl=0, bi2, sd2; double thr=envdbl("NSTAR",0.40);
+        { const char*e=getenv("BUDGETS"); char buf[128]; strncpy(buf,e&&*e?e:"50,150,400",127); buf[127]=0;
+          { char*p=strtok(buf,","); while(p&&nb<8){ int v=atoi(p); if(v>0) Bl[nb++]=v; p=strtok(NULL,","); } } }
+        { const char*e=getenv("NLIST"); char buf[128]; strncpy(buf,e&&*e?e:"12,16,20,24,28,32",127); buf[127]=0;
+          { char*p=strtok(buf,","); while(p&&nNl<MAXN){ int v=atoi(p); if(v>=K+2&&v<=NMAX) Nl[nNl++]=v; p=strtok(NULL,","); } } }
+        printf("PHASE BOUNDARY: does emergence (GA landing on the K=%d generative offsets) survive to larger N\n", K);
+        printf("as the search budget grows?  order parameter = GA on-relevance; N* = largest N with on-rel >= %.2f.\n", thr);
+        printf("%d seeds/cell, width=%.1f, target=%.2f.\n\n", seeds, g_width, g_target);
+        printf("  budget(gens,evals) |");
+        for(ni=0;ni<nNl;ni++) printf("  N=%d", Nl[ni]);
+        printf("   | N*\n");
+        for(bi2=0;bi2<nb;bi2++){ int nstar=-1; g_gens=Bl[bi2]; evals=POP*(g_gens+1);
+            printf("  gens=%-4d ev=%-6d |", g_gens, evals);
+            for(ni=0;ni<nNl;ni++){ set_n(Nl[ni]); double onrel=0;
+                for(sd2=seed0;sd2<seed0+seeds;sd2++){ double a[4]={0,0,0,0}; new_task((uint32_t)(sd2*131+1));
+                    run_ga((uint32_t)(sd2*7+1),a); onrel+=a[2]; }
+                onrel/=seeds; printf("  %.2f", onrel); if(onrel>=thr) nstar=Nl[ni]; }
+            if(nstar>0) printf("   | %d\n", nstar); else printf("   | -\n"); }
+        printf("\nphase boundary confirmed if N* GROWS with budget: directed emergence has an upper critical size\n");
+        printf("that a larger search budget pushes outward (more evaluations reach the generative offsets at larger N).\n");
+        return 0; }
     if(getenv("AGG")){   /* read RAW lines from stdin (from parallel chunks), print the aggregated scaling table -- pure C, no external tools */
         static double GA[NMAX+1][4], GQ[NMAX+1][4], RN[NMAX+1][4], RQ[NMAX+1][4];
         static double DC[NMAX+1], DC2[NMAX+1], DO[NMAX+1], DO2[NMAX+1];
