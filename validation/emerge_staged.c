@@ -23,7 +23,7 @@
  * on the repetitive one: ONE-OP 22/24 (REUSE 15/24, FREE 18/24), TWO-OP 24/24 (ties FREE 24/24; REUSE
  * 11/24). Clone and recombine have partially non-overlapping success sets, so clone-then-recombine
  * catches seeds neither gets alone (ONE-OP 22 = 15 clone + 7 recombine, above FREE's 18) -- the fallback
- * backstops noise in the easy regime too, not just the hard one. Honest cost: adaptivity is not free --
+ * backstops noise in the easy regime too, not just the hard one. Cost: adaptivity is not free --
  * STAGED pays the failed clone sweep before recombining (ONE-OP cost 114 vs REUSE 63; TWO-OP cost 154 vs
  * FREE 140). But it never has either fixed strategy's worst-case failure. Reports solve rate, mean
  * candidate-trainings, and which phase STAGED solved in.

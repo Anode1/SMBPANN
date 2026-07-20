@@ -16,7 +16,7 @@
  *     units settle on a common compact window -- a convolution -- and expensive otherwise.
  *
  * Two abstraction layers, one imposed (local field) and one that must emerge (shared compact filter).
- * The honest question: given the necessary locality prior, does an energy budget assemble the rest of
+ * The question: given the necessary locality prior, does an energy budget assemble the rest of
  * the convolution -- adopt sharing, shrink to a compact kernel, and tile the input -- or not?
  *
  * Reports, per arm: shared-frac, mean/max width, coverage (do the windows tile all N inputs?),

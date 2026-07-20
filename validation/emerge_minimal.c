@@ -17,7 +17,7 @@
  * minimal-grow reach an essentially identical kernel: taps 3.5 vs 3.8 (~K), span 6.9 vs 7.0, contiguity
  * 0.77 vs 0.80, on-relevant 0.61 vs 0.65, test 0.877 vs 0.877. So with grouped mutation the filter
  * emerges the same way whether you prune from dense or grow from minimal (NEAT-style) -- the direction
- * does not matter. (A lucky 16-seed run gave a tighter 2.8/0.90; 24 seeds is the honest, looser number,
+ * does not matter. (A lucky 16-seed run gave a tighter 2.8/0.90; 24 seeds is the looser number,
  * and the robustness across direction is what holds firmly.) Self-contained C99. Build: make emerge_minimal
  */
 #include <stdio.h>

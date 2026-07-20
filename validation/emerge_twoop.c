@@ -2,7 +2,7 @@
  *
  * emerge_arch.c found reuse (one block type, stacked) is the tractable near-optimum -- but only for a
  * task whose difficulty is a single receptive-field requirement, which uniform stacks already meet.
- * The honest prediction was that reuse should cost something on a task that genuinely needs two
+ * The prediction was that reuse should cost something on a task that genuinely needs two
  * DIFFERENT operations composed, where no single reused block can serve both roles. This builds it.
  *
  * The library is again dilated conv (dilation 1/2/3), but the two dilations are now genuinely

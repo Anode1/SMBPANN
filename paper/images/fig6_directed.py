@@ -3,13 +3,13 @@
 # Paper style: 820-wide, white bg, Segoe UI, slate palette. Numbers from scratch_prove_sweep.out (fixed, 50 seeds).
 import math
 N   = [12,16,20,24,28]
-sq  = math.sqrt(50)
-# contiguity (fixed budget)
-gaC=[0.73,0.68,0.67,0.56,0.52]; gaCsd=[0.31,0.29,0.27,0.22,0.15]
-rnC=[0.71,0.62,0.47,0.43,0.40]; rnCsd=[0.32,0.28,0.24,0.26,0.26]
-# test accuracy (fixed budget)
-gaA=[0.885,0.882,0.874,0.866,0.862]; gaAsd=[0.028,0.030,0.045,0.049,0.056]
-rnA=[0.880,0.877,0.866,0.862,0.853]; rnAsd=[0.032,0.037,0.041,0.050,0.053]
+sq  = math.sqrt(200)
+# contiguity (fixed budget, 200 seeds)
+gaC=[0.70,0.66,0.63,0.56,0.52]; gaCsd=[0.30,0.29,0.25,0.20,0.14]
+rnC=[0.68,0.59,0.47,0.41,0.37]; rnCsd=[0.30,0.28,0.25,0.23,0.23]
+# test accuracy (fixed budget, 200 seeds)
+gaA=[0.887,0.879,0.873,0.864,0.860]; gaAsd=[0.028,0.033,0.044,0.054,0.057]
+rnA=[0.879,0.873,0.863,0.856,0.851]; rnAsd=[0.033,0.038,0.041,0.052,0.051]
 sem=lambda v:[x/sq for x in v]
 gaCs,rnCs,gaAs,rnAs = sem(gaCsd),sem(rnCsd),sem(gaAsd),sem(rnAsd)
 
@@ -17,10 +17,10 @@ INK="#1e293b"; MUT="#64748b"; GRID="#e2e8f0"; GA="#1f7a8c"; RN="#c56b3e"
 GABAND="rgba(31,122,140,0.13)"; RNBAND="rgba(197,107,62,0.12)"
 out=[]; t=out.append
 t('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">')
-t('<title>Directed search is tidier than random at equal task accuracy</title>')
+t('<title>Directed search is tidier than random, and modestly more accurate too</title>')
 t('<rect x="0" y="0" width="820" height="300" fill="#ffffff"/>')
-t(f'<text x="20" y="27" font-size="16" font-weight="600" fill="{INK}">Directed search finds a tidier filter than random, at the same task accuracy</text>')
-t(f'<text x="20" y="46" font-size="12" fill="{MUT}">matched evaluation budget, 50 paired seeds; bands are ±1 SEM. GA wins on structure (what the objective rewards), ties on the task.</text>')
+t(f'<text x="20" y="27" font-size="16" font-weight="600" fill="{INK}">Directed search finds a tidier filter than random, and is modestly more accurate too</text>')
+t(f'<text x="20" y="46" font-size="12" fill="{MUT}">matched evaluation budget, 200 paired seeds; bands are ±1 SEM. GA wins on structure (large) and on the task (small but significant).</text>')
 
 def panel(ox,oy,pw,ph,y0,y1,yticks,yfmt,title,ylab):
     t(f'<text x="{ox}" y="{oy-8}" font-size="12.5" font-weight="600" fill="{INK}">{title}</text>')

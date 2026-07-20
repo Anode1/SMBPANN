@@ -1,4 +1,4 @@
-/* emerge_discover.c -- HONEST compositional emergence: does the SEARCH (not the experimenter)
+/* emerge_discover.c -- compositional emergence: does the SEARCH (not the experimenter)
  * discover the decomposition, from the composite label + an energy budget ALONE, with NO auxiliary
  * per-operation labels?
  *
@@ -10,7 +10,7 @@
  * find_block calls), which parts (the aux labels yA/yB), and how they wire (a fixed AND read-out).
  * That is construction, not emergence.
  *
- * THE HONEST QUESTION here: give the search only the COMPOSITE label and an energy budget on channels,
+ * THE QUESTION here: give the search only the COMPOSITE label and an energy budget on channels,
  * and let it decide the number of parts by itself (energy-selected channel count C*, exactly as depth
  * is energy-selected in Sec 2.5). Two things must EMERGE with no per-operation supervision:
  *   (a) DISCOVERY OF "HOW MANY PARTS": C* tracks the number of operations -- C*=1 for a one-operation
@@ -27,7 +27,7 @@
  * C=1..CMAX and the energy-selected C* is the shallowest C reaching target (fair mean over restarts and
  * paired seeds -- never best-of).
  *
- * HONEST BASELINES for the two-op task (context, not the claim):
+ * BASELINES for the two-op task (context, not the claim):
  *   - unshared from-scratch (P independent per-position filters, 2 channels)  -- the starvation floor.
  *   - aux-label CURRICULUM (find A on yA, find B on yB, freeze, train read-out) -- the SUPERVISED upper
  *     bound; the discovered solution should sit below it (we are giving the search LESS information).
@@ -36,7 +36,7 @@
  * channels do not specialize, then directed search does NOT spontaneously discover this decomposition
  * under an energy budget at this scale -- itself a clean, publishable finding.
  *
- * FINDING (40 seeds x 3 restarts, NTR=64, AMP=3.0, target 0.85) -- an HONEST PARTIAL NULL:
+ * FINDING (40 seeds x 3 restarts, NTR=64, AMP=3.0, target 0.85) -- a PARTIAL NULL:
  *   one-op:  C*=1 (0.972 at C=1) -- the method selects a low channel count when one part suffices.
  *   two-op:  acc 0.711/0.812/0.875/0.899 at C=1..4 -> C*=3, an OVERSHOOT of the operation count (2).
  *   At C=2 the discovered (composite-label-only) solution reaches just 0.812 (= the fair joint-shared
@@ -213,7 +213,7 @@ int main(void)
     g_ntr=envint("NTR",64); if(g_ntr>NTRMAX) g_ntr=NTRMAX;
     g_amp=envdbl("AMP",AMP_DEFAULT);
 
-    printf("HONEST DISCOVERY: does the search decide the decomposition from the composite label + a\n");
+    printf("DISCOVERY: does the search decide the decomposition from the composite label + a\n");
     printf("channel-energy budget ALONE (no per-operation labels)?  N=%d K=%d P=%d, NTR=%d AMP=%.1f,\n", N,K,P,g_ntr,g_amp);
     printf("%d seeds x %d restarts, target %.2f, %d epochs/arm. fair mean (never best-of), paired seeds.\n\n", seeds,restarts,target,EPOCHS);
 
@@ -230,7 +230,7 @@ int main(void)
           if(Cs>0) printf("   | C*=%d\n", Cs); else printf("   | C*=- (none reach target)\n"); }
     }
 
-    /* (2) two-op: spontaneous specialization of the C=2 channels, + honest baselines */
+    /* (2) two-op: spontaneous specialization of the C=2 channels, + baselines */
     { double sp_align=0; int sp_ok=0, ntot=0;
       double sc=0, cu=0, c2=0;
       for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+ 2u*61u +1u), 2);
@@ -257,7 +257,7 @@ int main(void)
                sp_ok, ntot, 100.0*sp_ok/ntot, sp_align/(2.0*ntot)); }
     }
 
-    printf("\nEMERGENCE (honest) if: C* = 1 for one op and 2 for two ops (parts discovered), AND the two\n");
+    printf("\nEMERGENCE if: C* = 1 for one op and 2 for two ops (parts discovered), AND the two\n");
     printf("channels specialize to the two motifs -- all from the composite label, no per-op supervision.\n");
     printf("NULL (also reportable) if C* does not track op count or the channels fail to specialize.\n");
     return 0;

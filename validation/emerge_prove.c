@@ -194,15 +194,16 @@ int main(void)
         return 0; }
     if(getenv("AGG")){   /* read RAW lines from stdin (from parallel chunks), print the aggregated scaling table -- pure C, no external tools */
         static double GA[NMAX+1][4], GQ[NMAX+1][4], RN[NMAX+1][4], RQ[NMAX+1][4];
-        static double DC[NMAX+1], DC2[NMAX+1], DO[NMAX+1], DO2[NMAX+1];
-        static int CNT[NMAX+1], WC[NMAX+1], TC[NMAX+1], LC[NMAX+1];
+        static double DC[NMAX+1], DC2[NMAX+1], DO[NMAX+1], DO2[NMAX+1], DT[NMAX+1], DT2[NMAX+1];
+        static int CNT[NMAX+1], WC[NMAX+1], TC[NMAX+1], LC[NMAX+1], WA[NMAX+1], TA[NMAX+1], LA[NMAX+1];
         int nn, ss, n; double a[4], b[4];
         while(scanf(" RAW %d %d %lf %lf %lf %lf %lf %lf %lf %lf", &nn,&ss,&a[0],&a[1],&a[2],&a[3],&b[0],&b[1],&b[2],&b[3])==10){
             if(nn<0||nn>NMAX) continue;
             CNT[nn]++;
             for(k=0;k<4;k++){ GA[nn][k]+=a[k]; GQ[nn][k]+=a[k]*a[k]; RN[nn][k]+=b[k]; RQ[nn][k]+=b[k]*b[k]; }
             { double d=a[1]-b[1]; DC[nn]+=d; DC2[nn]+=d*d; if(d>0.02) WC[nn]++; else if(d<-0.02) LC[nn]++; else TC[nn]++;
-              d=a[2]-b[2]; DO[nn]+=d; DO2[nn]+=d*d; }
+              d=a[2]-b[2]; DO[nn]+=d; DO2[nn]+=d*d;
+              d=a[3]-b[3]; DT[nn]+=d; DT2[nn]+=d*d; if(d>0.005) WA[nn]++; else if(d<-0.005) LA[nn]++; else TA[nn]++; }
         }
         printf("PROVE (scaling, aggregated): directed energy GA vs RANDOM at matched evals, grouped mutation.\n");
         printf("compact = taps->K(=%d), contig->1, on-rel->1. paired GA-RANDOM per seed (same task).\n\n", K);
@@ -212,8 +213,9 @@ int main(void)
                 gs[k]=c>1?sqrt((GQ[n][k]-GA[n][k]*GA[n][k]/c)/(c-1)):0; rsd[k]=c>1?sqrt((RQ[n][k]-RN[n][k]*RN[n][k]/c)/(c-1)):0; }
             double mdc=DC[n]/c, sdc=c>1?sqrt((DC2[n]-DC[n]*DC[n]/c)/(c-1)):0, semc=sdc/sqrt((double)c);
             double mdo=DO[n]/c, sdo=c>1?sqrt((DO2[n]-DO[n]*DO[n]/c)/(c-1)):0, semo=sdo/sqrt((double)c);
-            printf("  %-3d GA      %.1f±%.1f     %.2f±%.2f    %.2f±%.2f    %.3f±%.3f  | contig %+.2f±%.2f  onrel %+.2f±%.2f  (%d/%d/%d, n=%d)\n",
-                   n, gm[0],gs[0], gm[1],gs[1], gm[2],gs[2], gm[3],gs[3], mdc,semc, mdo,semo, WC[n],TC[n],LC[n], c);
+            double mdt=DT[n]/c, sdt=c>1?sqrt((DT2[n]-DT[n]*DT[n]/c)/(c-1)):0, semt=sdt/sqrt((double)c);
+            printf("  %-3d GA      %.1f±%.1f     %.2f±%.2f    %.2f±%.2f    %.3f±%.3f  | contig %+.2f±%.2f  onrel %+.2f±%.2f  test %+.4f±%.4f  (contig %d/%d/%d, acc %d/%d/%d, n=%d)\n",
+                   n, gm[0],gs[0], gm[1],gs[1], gm[2],gs[2], gm[3],gs[3], mdc,semc, mdo,semo, mdt,semt, WC[n],TC[n],LC[n], WA[n],TA[n],LA[n], c);
             printf("  %-3d RANDOM  %.1f±%.1f     %.2f±%.2f    %.2f±%.2f    %.3f±%.3f  |\n",
                    n, rm[0],rsd[0], rm[1],rsd[1], rm[2],rsd[2], rm[3],rsd[3]); }
         return 0; }
@@ -226,7 +228,7 @@ int main(void)
     printf("  N   arm     taps          contig        on-rel        test        | paired GA-RANDOM (mean±SEM, win/tie/loss)\n"); }
     for(ni=0;ni<nN;ni++){ set_n(Ns[ni]);
         double ga[4]={0,0,0,0}, gq[4]={0,0,0,0}, rn[4]={0,0,0,0}, rq[4]={0,0,0,0};
-        double dc=0,dc2=0,doo=0,doo2=0; int wc=0,tc=0,lc=0;     /* paired contig diff + win/tie/loss */
+        double dc=0,dc2=0,doo=0,doo2=0,dt=0,dt2=0; int wc=0,tc=0,lc=0,wa=0,ta=0,la=0;     /* paired contig/onrel/test diff + win/tie/loss */
         for(sd=seed0;sd<seed0+seeds;sd++){ new_task((uint32_t)(sd*131+1));
             double a[4]={0,0,0,0}, b[4]={0,0,0,0};
             run_ga((uint32_t)(sd*7+1),a);
@@ -236,7 +238,8 @@ int main(void)
             for(k=0;k<4;k++){ ga[k]+=a[k]; gq[k]+=a[k]*a[k]; }
             for(k=0;k<4;k++){ rn[k]+=b[k]; rq[k]+=b[k]*b[k]; }
             { double d=a[1]-b[1]; dc+=d; dc2+=d*d; if(d>0.02) wc++; else if(d<-0.02) lc++; else tc++;
-              d=a[2]-b[2]; doo+=d; doo2+=d*d; }
+              d=a[2]-b[2]; doo+=d; doo2+=d*d;
+              d=a[3]-b[3]; dt+=d; dt2+=d*d; if(d>0.005) wa++; else if(d<-0.005) la++; else ta++; }
             if(getenv("DBG")) printf("  [dbg N=%d seed=%d GA c=%.2f o=%.2f | RND c=%.2f o=%.2f]\n", Ns[ni], sd, a[1],a[2], b[1],b[2]);
         }
         if(raw) continue;
@@ -244,8 +247,9 @@ int main(void)
             gs[k]=seeds>1?sqrt((gq[k]-ga[k]*ga[k]/seeds)/(seeds-1)):0; rsd[k]=seeds>1?sqrt((rq[k]-rn[k]*rn[k]/seeds)/(seeds-1)):0; }
           double mdc=dc/seeds, sdc=seeds>1?sqrt((dc2-dc*dc/seeds)/(seeds-1)):0, semc=sdc/sqrt((double)seeds);
           double mdo=doo/seeds, sdo=seeds>1?sqrt((doo2-doo*doo/seeds)/(seeds-1)):0, semo=sdo/sqrt((double)seeds);
-          printf("  %-3d GA      %.1f±%.1f     %.2f±%.2f    %.2f±%.2f    %.3f±%.3f  | contig %+.2f±%.2f  onrel %+.2f±%.2f  (%d/%d/%d)\n",
-                 Ns[ni], gm[0],gs[0], gm[1],gs[1], gm[2],gs[2], gm[3],gs[3], mdc,semc, mdo,semo, wc,tc,lc);
+          double mdt=dt/seeds, sdt=seeds>1?sqrt((dt2-dt*dt/seeds)/(seeds-1)):0, semt=sdt/sqrt((double)seeds);
+          printf("  %-3d GA      %.1f±%.1f     %.2f±%.2f    %.2f±%.2f    %.3f±%.3f  | contig %+.2f±%.2f  onrel %+.2f±%.2f  test %+.4f±%.4f  (contig %d/%d/%d, acc %d/%d/%d)\n",
+                 Ns[ni], gm[0],gs[0], gm[1],gs[1], gm[2],gs[2], gm[3],gs[3], mdc,semc, mdo,semo, mdt,semt, wc,tc,lc, wa,ta,la);
           printf("  %-3d RANDOM  %.1f±%.1f     %.2f±%.2f    %.2f±%.2f    %.3f±%.3f  |\n",
                  Ns[ni], rm[0],rsd[0], rm[1],rsd[1], rm[2],rsd[2], rm[3],rsd[3]); }
     }

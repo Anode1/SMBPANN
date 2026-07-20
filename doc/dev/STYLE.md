@@ -28,7 +28,7 @@ where SMBPANN follows it and the **one place it must deviate**, with the reason.
 
 AIS's core allocates nothing on the record path -- peak footprint is a function
 of struct sizes, never of the data. **SMBPANN cannot honour that literally**, and
-pretending otherwise would be dishonest: a neural network's **weights are its
+pretending otherwise would misrepresent it: a neural network's **weights are its
 data**. Their count *is* the topology; they must live in RAM to be trained.
 
 So SMBPANN keeps the *guarantee* AIS's rule exists to provide -- no allocation on

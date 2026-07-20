@@ -16,7 +16,7 @@
  * the 2-layer extractor is stuck at ~0.63 across all C (vs the 1-layer's up to 0.76), and K=2 is also
  * slightly worse. The deeper net adds optimization difficulty without cleaner orientation specialization.
  * So the K=3 limit is ROBUST -- not the readout (Sec 15, MLP head), not extractor depth (here) -- a wall
- * of this conv+max-pool+conjunction setup, not a single-layer-specialization artifact. Honest caveat:
+ * of this conv+max-pool+conjunction setup, not a single-layer-specialization artifact. Caveat:
  * the deeper net is plausibly under-trained, so this shows adding depth did not help (and hurt), not that
  * depth fundamentally cannot. Self-contained C99. make emerge_2d_deep2
  */

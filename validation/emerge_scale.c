@@ -1,7 +1,7 @@
 /* emerge_scale.c -- does the developmental advantage (reuse beats re-search) GROW with problem size?
  *
  * Sec 17 and 19 showed, on small tasks, that reusing one working block (translate/tile it) beats
- * searching independent structure from scratch. The honest worry is that this is a small-task artifact.
+ * searching independent structure from scratch. The worry is that this is a small-task artifact.
  * This scales it: sweep the input size N (so the number of positions to cover grows), holding the data
  * scarce, and compare across scale:
  *   DEVELOPMENTAL (SHARED) : one block tiled at every position -- K weights, INDEPENDENT of N; learns

@@ -14,7 +14,7 @@
  *                  position's filter is trained fully every step toward its correct per-window target
  *                  (fire + iff its window is M, - for M' or noise). This is the strongest possible
  *                  locally-connected baseline -- full gradient, every position, plus the motif location
- *                  handed to it (which the task does not provide). Test is honest for all arms (max-pool,
+ *                  handed to it (which the task does not provide). Test is fair for all arms (max-pool,
  *                  no oracle).
  *
  * If develop still beats scratch_fair, and the gap still grows with N, the effect is real weight-sharing
@@ -112,7 +112,7 @@ static double train_indep_fair(uint32_t seed)
     }
     for(s=0;s<NTE;s++){ double best=-1e9;
         for(p=0;p<g_p;p++){ double z=b[p]; for(k=0;k<K;k++) z+=w[p][k]*Xte[s][p+k]; double v=tanh(z); if(v>best)best=v; }
-        if((best>0)==(yte[s]==1)) c++; }                       /* filter fires + for M -> honest max-pool */
+        if((best>0)==(yte[s]==1)) c++; }                       /* filter fires + for M -> max-pool */
     return (double)c/NTE;
 }
 static double mean_arm(int arm, uint32_t seed)

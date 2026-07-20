@@ -41,7 +41,7 @@
  *       FREEZE both blocks, and train ONLY the recombination read-out (rA,rB,bias) that ANDs the two
  *       tiled channels on the full task. This is "assemble the structure by recombining reused parts."
  *
- * Honesty / confounds controlled:
+ * Confounds controlled:
  *   - Capacity: the scratch baseline has the SAME two-channel AND capacity as the recombined arm (in
  *     fact FAR more parameters: independent per-position filters), so a recombined win is not "more
  *     compute for one arm" -- it wins with ~10x FEWER parameters. Parameter energy is reported.
@@ -123,7 +123,7 @@ static void rand_motif(double*M){ int k; for(k=0;k<K;k++) M[k]=runif()>0?1.0:-1.
 static double dot3(const double*u,const double*v){ return u[0]*v[0]+u[1]*v[1]+u[2]*v[2]; }
 /* draw A,B anti-correlated (dot == -1: share one tap, differ in two). Then motif B actively DRIVES
  * filter A negative (and vice versa), so neither motif false-triggers the other's detector -- the two
- * operations are cleanly separable, and any residual error is honest noise, not motif cross-talk. */
+ * operations are cleanly separable, and any residual error is noise, not motif cross-talk. */
 static void new_task(uint32_t seed){ rseed(seed);
     do { rand_motif(MA); rand_motif(MB); } while(dot3(MA,MB)!=-1.0);
     gen(Xtr,ytr,yAtr,yBtr,g_ntr); gen(Xte,yte,NULL,NULL,NTE); }

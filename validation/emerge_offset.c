@@ -12,7 +12,7 @@
  * So this probe uses grouped mutation: genome = an offset mask off[NOFF]; connection (j,i) exists iff
  * offset (i-j) is active; a mutation flips a WHOLE OFFSET, adding or removing all its duplicated edges
  * at once. Now removing an offset DOES reduce the parameter count by one, so the energy gradient Section
- * 6 said was missing is present, and the kernel can contract. (Honest caveat: making the genome an
+ * 6 said was missing is present, and the kernel can contract. (Caveat: making the genome an
  * offset mask also makes the connectivity translation-invariant by construction; that is the natural
  * consequence of the feature being shared, but it does bake in more than weight-tying alone.)
  *

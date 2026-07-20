@@ -20,7 +20,7 @@
  *   REUSE: one block type reused -- enumerate (dilation d, depth L), extra restarts to spend the
  *          budget. Tiny space (3*Lmax).
  *   FREE : a GA over arbitrary dilation sequences and length. Combinatorial (up to 3^Lmax).
- * We report, per s, solve-rate and the energy (block count) among solved. The honest question: at
+ * We report, per s, solve-rate and the energy (block count) among solved. The question: at
  * equal compute, does searching the big heterogeneous space solve MORE or CHEAPER than enumerating
  * uniform reused blocks -- or is reuse the tractable near-optimum?
  *

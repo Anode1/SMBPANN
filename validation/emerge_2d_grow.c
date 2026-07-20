@@ -13,7 +13,7 @@
  * that drops that one. So the minimal solving width is C = K. Growth searcher: raise C from 1 until the
  * target is met; report the selected C* per K, plus accuracy vs C. Expectation: C* tracks K (1,2,3).
  *
- * FINDING (24 seeds, fair mean over restarts) -- PARTIAL, honest: the clean "C* = K" staircase does NOT
+ * FINDING (24 seeds, fair mean over restarts) -- PARTIAL: the clean "C* = K" staircase does NOT
  * hold. Direction is right (more ops -> more channels: C* ~ 1.2, 3.2, 5.0 for K=1,2,3) but the equality
  * fails and is worse than a best-of run suggested: K=2 already overshoots (C*~3, not 2), and K=3 BREAKS
  * -- sub-target at every channel count (C=5 = 0.79), only 2/24 seeds solve, and an independent heavy-

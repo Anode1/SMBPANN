@@ -15,7 +15,7 @@
  * off around L ~ s/2, exactly as in 1-D. Reported over many seeds so we can judge STABILITY, not just a
  * lucky staircase. Self-contained C99. Build: make emerge_2d
  *
- * FINDING (8 seeds, AMP=3, 250 epochs) -- honest NEGATIVE: the clean 1-D staircase does NOT reproduce.
+ * FINDING (8 seeds, AMP=3, 250 epochs) -- NEGATIVE: the clean 1-D staircase does NOT reproduce.
  * Only the smallest separation solves (s=2: 0.86 at L=2), and it even degrades with more depth. s=4
  * never reaches target (~0.68-0.71); s=6 is chance at every depth, including L>=3 where the receptive
  * field covers the pair. The engine is verified correct (ASan-clean; s=2 clearly learns), so this is a
@@ -25,7 +25,7 @@
  * few positions), and 144 noisy cells breed spurious maxima. Also, this diagonal-offset task is really
  * 1-D-on-the-diagonal -- it does not exercise genuine 2-D structure. Conclusion: this task is NOT a
  * stable foundation; a 2-D study should use oriented-motif detection (conv's core competency, and
- * genuinely 2-D via orientation), not exact distance. Kept as an honest negative and engine check.
+ * genuinely 2-D via orientation), not exact distance. Kept as a negative and engine check.
  */
 #include <stdio.h>
 #include <stdlib.h>

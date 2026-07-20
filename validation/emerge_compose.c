@@ -5,7 +5,7 @@
  * blocks, wired how" explode, so we adopt the heuristic LeCun used: don't design each block
  * differently -- REUSE ONE BLOCK TYPE, stacked feed-forward input->output, and search only DEPTH.
  *
- * IMPOSED (honestly "a bit of cheating, like LeCun's"): the composition rule -- a feed-forward stack
+ * IMPOSED ("a bit of cheating, like LeCun's"): the composition rule -- a feed-forward stack
  * of L identical-type local conv blocks, wired input to output. EMERGENT: the depth L, every block's
  * weights (trained from scratch), and transfer across independent tasks of the family.
  *
@@ -21,7 +21,7 @@
  *   receptive field >= s+1, i.e. stack depth L >= s/2. So the task's required depth is set by s:
  *   s = 2,4,6,8 need L = 1,2,3,4. A shallow net literally cannot see the pair and is stuck at chance.
  *
- * The honest question: under an energy budget (energy = depth), does the selected depth L* track the
+ * The question: under an energy budget (energy = depth), does the selected depth L* track the
  * required depth -- do abstraction layers appear exactly as deep as the task's composition demands,
  * from a reused block? Reports, per required depth: test accuracy vs stack depth L, and the
  * energy-selected L* (shallowest L reaching target). Each accuracy averages INDEPENDENT task draws,
@@ -35,7 +35,7 @@
 
 #define N     18
 #define K     3
-#define LMAX  5
+#define LMAX  8
 #define NTR   192
 #define NTE   1500
 #define TEPOCHS 300
@@ -118,23 +118,27 @@ static double mean_eval(int L, uint32_t seed)
 int main(void)
 {
     int seeds=envint("SEEDS",12), sd, di, L;
+    int lmax=envint("LMAX",5); if(lmax<1) lmax=1; if(lmax>LMAX) lmax=LMAX;
     int seps[4]={2,4,6,8}, reqL[4]={1,2,3,4};   /* distance s -> required depth s/2 */
-    double acc[LMAX+1];
+    double acc[LMAX+1], sem[LMAX+1];
     g_target=envdbl("TARGET",0.85);
     printf("EMERGENT DEPTH vs REQUIRED DEPTH  (reused feed-forward conv block + global max-pool)\n");
-    printf("N=%d K=%d, %d seeds x %d restarts, up to L=%d, target acc >= %.2f\n", N, K, seeds, RESTARTS, LMAX, g_target);
+    printf("N=%d K=%d, %d seeds x %d restarts, up to L=%d, target acc >= %.2f\n", N, K, seeds, RESTARTS, lmax, g_target);
     printf("task: fire iff two spikes are exactly distance s apart. RF>=s+1 needed => depth>=s/2.\n");
     printf("imposed: feed-forward reused-block stack. emergent: depth L, weights, cross-task transfer.\n\n");
-    printf("  distance s (need L) | test accuracy at stack depth L=1..%d      | L* (energy-selected)\n", LMAX);
+    printf("  distance s (need L) | test accuracy (mean+-SEM) at stack depth L=1..%d | L* (target-cross), peak (argmax)\n", lmax);
     for(di=0;di<4;di++){ g_sep=seps[di];
-        for(L=1;L<=LMAX;L++){ double sacc=0; int nv=0;
+        for(L=1;L<=lmax;L++){ double sacc=0,sacc2=0; int nv=0;
             for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+g_sep*17u+1u),g_sep);
-                if(len_at(L)>=1){ sacc+=mean_eval(L,(uint32_t)(sd*7u+1u)); nv++; } }
-            acc[L]= nv? sacc/nv : 0; }
-        { int Ls=-1; for(L=1;L<=LMAX;L++) if(acc[L]>=g_target){ Ls=L; break; }
+                if(len_at(L)>=1){ double v=mean_eval(L,(uint32_t)(sd*7u+1u)); sacc+=v; sacc2+=v*v; nv++; } }
+            acc[L]= nv? sacc/nv : 0;
+            sem[L]= nv>1? sqrt((sacc2-sacc*sacc/nv)/(nv-1))/sqrt((double)nv) : 0; }
+        { int Ls=-1, Lb=1; for(L=1;L<=lmax;L++) if(acc[L]>=g_target){ Ls=L; break; }
+          for(L=2;L<=lmax;L++) if(acc[L]>acc[Lb]) Lb=L;                     /* peak = argmax over depth */
           printf("  s=%d (need L=%d)      |", seps[di], reqL[di]);
-          for(L=1;L<=LMAX;L++) printf(" %.3f", acc[L]);
-          if(Ls>0) printf("  | L*=%d\n", Ls); else printf("  | L*=- \n"); }
+          for(L=1;L<=lmax;L++) printf(" %.3f+-%.3f", acc[L], sem[L]);
+          if(Ls>0) printf("  | L*=%d peak=%d%s\n", Ls, Lb, Lb==lmax?" (at ceiling)":"");
+          else     printf("  | L*=-  peak=%d%s\n", Lb, Lb==lmax?" (at ceiling)":""); }
     }
     printf("\nemergent depth tracks required depth if L* rises 1,2,3,4 with s=2,4,6,8.\n");
     printf("(shallow nets cannot see the spike pair -> stuck at chance; energy picks the shallowest that can.)\n");

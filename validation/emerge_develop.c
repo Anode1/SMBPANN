@@ -20,7 +20,7 @@
  * and the need (or not) for jitter are both visible.
  *
  * FINDING (40 seeds, scarce data; paper Sec 3.5): find-block+translate reaches 0.86 vs 0.60 for P
- * independent detectors searched from random (+0.25). Stated honestly, that +0.25 is the SAME
+ * independent detectors searched from random (+0.25). That +0.25 is the SAME
  * weight-sharing DATA-EFFICIENCY effect as the translate/scale results (one tiled block learns from every
  * position while the independent per-position detectors starve), shown inside a chained pipeline -- NOT a
  * separate "reuse beats re-search" mechanism, and a fair shared baseline trained end-to-end captures most
