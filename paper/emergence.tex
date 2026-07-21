@@ -31,9 +31,10 @@ does, not on a single edge, and composition on the channel axis does not emerge 
 On top of the priors a ConvNet hardwires (locality, translatability), the free dimensions organize to the
 task: compact fields and a depth that grows with (though overshoots) the required receptive field.
 
-\medskip\noindent\textbf{What is new.} First, the approach itself: we use an evolutionary energy budget as a
+\medskip\noindent\textbf{What is new.} First, the framing: we use an evolutionary energy budget as a
 \emph{lens} on emergence, \emph{growing} a convolution from an exhaustive seed rather than searching for
-one. This is a new use of evolutionary search, distinct from gradient pruning. Within it we contribute one
+one. A connection cost as a lens on emergent structure is not itself new; what is new is applying it to
+decompose \emph{convolution} into imposed and emergent pieces. Within it we contribute one
 clean mechanism, the sharing/energy \emph{decoupling} (a compact filter emerges only when mutation acts on
 the whole shared feature, not a single edge); a \emph{map} of which pieces of a convolution are imposed and
 which emerge, negatives kept, including the
@@ -76,8 +77,8 @@ connection count from parameter count, and emerges only once mutation acts on th
 a gene acts on every instance it builds, not on one edge). Around it we draw a \emph{map}, using the energy
 GA as a \emph{lens} rather than an optimizer, of which pieces of convolution are imposed priors and which
 emerge from an exhaustive seed, with the boundary where emergent composition needs supervision marked
-rather than hidden. This use of evolution, and this map, is distinct from gradient pruning (Optimal Brain Damage; the Lottery Ticket), from DARTS' gradient-relaxed
-supernet, and from NEAT's grow-from-minimal, which augment rather than prune. Much of the rest, weight sharing is data-efficient; receptive field $\approx$ depth,
+rather than hidden. The cost-as-lens itself has precedent: a connection cost drives modularity~\cite{clune} and hierarchy~\cite{mengistu}, and Weight Agnostic Networks~\cite{wann} isolate what structure alone contributes; what is new is turning it on \emph{convolution}, to separate imposed priors from emergent pieces. This map is also distinct from gradient pruning (Optimal Brain Damage; the Lottery Ticket), from DARTS' gradient-relaxed
+supernet, and from NEAT's grow-from-minimal, which augment rather than prune. Much of the rest, weight sharing is data-efficient; a depth that grows with but overshoots the receptive field,
 reproduces known inductive-bias facts, which we verify carefully rather than claim as new.
 
 \paragraph{Method in one paragraph.} A one-hidden-layer network whose connectivity is a binary mask is
@@ -171,9 +172,9 @@ $N$ & paired contiguity gap & paired accuracy gap & GA acc & random acc \\
 \bottomrule
 \end{tabular}
 \caption{Directed GA vs random at matched evaluations, 200 paired seeds. Both gaps are positive at every
-$N$: the paired \emph{contiguity} (structural) gap runs $3$--$8$ SEM and peaks at $N{=}20$ before
+$N$: the paired \emph{contiguity} (structural) gap runs $3$--$8$ SEM from $N{=}16$ on (within noise at $N{=}12$) and peaks at $N{=}20$ before
 plateauing; the paired \emph{accuracy} (task) gap is $3$--$5$ SEM. The structural gap also survives a budget
-scaled with $N$ and a denoising control (random given $r{=}8$ evaluations per mask, verified at 50 seeds,
+scaled with $N$ and a repeated-evaluation control (random given $r{=}8$ best-of-$r$ evaluations per mask at the same budget, 50 seeds,
 which if anything \emph{widens} it).}
 \label{tab:directed}
 \end{table}
@@ -188,31 +189,31 @@ term the objective rewards, and slightly on the task. 200 paired seeds, bands $\
 \label{fig:directed}
 \end{figure}
 
-\textbf{Result: tidier, and modestly better.} At $200$ paired seeds the GA beats random on \emph{both} axes.
-The structural gap is large: a paired contiguity advantage of ${+}0.15$ to ${+}0.17$ from $N{=}20$ on
-($7$--$8$ SEM, and already significant at $N{=}16$). The task gap is small but real: a paired accuracy
-advantage of ${+}0.006$ to ${+}0.011$ at every $N$ ($3$--$5$ SEM), an order of magnitude smaller than the
-structural gap yet no longer within noise. So the GA is a \emph{tidier} network and a slightly more accurate
-one, what a directed optimizer should do on an objective it can climb: the large win is on the energy term
-it is paid to minimize, which it descends by mutation where random can only sample, with a small accuracy
-gain alongside. At scale it is \emph{less diffuse than random}, not compact (on-relevance
-$0.22$ at $N{=}28$); a compact filter truly emerges only at $N{=}12$.
+\textbf{Result: tidier, and modestly better.} At $200$ paired seeds the GA beats random on \emph{both} axes
+(Table~\ref{tab:directed}): a large structural (contiguity) gap, $7$--$8$ SEM from $N{=}20$ and significant
+by $N{=}16$, and a task-accuracy gap an order of magnitude smaller ($3$--$5$ SEM) yet no longer within noise.
+This is what a directed optimizer should do on an objective it can climb: the large win is on the energy term
+it descends by mutation where random can only sample, a small accuracy gain alongside. At scale it is
+\emph{less diffuse than random}, not compact (on-relevance $0.22$ at $N{=}28$); a compact filter truly emerges
+only at $N{=}12$.
 
-\textbf{The edge is direction, not denoising.} The GA re-evaluates each survivor afresh every generation,
-so a marginal mask gets many attempts at the accuracy gate while random gets one. Give random $r{=}8$
-evaluations per mask (best-of-$r$) at the same budget and the gap does not shrink, it \emph{widens}
-(verified at 50 seeds): best-of-$r$ costs random distinct masks, and exploration matters more than
-noise-averaging. A budget scaled with $N$ firms the large-$N$ gap only slightly.
+\textbf{The edge is direction, not re-evaluation.} The GA re-evaluates each survivor afresh every generation,
+so a marginal mask gets many attempts at the gate while random gets one. Give random $r{=}8$ best-of-$r$
+evaluations per mask at the same budget and the gap does not shrink, it \emph{widens} (50 seeds): best-of-$r$
+costs random distinct masks, and exploration beats noise-averaging.
 
-\textbf{Why it matters.} This \emph{reconciles} the crossover null and confirms the project's founding
-conjecture, that a directed search beats random, under the condition it always assumed: the objective must
-have structure to climb. On NAS-Bench-101 it was flat near the top, so directed search tied random; here
-the energy objective is exploitable, so it climbs and wins. (``Tidier'' is really \emph{energy-efficient},
-the more compressed structure at comparable, indeed slightly higher, accuracy, so the GA is the better
-\emph{search} on both terms.) At the sizes tested the structural gap does not keep widening; it peaks near
-$N{=}20$ and plateaus (Table~\ref{tab:directed}). Whether it grows again at larger scale, where random covers
-a vanishing fraction of a space growing like $2^{2N}$, remains a conjecture beyond $N{\le}28$, not a
-measurement.
+\textbf{Why it matters.} This \emph{reconciles} the crossover null and confirms the founding conjecture,
+that a directed search beats random when the objective has structure to climb: on NAS-Bench-101 the top was
+flat, so directed search tied random; here the energy objective is exploitable. This is the classical
+evolutionary-search picture, a directed search separating from random only once a gradient exists
+(Needle-versus-OneMax~\cite{djw2002}), an advantage that requires exploitable structure~\cite{nfl,fdc} and
+need not hold against plain hill-climbing~\cite{royalroad}. Our claim is not the principle but its instantiation on this
+substrate, the energy budget supplying the gradient a flat accuracy-only objective lacks. At the sizes tested the structural gap does not keep widening; it peaks near
+$N{=}20$ and plateaus (Table~\ref{tab:directed}). This plateau reflects the landscape, not the search budget:
+growing the budget \emph{quadratically} in $N$ (rather than linearly) lifts the $N{=}28$ structural gap by
+only about one SEM (100 seeds), so more compute does not reopen it. Whether it grows again at larger scale,
+where random covers a vanishing fraction of a space growing like $2^{2N}$, remains a conjecture beyond
+$N{\le}28$, not a measurement.
 
 \subsection{Emergent depth grows with the receptive field, but overshoots it}
 
@@ -223,11 +224,10 @@ is too shallow to span the pair and rises with depth, and the depth of best accu
 (Figure~\ref{fig:depth}). But, evaluated fairly (mean over restarts), the match is only
 \emph{qualitative}: peak accuracy falls with $s$ ($0.81, 0.73, 0.67, 0.65$ for $s{=}2,4,6,8$) and never
 reaches the $0.85$ target, so no depth is cleanly ``selected,'' and the best depth \emph{overshoots} the
-required $s/2$ ($L{\approx}3,3,4,5$ versus $1,2,3,4$). The clean target-crossing staircase we first
+required $s/2$ ($L{\approx}3,3,5,5$ versus $1,2,3,4$). The clean target-crossing staircase we first
 reported was a best-of-restarts artifact; fairly measured, depth is a trend with the same overshoot the
-channel axis shows (Sec.~3.6). The deepest peak ($s{=}8$) sits at the search ceiling $L{=}5$, so its
-overshoot there is a lower bound, and the per-depth means carry no error bars; a larger, deeper sweep
-would tighten both.
+channel axis shows (Sec.~\ref{subsec:compose}). The two deepest peaks ($s{=}6,8$) sit at the search ceiling $L{=}5$, so their
+overshoot there is a lower bound; a larger, deeper sweep would tighten both.
 
 \begin{figure}[t]
 \centering
@@ -357,6 +357,22 @@ organize at all without per-operation supervision. It also explains a chain
 that only \emph{appears} to recombine, hand it the decomposition and its gain is weight sharing plus that
 supervision, not emergent composition.
 
+\subsection{Toward audio: a periodic task, and real speech}\label{subsec:audio}
+
+Audio adds long-range \emph{periodicity} (pitch) on top of local detail, a natural test of whether the
+reuse-versus-recombination result survives. Replacing the recombination task's far spike with a periodic
+spike train at period $p$ (the pitch analog) keeps the two-operation structure and reproduces the finding: at the decisive
+period, recombination solves $100/100$ where the best reused block reaches $93$--$94/100$ and a fine-only
+clone collapses to $14$--$87/100$, at lower depth and with heterogeneous filters like $[1,4]$ (100 seeds).
+The boundary is \emph{soft}, though: a well-chosen uniform dilation still solves most cases (a coarse block,
+scanned and max-pooled, partially recovers the fine motif), so recombination's edge here is real but modest.
+
+On \emph{real} speech (Free Spoken Digit Dataset, a raw $8$\,ms window, one speaker versus another) the
+transfer does not hold: the directed budget slightly beats random on accuracy ($+0.03$, $3$ SEM) but finds a
+\emph{less} compact filter on every seed, where random reaches a near-trivial single-tap separator. Whether a
+genuine limit or a dataset confound, a clean real-audio test needs a task whose optimal filter is demonstrably
+local; the pipeline is in place, the test is future work. We mark this boundary rather than claim the transfer.
+
 \section{Related work, and how we differ}
 
 The closest neighbors, and the distinction: \textbf{DARTS} starts from an exhaustive supernet and
@@ -455,6 +471,14 @@ the reproducibility; each experiment regenerates from its stated command and see
  \emph{NeurIPS} 2023.
 \bibitem{localshare} A.~Lahoti, S.~Karp, E.~Winston, A.~Singh, Y.~Li. Role of Locality and Weight Sharing in
  Image-Based Tasks: A Sample Complexity Separation between CNNs, LCNs, and FCNs. arXiv:2403.15707, 2024.
+\bibitem{djw2002} S.~Droste, T.~Jansen, I.~Wegener. On the analysis of the (1+1) evolutionary algorithm.
+ \emph{Theoretical Computer Science} 276, 2002.
+\bibitem{royalroad} M.~Mitchell, J.~H. Holland, S.~Forrest. When Will a Genetic Algorithm Outperform Hill
+ Climbing? \emph{NeurIPS} 1993.
+\bibitem{fdc} T.~Jones, S.~Forrest. Fitness Distance Correlation as a Measure of Problem Difficulty for
+ Genetic Algorithms. \emph{ICGA} 1995.
+\bibitem{nfl} D.~H. Wolpert, W.~G. Macready. No Free Lunch Theorems for Optimization. \emph{IEEE Trans.
+ Evolutionary Computation} 1(1), 1997.
 \bibitem{kirkpatrick} S.~Kirkpatrick, C.~D. Gelatt, M.~P. Vecchi. Optimization by Simulated Annealing.
  \emph{Science} 220, 1983.
 \bibitem{repo} V.~Gavrilov. SMBPANN reference implementation, 2001--2015--2026.

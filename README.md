@@ -58,7 +58,8 @@ crossover that recombines the architecture's structure is no better than a
 structure-blind one, and worse at large budget, and no search meaningfully beats random
 *there* (see the paper below). Under an *energy budget*, though, the picture differs:
 a directed search finds more structured filters than random, and is modestly more accurate too
-(the emergence study below).
+(the emergence study below). That structural edge holds even when the search budget is scaled *quadratically* with
+problem size, so it reflects the landscape, not a search-budget artifact.
 Structure still matters to a network's accuracy; what does not hold is that a
 structure-aware search extracts an edge a random sampler cannot. The convolutional
 backprop is still verified by a numerical gradient check in the test suite.
@@ -226,7 +227,7 @@ perturbs log-normally at each birth, and selection keeps whatever value produced
 good offspring). Ten seeds per cell. Each cell reports two numbers: **wins** is how
 many of the ten seeds the GA finished with a lower final test-MSE than its
 matched-compute random control, and **gap** is the mean of (random's test-MSE minus
-the GA's) over the ten seeds — so a **positive gap means the GA did better** (lower
+the GA's) over the ten seeds, so a **positive gap means the GA did better** (lower
 error). Five wins of ten is a coin-flip; the gaps are small.
 
 | starting rate (`-M`) | fixed: wins / 10 | fixed: mean gap | self-adaptive: wins / 10 | self-adaptive: mean gap |
@@ -336,7 +337,7 @@ block, then clone and translate it). That chain's +0.25 over search-from-scratch
 per-position detectors starve), shown inside a pipeline, not a separate "reuse beats re-search" mechanism.
 And when the search must **discover** the decomposition itself, given only the composite label and an
 energy budget, **composition does not cleanly emerge without supervision** (the channels under-specialize
-and the energy-selected count overshoots) -- the paper's sharpest boundary. Real data and scale, not
+and the energy-selected count overshoots), the paper's sharpest boundary. Real data and scale, not
 another operator, are the next step.
 
 ![The four operators as A → B: prune, clone, translate, recombine, each with the exact action written under the arrow.](paper/images/fig_operators.svg)
@@ -431,6 +432,34 @@ train weights by backprop):*
 - X. Dong, Y. Yang. *NAS-Bench-201: Extending the Scope of Reproducible Neural
  Architecture Search.* ICLR 2020.
 
+*When directed search beats random (the §2.4 principle, known theory):*
+- S. Droste, T. Jansen, I. Wegener. *On the analysis of the (1+1) evolutionary
+ algorithm.* Theoretical Computer Science 276, 2002 (Needle vs OneMax: a gradient is
+ what separates directed search from random).
+- M. Mitchell, J. H. Holland, S. Forrest. *When Will a Genetic Algorithm Outperform
+ Hill Climbing?* NeurIPS 1993.
+- T. Jones, S. Forrest. *Fitness Distance Correlation as a Measure of Problem
+ Difficulty for Genetic Algorithms.* ICGA 1995.
+- D. H. Wolpert, W. G. Macready. *No Free Lunch Theorems for Optimization.* IEEE
+ Trans. Evolutionary Computation 1(1), 1997.
+
+*Which pieces of a convolution are learned vs imposed (the paper's central question):*
+- A. Ingrosso, S. Goldt. *Data-driven emergence of convolutional structure in neural
+ networks.* PNAS 119(40), 2022.
+- B. Neyshabur. *Towards Learning Convolutions from Scratch.* NeurIPS 2020.
+- Z. Wang, L. Wu. *Theoretical Analysis of Inductive Biases in Deep Convolutional
+ Networks.* NeurIPS 2023.
+- A. Lahoti, S. Karp, E. Winston, A. Singh, Y. Li. *Role of Locality and Weight Sharing
+ in Image-Based Tasks.* arXiv:2403.15707, 2024.
+
+*Emergence of structure under a cost / efficient-coding budget (nearest to our approach):*
+- B. A. Olshausen, D. J. Field. *Emergence of simple-cell receptive field properties by
+ learning a sparse code for natural images.* Nature 381, 1996.
+- J. Clune, J.-B. Mouret, H. Lipson. *The evolutionary origins of modularity.* Proc. R.
+ Soc. B 280, 2013.
+- H. Mengistu, J. Huizinga, J.-B. Mouret, J. Clune. *The Evolutionary Origins of
+ Hierarchy.* PLOS Comput. Biol. 12(6), 2016.
+
 *Foundations:*
 - D. E. Rumelhart, G. E. Hinton, R. J. Williams. *Learning representations by
  back-propagating errors.* Nature 323, 1986.
@@ -451,6 +480,8 @@ train weights by backprop):*
  networks with adaptive sparse connectivity* (SET). Nature Communications 9, 2018.
 - U. Evci, T. Gale, J. Menick, P. S. Castro, E. Elsen. *Rigging the Lottery: Making
  All Tickets Winners* (RigL). ICML 2020.
+- H. Li, A. Kadav, I. Durdanovic, H. Samet, H. P. Graf. *Pruning Filters for Efficient
+ ConvNets.* ICLR 2017 (structured pruning; the neighbor to the sharing/energy decoupling).
 
 ## License
 
