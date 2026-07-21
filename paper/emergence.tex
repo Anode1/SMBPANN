@@ -419,12 +419,14 @@ generalize to real data. The reuse and weight-sharing results are a property of 
 shared-versus-unshared architectures (data efficiency under SGD), not evidence about what the evolutionary
 search discovers; we label them accordingly. The developmental chain (Section~\ref{subsec:develop}) covers find, clone, and
 translate; when the search must \emph{discover} the recombination of a second block it does not cleanly do
-so (Sec.~\ref{subsec:compose}), so a real dataset and scale, not another operator, are the natural next steps. What limits
-this work is scale, not the absence of an idea: the new
-parts, the sharing/energy decoupling and the directed-vs-random reconciliation, are real but small, and
-the tasks are toy. The contribution is a precise mechanism and a clearly marked boundary, verified and
-reproducible from its stated command and seed count, rather than a result at scale; a real dataset is the
-natural next step.
+so (Sec.~\ref{subsec:compose}). What limits this work is scale, not the absence of an idea: the new parts,
+the sharing/energy decoupling and the directed-vs-random reconciliation, are real but small, and the tasks
+are toy. But this method is strongest at \emph{characterization}, the maps and boundaries a
+performance-driven search leaves unmeasured. The sharpest next step is the \emph{minimal-supervision
+boundary} of the composition negative: sweep supervision up from none for the threshold, if any, at which
+composition snaps into place, a phase transition this setup can measure. Two more: the developmental
+\emph{order} the pieces emerge in (trace mode records it), and whether the budget \emph{rediscovers} known
+efficient codes~\cite{olshausen} or diverges from them.
 
 \section{Conclusion}
 
