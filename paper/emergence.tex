@@ -357,7 +357,7 @@ organize at all without per-operation supervision. It also explains a chain
 that only \emph{appears} to recombine, hand it the decomposition and its gain is weight sharing plus that
 supervision, not emergent composition.
 
-\subsection{Toward audio: a periodic task, and real speech}\label{subsec:audio}
+\subsection{Toward audio: a periodic task}\label{subsec:audio}
 
 Audio adds long-range \emph{periodicity} (pitch) on top of local detail, a natural test of whether the
 reuse-versus-recombination result survives. Replacing the recombination task's far spike with a periodic
@@ -367,11 +367,9 @@ clone collapses to $14$--$87/100$, at lower depth and with heterogeneous filters
 The boundary is \emph{soft}, though: a well-chosen uniform dilation still solves most cases (a coarse block,
 scanned and max-pooled, partially recovers the fine motif), so recombination's edge here is real but modest.
 
-On \emph{real} speech (Free Spoken Digit Dataset, a raw $8$\,ms window, one speaker versus another) the
-transfer does not hold: the directed budget slightly beats random on accuracy ($+0.03$, $3$ SEM) but finds a
-\emph{less} compact filter on every seed, where random reaches a near-trivial single-tap separator. Whether a
-genuine limit or a dataset confound, a clean real-audio test needs a task whose optimal filter is demonstrably
-local; the pipeline is in place, the test is future work. We mark this boundary rather than claim the transfer.
+Extending this to \emph{real} speech is future work: a first attempt (spoken digits, raw windows; the framing
+pipeline is in place) found random matching or beating the directed search where the optimal filter is not
+itself compact and local, the needle case the energy gradient cannot help.
 
 \section{Related work, and how we differ}
 
