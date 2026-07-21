@@ -367,10 +367,6 @@ clone collapses to $14$--$87/100$, at lower depth and with heterogeneous filters
 The boundary is \emph{soft}, though: a well-chosen uniform dilation still solves most cases (a coarse block,
 scanned and max-pooled, partially recovers the fine motif), so recombination's edge here is real but modest.
 
-Extending this to \emph{real} speech is future work: a first attempt (spoken digits, raw windows; the framing
-pipeline is in place) found random matching or beating the directed search where the optimal filter is not
-itself compact and local, the needle case the energy gradient cannot help.
-
 \section{Related work, and how we differ}
 
 The closest neighbors, and the distinction: \textbf{DARTS} starts from an exhaustive supernet and
@@ -422,11 +418,7 @@ translate; when the search must \emph{discover} the recombination of a second bl
 so (Sec.~\ref{subsec:compose}). What limits this work is scale, not the absence of an idea: the new parts,
 the sharing/energy decoupling and the directed-vs-random reconciliation, are real but small, and the tasks
 are toy. But this method is strongest at \emph{characterization}, the maps and boundaries a
-performance-driven search leaves unmeasured. The sharpest next step is the \emph{minimal-supervision
-boundary} of the composition negative: sweep supervision up from none for the threshold, if any, at which
-composition snaps into place, a phase transition this setup can measure. Two more: the developmental
-\emph{order} the pieces emerge in (trace mode records it), and whether the budget \emph{rediscovers} known
-efficient codes~\cite{olshausen} or diverges from them.
+performance-driven search leaves unmeasured, rather than at scale.
 
 \section{Conclusion}
 
@@ -442,6 +434,14 @@ data-efficient at a degree that grows with scale then saturates. Where the searc
 compositional decomposition itself it does not, the parts failing to specialize without supervision
 (Sec.~\ref{subsec:compose}), a boundary we mark rather than paper over. The contribution is the map, the negatives, and
 the reproducibility; each experiment regenerates from its stated command and seed count.
+
+\textbf{Future work.} The sharpest next step is the \emph{minimal-supervision boundary} of the composition
+negative (Sec.~\ref{subsec:compose}): sweep supervision from none upward for the threshold, if any, at which
+the parts snap into place, a phase transition this setup is built to measure. A second is \emph{real} audio as
+a \emph{spectrogram} (frequencies in time): a raw-waveform attempt found random matching the directed search
+because the optimal filter was not local in time (the needle case), but on the time-frequency image, where
+formants and their transitions are local patches, the emergence has a gradient to climb, returning audio to
+the very 2-D-image substrate this method works on.
 
 \begin{thebibliography}{9}\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
 \bibitem{obd} Y.~LeCun, J.~S. Denker, S.~A. Solla. Optimal Brain Damage. \emph{NeurIPS} 1990.
