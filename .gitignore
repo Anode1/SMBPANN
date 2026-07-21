@@ -79,3 +79,6 @@ emerge_develop2
 scratch_emerge_develop2.out
 emerge_discover
 scratch_emerge_discover.out
+
+# large audio dataset (real-audio next-paper direction); re-fetch via data/fsdd/PROVENANCE.md
+data/fsdd/recordings/
