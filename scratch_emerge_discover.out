@@ -1,0 +1,17 @@
+HONEST DISCOVERY: does the search decide the decomposition from the composite label + a
+channel-energy budget ALONE (no per-operation labels)?  N=16 K=3 P=14, NTR=64 AMP=3.0,
+40 seeds x 3 restarts, target 0.85, 800 epochs/arm. fair mean (never best-of), paired seeds.
+
+  task    | test acc at C=1..4                | energy-selected C*
+  1   op  | 0.972 0.991 0.996 0.998   | C*=1
+  2   op  | 0.711 0.812 0.875 0.899   | C*=3
+
+two-op decomposition (C=2), 120 runs:
+  discovered (2 shared channels, composite label only)  test = 0.812
+  aux-label CURRICULUM (supervised upper bound)         test = 0.874
+  unshared from-scratch (starvation floor)              test = 0.650
+  channel specialization: 66/120 runs split the two motifs (55%); mean best-align = 0.78
+
+EMERGENCE (honest) if: C* = 1 for one op and 2 for two ops (parts discovered), AND the two
+channels specialize to the two motifs -- all from the composite label, no per-op supervision.
+NULL (also reportable) if C* does not track op count or the channels fail to specialize.

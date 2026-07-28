@@ -1,0 +1,11 @@
+FAIR-BASELINE TEST: does weight-sharing beat a FULLY-TRAINED, oracle-supervised INDEP baseline?
+translation-invariant motif task, 32 train examples, 60 seeds x 4 restarts (mean, +/- std).
+
+  N   | develop (shared) | scratch (indep, winner-only) | scratch_FAIR (indep, oracle full) | develop - FAIR
+  16  | 0.946 +/- 0.061  | 0.714 +/- 0.096              | 0.807 +/- 0.071                     | +0.139
+  48  | 0.940 +/- 0.073  | 0.557 +/- 0.044              | 0.610 +/- 0.057                     | +0.330
+  96  | 0.943 +/- 0.068  | 0.530 +/- 0.026              | 0.560 +/- 0.042                     | +0.383
+  128 | 0.932 +/- 0.076  | 0.525 +/- 0.023              | 0.551 +/- 0.043                     | +0.381
+
+verdict: if develop still beats scratch_FAIR and the gap grows with N, the effect is REAL weight-
+sharing data efficiency; if scratch_FAIR closes the gap, the headline was a weak-baseline artifact.

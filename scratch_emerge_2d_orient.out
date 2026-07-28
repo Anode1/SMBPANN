@@ -1,0 +1,10 @@
+2-D STABILITY PROBE: orientation discrimination (horizontal vs vertical 3-bar)
+G=12x12 k=3, 8 seeds x 3 restarts, AMP=3.0, 200 epochs. both classes have one bar.
+
+  depth L | mean test acc | spread(SD) | min over seeds
+   L=1    | 0.980         | 0.028      | 0.939
+   L=2    | 0.927         | 0.046      | 0.853
+   L=3    | 0.904         | 0.059      | 0.818
+
+STABLE foundation if L=1 is high (single oriented filter suffices) with small spread and a
+high per-seed minimum -- then a genuinely-2-D reuse/recombination study can be built on it.

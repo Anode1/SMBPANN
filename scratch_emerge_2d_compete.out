@@ -1,0 +1,9 @@
+COMPETITION fixes specialization? C=3 channels, K-orientation task, lateral-inhibition strength lambda
+G=12x12 k=3, 8 seeds x 3 restarts, AMP=3.0. lambda=0 is plain SGD (K=3 fails at ~0.75).
+
+  K ops (C=3) | accuracy at lambda = 0.00, 0.10, 0.30, 0.60
+  K=2         |  0.955  0.943  0.954  0.948
+  K=3         |  0.759  0.782  0.759  0.771
+
+competition is the missing piece if K=3 at C=3 crosses target for lambda>0 where lambda=0 fails:
+lateral inhibition breaks channel symmetry so the three channels specialize to the three orientations.

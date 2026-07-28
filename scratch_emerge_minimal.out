@@ -1,0 +1,10 @@
+MINIMAL vs DENSE seed under the SAME energy GA (grouped per-offset mutation, width penalty=1.0)
+local K=3 generative filter, N=12 hidden=10, 24 seeds x 200 gens, target 0.90
+does the compact filter emerge from EITHER direction? compact = taps->K, span->K, contig->1, on-rel->1
+
+  seed        taps  span  contig  on-rel  test
+  DENSE (prune) 3.5  6.9   0.77    0.61    0.877
+  MINIMAL (grow) 3.8  7.0   0.80    0.65    0.877
+
+emergence is robust to the starting point if DENSE-prune and MINIMAL-grow reach the same compact,
+generative kernel; if only one direction gets there, the seed matters and that is the result.

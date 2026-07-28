@@ -1,0 +1,9 @@
+LOCALITY IMPOSED, convolution emergent? contiguous windows given; sharing+width must emerge
+N=12 hidden=10, target acc >= 0.90, 16 seeds x 150 gens.  compact conv = width K=3, coverage 1
+
+  arm                 shared-frac  mean-w  max-w  coverage  test
+  sharing forced off   0.000       2.71    9.78   0.902    0.891
+  sharing allowed      0.883       4.36    6.40   0.867    0.875
+
+convolution emerged on top of imposed locality when: shared-frac ~1, width -> K(=3), coverage ~1.
+(only locality is imposed; weight sharing = translation invariance and compact width must emerge.)

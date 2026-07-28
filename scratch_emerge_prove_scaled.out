@@ -1,0 +1,14 @@
+PROVE (scaling, aggregated): directed energy GA vs RANDOM at matched evals, grouped mutation.
+compact = taps->K(=3), contig->1, on-rel->1. paired GA-RANDOM per seed (same task).
+
+  N   arm     taps          contig        on-rel        test        | paired GA-RANDOM (mean±SEM, win/tie/loss)
+  12  GA      3.4±2.6     0.73±0.31    0.61±0.40    0.885±0.028  | contig +0.02±0.03  onrel +0.01±0.04  (12/29/9, n=50)
+  12  RANDOM  3.4±3.2     0.71±0.32    0.59±0.41    0.878±0.036  |
+  16  GA      4.6±3.9     0.69±0.29    0.52±0.39    0.882±0.032  | contig +0.06±0.04  onrel +0.10±0.03  (22/14/14, n=50)
+  16  RANDOM  5.6±6.9     0.63±0.29    0.43±0.36    0.878±0.037  |
+  20  GA      7.0±6.3     0.68±0.26    0.47±0.36    0.871±0.046  | contig +0.22±0.03  onrel +0.12±0.04  (37/8/5, n=50)
+  20  RANDOM  5.3±4.8     0.46±0.27    0.34±0.33    0.868±0.042  |
+  24  GA      10.0±8.0     0.60±0.22    0.35±0.30    0.868±0.048  | contig +0.17±0.03  onrel +0.04±0.03  (35/6/9, n=50)
+  24  RANDOM  8.7±9.0     0.43±0.24    0.31±0.30    0.861±0.040  |
+  28  GA      15.2±11.0     0.59±0.19    0.30±0.31    0.864±0.055  | contig +0.15±0.04  onrel +0.07±0.03  (33/4/13, n=50)
+  28  RANDOM  12.8±13.5     0.44±0.27    0.23±0.25    0.850±0.046  |

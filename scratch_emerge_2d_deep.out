@@ -1,0 +1,12 @@
+2-D DEPTH-IN-HEAD: does a combining layer recover the K=3 failure? (conv 1->C, then head)
+G=12x12 k=3, 8 seeds x 3 restarts, AMP=3.0, MLP head has 8 hidden units.
+K oriented bars all present vs one dropped, balanced. does MLP head solve K=3 at C=3?
+
+  head    | K | accuracy at C=1..5
+  linear  | 2 | 0.717 0.845 0.955 0.944 0.981
+  linear  | 3 | 0.635 0.674 0.759 0.763 0.817
+  MLP     | 2 | 0.724 0.951 0.969 0.994 0.987
+  MLP     | 3 | 0.634 0.741 0.794 0.841 0.870
+
+the combining layer recovers K=3 if the MLP row for K=3 crosses target at C=3, where the
+linear row did not -- i.e. the failure was the linear head, not the conv channels themselves.

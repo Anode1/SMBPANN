@@ -1,0 +1,12 @@
+2-D DEPTH-IN-EXTRACTOR: does a 2nd conv layer let C final channels cover K orientations?
+G=12x12 k=3, 8 seeds x 3 restarts, AMP=3.0. 2-layer = conv 1->4, conv 4->C; linear head.
+K oriented bars all present vs one dropped, balanced. does 2-layer solve K=3 at C=3?
+
+  extractor | K | accuracy at final C=1..4
+  1-layer   | 2 | 0.717 0.845 0.955 0.944
+  2-layer   | 2 | 0.671 0.817 0.858 0.877
+  1-layer   | 3 | 0.635 0.674 0.759 0.763
+  2-layer   | 3 | 0.623 0.623 0.645 0.645
+
+2-layer extractor recovers K=3 if its K=3 row crosses target at C=3 where 1-layer did not
+(the limit was 'one conv layer cannot specialize'); if not, it is a harder capacity wall.

@@ -1,0 +1,11 @@
+PROVE: directed energy GA vs RANDOM search at matched evals (4824), grouped mutation, width=1.0
+local K=3 generative filter, 50 seeds, mean +/- SD. compact = taps->K(=3), contig->1, on-rel->1
+
+  N   arm     taps           contig         on-rel         test
+  12  GA      3.4±2.6      0.73±0.31     0.61±0.40     0.885±0.028
+  12  RANDOM  3.4±3.2      0.71±0.32     0.59±0.41     0.878±0.036
+  20  GA      7.2±6.0      0.67±0.27     0.45±0.34     0.874±0.045
+  20  RANDOM  6.7±7.6      0.46±0.25     0.32±0.32     0.872±0.035
+
+directed search is proven if GA reaches a compact, on-generative kernel and beats RANDOM by
+more than the SD; scaling holds if that survives N=20. If random matches GA, the filter is just easy.

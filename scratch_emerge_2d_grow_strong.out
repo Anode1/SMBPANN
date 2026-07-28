@@ -1,0 +1,11 @@
+2-D EMERGENT WIDTH: does the grown channel count C* track the number of operations K?
+G=12x12 k=3, single conv 1->C + per-channel max-pool, 6 seeds x 4 restarts, AMP=4.0
+K-op task: all K oriented bars present (pos) vs one dropped (neg), balanced. minimal width C=K.
+
+  K ops | accuracy at C=1..5           | selected C* (mean, first C>=target)
+  K=1   | 1.000 1.000 1.000 1.000 1.000   | C*=1.00 (6/6 solved)
+  K=2   | 0.725 0.860 0.977 0.988 1.000   | C*=2.50 (6/6 solved)
+  K=3   | 0.649 0.658 0.751 0.796 0.857   | C*=4.75 (4/6 solved)
+
+emergent width tracks operation count if C* rises 1,2,3 with K -- the network discovers how
+many distinct feature detectors the task needs, by growing channels only when one is not enough.

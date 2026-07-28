@@ -1,0 +1,12 @@
+TWO-OPERATION task: fine motif (+,-,+, needs dilation 1) AND far spike at distance s
+(cheap with dilation 3). No single reused block serves both roles. Equal compute.
+N=24 K=3, dilations {1,2,3}, up to L=6, 8 seeds, target 0.85
+
+  s  | uni-d1 (solve,E) | uni-d3 (solve,E) | REUSE best | FREE/recomb best   | verdict
+  8  | 3/8 L=4.7   | 0/8  -     | 3/8 L=4.7  | 8/8 L=2.4  | FREE solves more
+       example FREE arch: [1 3]
+  12 | 0/8  -     | 0/8  -     | 1/8 L=4.0  | 5/8 L=3.6  | FREE solves more
+       example FREE arch: [1 2 3]
+
+reuse BREAKS if uniform-d3 fails (blind to fine motif) and FREE finds a cheaper MIX than
+uniform-d1 -- i.e. two different ops force heterogeneity, and cloning one block costs energy.

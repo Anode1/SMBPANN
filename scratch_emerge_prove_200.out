@@ -1,0 +1,17 @@
+PROVE (scaling): directed energy GA vs RANDOM search at matched evals (3624), grouped mutation, width=1.0
+local K=3 generative filter, 200 seeds, 150 gens. paired per seed (same task). compact = taps->K(=3), contig->1, on-rel->1
+
+  N   arm     taps          contig        on-rel        test        | paired GA-RANDOM (mean±SEM, win/tie/loss)
+  12  GA      3.4±2.5     0.70±0.30    0.59±0.39    0.886±0.032  | contig +0.02±0.02  onrel +0.03±0.02  test +0.0040±0.0018  (contig 61/89/50, acc 81/73/46)
+  12  RANDOM  3.7±3.6     0.67±0.30    0.56±0.40    0.882±0.031  |
+  16  GA      5.4±4.5     0.65±0.27    0.48±0.36    0.877±0.037  | contig +0.08±0.02  onrel +0.08±0.02  test +0.0048±0.0021  (contig 98/49/53, acc 93/44/63)
+  16  RANDOM  5.4±5.7     0.57±0.28    0.40±0.33    0.872±0.038  |
+  20  GA      8.5±6.8     0.62±0.23    0.38±0.34    0.872±0.042  | contig +0.17±0.02  onrel +0.11±0.02  test +0.0087±0.0019  (contig 139/24/37, acc 105/34/61)
+  20  RANDOM  7.9±8.0     0.45±0.24    0.27±0.27    0.863±0.042  |
+  24  GA      11.2±8.5     0.53±0.19    0.26±0.26    0.865±0.050  | contig +0.13±0.02  onrel +0.05±0.02  test +0.0089±0.0020  (contig 132/13/55, acc 110/39/51)
+  24  RANDOM  10.3±10.5     0.41±0.23    0.21±0.23    0.856±0.052  |
+  28  GA      14.7±9.9     0.52±0.15    0.21±0.23    0.860±0.058  | contig +0.15±0.02  onrel +0.07±0.01  test +0.0108±0.0025  (contig 153/7/40, acc 118/29/53)
+  28  RANDOM  12.9±12.5     0.37±0.22    0.14±0.16    0.849±0.053  |
+
+directed search does real work if the paired GA-RANDOM contig/on-rel gap is positive by several SEM,
+and the scaling claim holds if that gap GROWS with N (tie at small N, widening advantage as the space grows).

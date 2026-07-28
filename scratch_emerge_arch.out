@@ -1,0 +1,16 @@
+REUSE vs FREE composition at EQUAL COMPUTE: does heterogeneity beat the reuse heuristic?
+N=24 K=3, dilations {1,2,3}, up to L=6, 8 seeds, target 0.85
+REUSE enumerates uniform (dilation,depth) with 8 restarts; FREE runs a GA over arbitrary
+dilation sequences -- budgets matched (~equal candidate trainings). Rank: solve-rate, then
+energy (block count) among solved. Winner needs to actually SOLVE, then be cheaper.
+
+  s  | REUSE solve  energy  evals | FREE solve  energy  evals | verdict
+  4  | 8/8  L=1.6   112 | 8/8  L=1.2   140 | tie-solve, FREE cheaper
+       example solved arch: reuse [2]   free [2]
+  8  | 8/8  L=2.8   112 | 7/8  L=3.0   133 | REUSE solves more
+       example solved arch: reuse [2 2 2]   free [1 2 3]
+  12 | 7/8  L=2.7   112 | 7/8  L=3.1   136 | tie-solve, REUSE cheaper
+       example solved arch: reuse [3 3 3]   free [2 3 3]
+
+reuse heuristic validated if, at equal compute, FREE does not solve more or cheaper than
+enumerating uniform reused blocks -- i.e. block diversity buys nothing but a bigger search.

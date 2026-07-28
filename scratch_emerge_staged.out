@@ -1,0 +1,14 @@
+STAGED searcher: clone while it pays, recombine when it stalls. s=8, 8 seeds, target 0.85
+N=24 K=3 dilations {1,2,3} up to L=6. cost = candidate trainings.
+
+  task regime               | strategy | solve | mean-cost | note
+  ONE-OP (repetitive)       | REUSE    | 5/8  |     63    | clone only
+                            | FREE     | 5/8  |    134    | recombine only
+                            | STAGED   | 7/8  |    114    | solved: 5 via clone, 2 via recombine
+                            |
+  TWO-OP (two different ops) | REUSE    | 2/8  |     79    | clone only
+                            | FREE     | 8/8  |    140    | recombine only
+                            | STAGED   | 8/8  |    185    | solved: 2 via clone, 6 via recombine
+
+STAGED wins if it matches REUSE's low cost on ONE-OP (solves in clone) and FREE's solve
+rate on TWO-OP (detects the stall, recombines) -- adapting to the regime without being told.

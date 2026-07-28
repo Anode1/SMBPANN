@@ -1,0 +1,13 @@
+EMERGENT DEPTH vs REQUIRED DEPTH  (reused feed-forward conv block + global max-pool)
+N=18 K=3, 12 seeds x 4 restarts, up to L=5, target acc >= 0.85
+task: fire iff two spikes are exactly distance s apart. RF>=s+1 needed => depth>=s/2.
+imposed: feed-forward reused-block stack. emergent: depth L, weights, cross-task transfer.
+
+  distance s (need L) | test accuracy at stack depth L=1..5      | L* (energy-selected)
+  s=2 (need L=1)      | 0.729 0.902 0.923 0.869 0.897  | L*=2
+  s=4 (need L=2)      | 0.551 0.711 0.908 0.830 0.797  | L*=3
+  s=6 (need L=3)      | 0.555 0.595 0.695 0.765 0.786  | L*=- 
+  s=8 (need L=4)      | 0.539 0.591 0.657 0.711 0.783  | L*=- 
+
+emergent depth tracks required depth if L* rises 1,2,3,4 with s=2,4,6,8.
+(shallow nets cannot see the spike pair -> stuck at chance; energy picks the shallowest that can.)

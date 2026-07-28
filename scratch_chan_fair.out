@@ -1,0 +1,11 @@
+2-D CHANNELS: do two different operations (orientations) require two feature CHANNELS?
+G=12x12 k=3, single conv layer 1->C, per-channel max-pool, 24 seeds x 3 restarts, AMP=3.0
+
+  ONE-OP (orientation of one bar)    | acc at C=1,2,3,4        | spread(SD)
+                                     | 0.941 0.979 0.991 0.994   | 0.06 0.02 0.01 0.01
+
+  TWO-OP (both orientations present) | acc at C=1,2,3,4        | spread(SD)
+                                     | 0.688 0.769 0.859 0.894   | 0.04 0.06 0.08 0.06
+
+crossover if ONE-OP is flat-high across C (one channel enough) but TWO-OP jumps C=1->C=2
+(one orientation cannot see both; two channels can) -- reuse vs recombination on the channel axis.

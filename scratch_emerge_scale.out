@@ -1,0 +1,15 @@
+SCALE: does 'reuse beats re-search' GROW with problem size? (32 train examples, 250 seeds x 4 restarts)
+translation-invariant motif task. DEVELOPMENTAL = one tiled block (K=3 weights, N-invariant).
+SEARCH-FROM-SCRATCH = one filter per position (K*P weights, grows with N).
+
+fair statistics: MEAN over restarts (no best-of selection), reported as mean +/- std over seeds.
+  input N | positions | develop (shared) mean+/-sd | scratch (indep) mean+/-sd | gap   | scratch weights
+  16      | 14        | 0.942 +/- 0.058            | 0.692 +/- 0.088           | +0.250 | 42
+  32      | 30        | 0.943 +/- 0.063            | 0.605 +/- 0.071           | +0.338 | 90
+  48      | 46        | 0.947 +/- 0.071            | 0.568 +/- 0.052           | +0.379 | 138
+  64      | 62        | 0.947 +/- 0.072            | 0.548 +/- 0.043           | +0.399 | 186
+  96      | 94        | 0.944 +/- 0.070            | 0.529 +/- 0.028           | +0.415 | 282
+  128     | 126       | 0.948 +/- 0.063            | 0.524 +/- 0.022           | +0.424 | 378
+
+reuse-beats-re-search STRENGTHENS with scale if 'develop' stays flat while 'scratch' falls and
+the gap widens -- one tiled block is size-independent; independent detectors starve harder as N grows.

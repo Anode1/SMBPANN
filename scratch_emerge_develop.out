@@ -1,0 +1,10 @@
+THE WHOLE SEQUENCE, chained: search-from-scratch vs developmental (block -> translate -> refine)
+translation-invariant motif task, 24 train examples (scarce), 12 seeds x 3 restarts.
+
+  phase                                   | test acc
+  (1) search from scratch (P independent) | 0.629   <- the worsening: starves
+  (2) find a stable block + (3) translate | 0.899   <- reuse, no re-search
+  (4) refine in place, no jitter          | 0.876
+  (4) refine in place, + jitter (anneal)  | 0.786
+
+developmental payoff = (2) over (1); jitter matters only if (4)+jitter clearly beats no-jitter.

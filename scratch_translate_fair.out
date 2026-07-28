@@ -1,0 +1,14 @@
+TRANSLATE (the 3rd operator): does replicating a working detector beat learning each position?
+N=16 K=3, 14 positions, 40 seeds x 3 restarts. translation-invariant motif task.
+SHARED = one filter tiled at every position (a convolution), 3 filter weights.
+INDEP  = a separate filter per position (locally connected), 42 filter weights.
+
+fair stats: mean over restarts (no best-of), mean +/- std over seeds.
+  train size | SHARED (weight-shared) | INDEP (per-position)  | gap
+  16         | 0.820 +/- 0.122       | 0.581 +/- 0.065      | +0.239
+  32         | 0.838 +/- 0.094       | 0.615 +/- 0.071      | +0.224
+  64         | 0.866 +/- 0.082       | 0.672 +/- 0.076      | +0.195
+  128        | 0.867 +/- 0.081       | 0.724 +/- 0.086      | +0.143
+
+translation pays if SHARED matches/beats INDEP at 14x fewer weights, and the gap grows as data
+shrinks -- one working module tiled across positions learns from all of them (data efficiency).
