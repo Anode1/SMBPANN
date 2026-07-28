@@ -182,7 +182,6 @@ From the [AIS](https://github.com/Anode1/ais) project:
 validation/ standalone probes: bbtest (trap control), nasxover (NAS-Bench-201),
  nb101 + nb101_extract (NAS-Bench-101 crossover study),
  emerge_* (the emergence study: energy-budget growth + the operators)
-paper/ the write-ups (emergence: .md note + .tex/.pdf paper) + essay + figures
 legacy/java/ the original early-2000s Java prototype (object-graph design)
 ```
 
@@ -305,17 +304,16 @@ TARGET=0.12 RUNS=30 GENS=60 scripts/errortest.sh
 
 ## Paper
 
-The write-up is the emergence study, in two forms: the paper
-[`paper/emergence.pdf`](paper/emergence.pdf) (source [`paper/emergence.tex`](paper/emergence.tex)) and
-the full reproducible note [`paper/emergence.md`](paper/emergence.md): *Directed Emergence of Network
-Structure Under an Energy Budget*, on what does, and does not, emerge, framed by the
+The write-up is the emergence study, published as *The Imposed and Emergent Pieces of Convolution
+Under an Energy Budget* and archived at <https://doi.org/10.5281/zenodo.21423177> (concept DOI, always resolving to the latest version).
+It is on what does, and does not, emerge, framed by the
 prune/clone/translate/recombine operators, with the negatives kept and every number reproducible from
 one `make`. It opens from the negative result that motivates it: on the real NAS-Bench-101 cell space
 *searching* for structure does not beat random search (a trap-function positive control shows crossover
 helps only where separable building blocks exist), so instead of searching for the architecture, the
 paper grows it, and §2.4 reconciles the two, directed search beats random only when the objective can be
 climbed. That crossover study's code lives in `validation/` (`nb101*`, `nasxover`); its standalone
-write-up has been folded into this paper. The companion essay is [`paper/essay.md`](paper/essay.md).
+write-up has been folded into this paper. 
 
 ## The emergence study
 
@@ -324,7 +322,7 @@ topologies, it **grows** one from an **exhaustive (fully-connected) seed under a
 evolutionary search that pays for every connection, and asks *which pieces of convolution
 emerge, and which do not*.
 
-![The main idea: an exhaustive, tangled network becomes an ordered convolution through a few structural operators.](paper/images/fig_main_idea.svg)
+![The main idea: an exhaustive, tangled network becomes an ordered convolution through a few structural operators.](images/fig_main_idea.svg)
 
 The frame is: **impose the priors that are real symmetries of the domain**, *locality* (information is
 local) and *translatability* (a signal is the same shifted over), and let a few biological operators
@@ -340,7 +338,7 @@ energy budget, **composition does not cleanly emerge without supervision** (the 
 and the energy-selected count overshoots), the paper's sharpest boundary. Real data and scale, not
 another operator, are the next step.
 
-![The four operators as A → B: prune, clone, translate, recombine, each with the exact action written under the arrow.](paper/images/fig_operators.svg)
+![The four operators as A → B: prune, clone, translate, recombine, each with the exact action written under the arrow.](images/fig_operators.svg)
 
 The map that comes out:
 sparse, task-relevant connectivity emerges cleanly, and weight-sharing is *adopted* when
@@ -358,7 +356,7 @@ than random sampling and is **modestly more accurate** too (a large structural w
 which reconciles the two, directed search beats random exactly when the objective can be *climbed* and
 ties it when the landscape is flat (as on NAS-Bench-101). The rest reproduces known inductive-bias
 results (weight-sharing is data-efficient, LeCun 1989; receptive field ≈ depth) with a *fair baseline*
-and full reproducibility. Every claim is a small, seeded, one-`make` probe, the negatives kept. See [`paper/emergence.pdf`](paper/emergence.pdf) (paper) and [`paper/emergence.md`](paper/emergence.md) (full note), `validation/emerge_*.c`.
+and full reproducibility. Every claim is a small, seeded, one-`make` probe, the negatives kept. See the paper at <https://doi.org/10.5281/zenodo.21423177>, and `validation/emerge_*.c` for the probes behind every number.
 
 ## Roadmap
 
@@ -388,7 +386,7 @@ and full reproducibility. Every claim is a small, seeded, one-`make` probe, the 
  building blocks exist (traps) but not on the real cell space, where nothing
  meaningfully beats random. *(done)*
 
-9. **The emergence study** (`validation/emerge_*`, [`paper/emergence.tex`](paper/emergence.tex) + [`.md`](paper/emergence.md)): coming
+9. **The emergence study** (`validation/emerge_*`, paper at <https://doi.org/10.5281/zenodo.21423177>): coming
  at the 1997 ambition from the other side, *growing* a topology from an exhaustive seed under an
  energy budget, a map of what does and does not emerge, and the prune/clone/translate/
  recombine operators, each a small reproducible probe with its negatives kept. *(in progress)*
