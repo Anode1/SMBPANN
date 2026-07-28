@@ -58,5 +58,5 @@
 <text x="94" y="111.5" font-size="9.5" fill="#1e293b">s=6 (need L=3)</text>
 <line x1="72" y1="123" x2="88" y2="123" stroke="#14506b" stroke-width="2.6"/>
 <text x="94" y="126.5" font-size="9.5" fill="#1e293b">s=8 (need L=4)</text>
-<text x="20" y="308" font-size="10.5" fill="#64748b">Best depth (ringed) peaks at L≈3,3,4,5 for s=2,4,6,8 — deeper than the required 1,2,3,4: a trend that overshoots.</text>
+<text x="20" y="308" font-size="10.5" fill="#64748b">Best depth (ringed) peaks at L≈3,3,5,5 for s=2,4,6,8, deeper than the required 1,2,3,4: a trend that overshoots.</text>
 </svg>

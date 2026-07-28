@@ -167,3 +167,6 @@ emerge_minimal:
 
 emerge_discover:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_discover validation/emerge_discover.c $(SMB_MATH)
+
+emerge_pitch:
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_pitch validation/emerge_pitch.c $(SMB_MATH)

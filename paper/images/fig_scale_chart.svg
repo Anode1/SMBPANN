@@ -46,5 +46,5 @@
     <line x1="360" y1="112" x2="384" y2="112" stroke="#e76f51" stroke-width="2.5"/><circle cx="372" cy="112" r="4" fill="#e76f51"/>
     <text x="392" y="116" fill="#c2410c">locally-connected (one filter per position)</text>
   </g>
-  <text x="24" y="416" font-size="11" fill="#94a3b8">The shared block is size-independent; the local baseline starves and falls to chance — the gap widens, then saturates once it hits the floor.</text>
+  <text x="24" y="416" font-size="11" fill="#94a3b8">The shared block is size-independent; the local baseline starves and falls to chance, the gap widens, then saturates once it hits the floor.</text>
 </svg>

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # fig6_directed.svg -- honest two-panel: directed search is TIDIER (contiguity) at EQUAL task accuracy.
-# Paper style: 820-wide, white bg, Segoe UI, slate palette. Numbers from scratch_prove_sweep.out (fixed, 50 seeds).
+# Paper style: 820-wide, white bg, Segoe UI, slate palette. Numbers from scratch_emerge_prove_200.out (fixed, 200 seeds).
 import math
 N   = [12,16,20,24,28]
 sq  = math.sqrt(200)
 # contiguity (fixed budget, 200 seeds)
-gaC=[0.70,0.66,0.63,0.56,0.52]; gaCsd=[0.30,0.29,0.25,0.20,0.14]
-rnC=[0.68,0.59,0.47,0.41,0.37]; rnCsd=[0.30,0.28,0.25,0.23,0.23]
+gaC=[0.70,0.65,0.62,0.53,0.52]; gaCsd=[0.30,0.27,0.23,0.19,0.15]
+rnC=[0.67,0.57,0.45,0.41,0.37]; rnCsd=[0.30,0.28,0.24,0.23,0.22]
 # test accuracy (fixed budget, 200 seeds)
-gaA=[0.887,0.879,0.873,0.864,0.860]; gaAsd=[0.028,0.033,0.044,0.054,0.057]
-rnA=[0.879,0.873,0.863,0.856,0.851]; rnAsd=[0.033,0.038,0.041,0.052,0.051]
+gaA=[0.886,0.877,0.872,0.865,0.860]; gaAsd=[0.032,0.037,0.042,0.050,0.058]
+rnA=[0.882,0.872,0.863,0.856,0.849]; rnAsd=[0.031,0.038,0.042,0.052,0.053]
 sem=lambda v:[x/sq for x in v]
 gaCs,rnCs,gaAs,rnAs = sem(gaCsd),sem(rnCsd),sem(gaAsd),sem(rnAsd)
 

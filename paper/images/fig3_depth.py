@@ -45,7 +45,7 @@ for k,(lab,need,vals,col) in enumerate(series):
     yy=ly+k*15
     t(f'<line x1="{lx}" y1="{yy}" x2="{lx+16}" y2="{yy}" stroke="{col}" stroke-width="2.6"/>')
     t(f'<text x="{lx+22}" y="{yy+3.5}" font-size="9.5" fill="{INK}">{lab}</text>')
-t(f'<text x="20" y="{H-12}" font-size="10.5" fill="{MUT}">Best depth (ringed) peaks at L≈3,3,4,5 for s=2,4,6,8 — deeper than the required 1,2,3,4: a trend that overshoots.</text>')
+t(f'<text x="20" y="{H-12}" font-size="10.5" fill="{MUT}">Best depth (ringed) peaks at L≈3,3,5,5 for s=2,4,6,8, deeper than the required 1,2,3,4: a trend that overshoots.</text>')
 t('</svg>')
 open("fig3_depth.svg","w").write("\n".join(out))
 print("wrote fig3_depth.svg")

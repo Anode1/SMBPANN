@@ -52,5 +52,5 @@
     <text x="16" y="168" font-size="11" fill="#64748b">will not do</text>
   </g>
 
-  <text x="20" y="292" font-size="11.5" fill="#94a3b8">A staged searcher (Sec. 11) clones by default and recombines only when cloning stalls — and matches or beats both fixed strategies.</text>
+  <text x="20" y="292" font-size="11.5" fill="#94a3b8">A staged searcher (Sec. 11) clones by default and recombines only when cloning stalls, and matches or beats both fixed strategies.</text>
 </svg>
