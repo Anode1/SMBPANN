@@ -170,3 +170,15 @@ emerge_discover:
 
 emerge_pitch:
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_pitch validation/emerge_pitch.c $(SMB_MATH)
+
+emerge_tile: validation/emerge_tile.c
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_tile validation/emerge_tile.c $(SMB_MATH)
+
+emerge_offset_check: validation/emerge_offset_check.c
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_offset_check validation/emerge_offset_check.c $(SMB_MATH)
+
+emerge_gen: validation/emerge_gen.c
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_gen validation/emerge_gen.c $(SMB_MATH)
+
+emerge_gen2: validation/emerge_gen2.c
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_gen2 validation/emerge_gen2.c $(SMB_MATH)

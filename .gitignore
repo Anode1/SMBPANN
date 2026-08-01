@@ -53,3 +53,7 @@ emerge_discover
 
 # large audio dataset (real-audio next-paper direction); re-fetch via data/fsdd/PROVENANCE.md
 data/fsdd/recordings/
+/emerge_tile
+/emerge_gen
+/emerge_gen2
+/emerge_offset_check
