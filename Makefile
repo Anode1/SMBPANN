@@ -182,3 +182,6 @@ emerge_gen: validation/emerge_gen.c
 
 emerge_gen2: validation/emerge_gen2.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_gen2 validation/emerge_gen2.c $(SMB_MATH)
+
+objcheck: validation/objcheck.c
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o objcheck validation/objcheck.c $(SMB_MATH)
