@@ -132,3 +132,29 @@ file is shared across workers by the OS page cache).
 As in AIS: spawn focused subagents for isolatable work; a separate tester with
 fresh context writing the tests catches the implementer's assumptions; the main
 session locks the contract and runs `make ut` plus the sanitizers.
+
+## Autonomous (overnight) runs
+
+The long runs -- `scripts/tile_overnight.sh`, `scripts/tile_continuous.sh`,
+`scripts/run_pairstats.sh`, and the many-seed `errortest.sh` sweeps -- are
+launched and left; nobody is reading the output for hours. Two instructions
+belong in any task posted for that regime, because what ends a long session is
+not a capability gap:
+
+**Ground every progress claim in a tool result.** Before reporting progress,
+audit each claim against a tool result from this session. Only report work you
+can point to evidence for; if something is not yet verified, say so explicitly.
+If a probe fails, say so with the output; if a step was skipped, say that; when
+something is done and verified, state it plainly without hedging. A summary that
+reads well but was never checked against a `scratch_*.out` file is worse than no
+summary, because it looks like a finding.
+
+**Do not end the turn on an intention.** You are operating autonomously. The
+user is not watching in real time and cannot answer questions mid-task, so
+asking "Want me to...?" or "Shall I...?" will block the work. For reversible
+actions that follow from the original request, proceed without asking. Before
+ending your turn, check your last paragraph: if it is a plan, an analysis, a
+question, a list of next steps, or a promise about work you have not done
+("I'll...", "let me know when..."), do that work now with tool calls. End your
+turn only when the task is complete or you are blocked on input only the user
+can provide.
