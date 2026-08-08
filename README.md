@@ -75,10 +75,17 @@ Crossover is no longer left open; it is now studied directly (see the paper
 below). On deceptive trap functions, where separable building blocks exist by
 construction, crossover decisively beats mutation, and its advantage grows with the
 number of blocks. On the real NAS-Bench-101 cell space, no crossover meaningfully
-beats random search: operators that recombine the cell's wiring, labeling, node
-roles, or whole paths are all consistently worse than a plain structure-blind one,
-and none clears the benchmark's own training noise over random. Crossover helps only
-where the space carries recombinable building blocks; the real cell space does not.
+beats random search. Every arm edges random with a large signed-rank z (2.0 to
+14.4 over 800 seeds a cell), but by 0.07 to 0.17 accuracy points, inside the
+benchmark's own training noise. Against a plain structure-blind (flat) crossover
+the structured operators do not pay: recombining the two dimensions separately
+(`axis`) and role-matched node-wise recombination with competing conventions
+removed (`aligned`) lose to flat at every budget. Transplanting whole
+input-to-output paths (`path`) is the exception, winning at the smallest budget
+(50 evals: 93.520 vs 93.484, 401/293) and falling behind as the budget grows, so
+structure helps while evaluations are scarce and stops helping once they are not.
+Crossover helps only where the space carries recombinable building blocks; the
+real cell space barely does.
 
 ## Where this sits today
 
