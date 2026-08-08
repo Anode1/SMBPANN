@@ -36,12 +36,18 @@
 #define N     18
 #define K     3
 #define LMAX  8
+#ifndef NTR
 #define NTR   192
+#endif
 #define NTE   1500
+#ifndef TEPOCHS
 #define TEPOCHS 300
+#endif
 #define LR    0.05
 #define AMP   2.5
+#ifndef RESTARTS
 #define RESTARTS 4
+#endif
 
 static uint32_t rs=1u; static uint32_t r32(void){uint32_t x=rs;x^=x<<13;x^=x>>17;x^=x<<5;rs=x;return x;}
 static void rseed(uint32_t s){rs=s?s:1u;} static double runif(void){return (double)r32()/4294967296.0*2.0-1.0;}
@@ -118,6 +124,7 @@ static double mean_eval(int L, uint32_t seed)
 int main(void)
 {
     int seeds=envint("SEEDS",12), sd, di, L;
+    int seed0=envint("SEED0",0), di0=envint("DI0",0), di1=envint("DI1",3), raw=envint("RAW",0);
     int lmax=envint("LMAX",5); if(lmax<1) lmax=1; if(lmax>LMAX) lmax=LMAX;
     int seps[4]={2,4,6,8}, reqL[4]={1,2,3,4};   /* distance s -> required depth s/2 */
     double acc[LMAX+1], sem[LMAX+1];
@@ -127,10 +134,12 @@ int main(void)
     printf("task: fire iff two spikes are exactly distance s apart. RF>=s+1 needed => depth>=s/2.\n");
     printf("imposed: feed-forward reused-block stack. emergent: depth L, weights, cross-task transfer.\n\n");
     printf("  distance s (need L) | test accuracy (mean+-SEM) at stack depth L=1..%d | L* (target-cross), peak (argmax)\n", lmax);
-    for(di=0;di<4;di++){ g_sep=seps[di];
+    for(di=di0;di<=di1&&di<4;di++){ g_sep=seps[di];
         for(L=1;L<=lmax;L++){ double sacc=0,sacc2=0; int nv=0;
-            for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+g_sep*17u+1u),g_sep);
-                if(len_at(L)>=1){ double v=mean_eval(L,(uint32_t)(sd*7u+1u)); sacc+=v; sacc2+=v*v; nv++; } }
+            for(sd=seed0+1;sd<=seed0+seeds;sd++){ new_task((uint32_t)(sd*911u+g_sep*17u+1u),g_sep);
+                if(len_at(L)>=1){ double v=mean_eval(L,(uint32_t)(sd*7u+1u));
+                    if(raw) printf("RAW %d %d %d %.6f\n", g_sep, L, sd, v);
+                    sacc+=v; sacc2+=v*v; nv++; } }
             acc[L]= nv? sacc/nv : 0;
             sem[L]= nv>1? sqrt((sacc2-sacc*sacc/nv)/(nv-1))/sqrt((double)nv) : 0; }
         { int Ls=-1, Lb=1; for(L=1;L<=lmax;L++) if(acc[L]>=g_target){ Ls=L; break; }
