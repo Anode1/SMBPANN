@@ -169,6 +169,7 @@ int main(void)
 {
     int seeds=envint("SEEDS",24), sd, di;
     int seps[3]={4,8,12};
+    int raw = getenv("RAW")!=NULL;   /* per-seed paired solve flags for pairstat (McNemar) */
     g_target=envdbl("TARGET",0.85);
     printf("REUSE vs FREE composition at EQUAL COMPUTE: does heterogeneity beat the reuse heuristic?\n");
     printf("N=%d K=%d, dilations {1,2,3}, up to L=%d, %d seeds, target %.2f\n", N, K, LMAX, seeds, g_target);
@@ -185,6 +186,8 @@ int main(void)
             if(R.acc>=g_target){ rn++; rLs+=R.L; lastR=R; }
             g_evals=0; Arch F=search_free((uint32_t)(sd*7u+1u),POP,GENS,FREE_NR); fE+=g_evals;
             if(F.acc>=g_target){ fn++; fLs+=F.L; lastF=F; }
+            /* paired binary outcome per seed: REUSE solved, FREE solved (0/1) -> McNemar */
+            if(raw) printf("RAW %d %d %d %d\n", seps[di], sd, R.acc>=g_target, F.acc>=g_target);
         }
         { double rEn = rn? rLs/rn : 0, fEn = fn? fLs/fn : 0;
           const char *verdict;

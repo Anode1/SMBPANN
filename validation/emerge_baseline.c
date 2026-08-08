@@ -123,6 +123,7 @@ int main(void)
 {
     int seeds=envint("SEEDS",60), sd, t;
     int Ns[4]={16,48,96,128};
+    int raw = getenv("RAW")!=NULL;   /* per-seed paired lines for pairstat; table still printed */
     g_ntr=envint("NTR",32);
     printf("FAIR-BASELINE TEST: does weight-sharing beat a FULLY-TRAINED, oracle-supervised INDEP baseline?\n");
     printf("translation-invariant motif task, %d train examples, %d seeds x %d restarts (mean, +/- std).\n\n", g_ntr, seeds, RESTARTS);
@@ -131,6 +132,8 @@ int main(void)
         double a0=0,a1=0,a2=0, s0=0,s1=0,s2=0;
         for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+(unsigned)g_n*17u+1u));
             double v0=mean_arm(0,(uint32_t)(sd*7u+1u)), v1=mean_arm(1,(uint32_t)(sd*7u+1u)), v2=mean_arm(2,(uint32_t)(sd*7u+1u));
+            /* shared, indep-winner-only, indep-oracle-full: the paper's claim is shared vs the ORACLE arm */
+            if(raw) printf("RAW %d %d %.6f %.6f %.6f\n", g_n, sd, v0, v1, v2);
             a0+=v0; s0+=v0*v0; a1+=v1; s1+=v1*v1; a2+=v2; s2+=v2*v2; }
         { double m0=a0/seeds,m1=a1/seeds,m2=a2/seeds;
           double d0=seeds>1?sqrt((s0-a0*a0/seeds)/(seeds-1)):0, d1=seeds>1?sqrt((s1-a1*a1/seeds)/(seeds-1)):0, d2=seeds>1?sqrt((s2-a2*a2/seeds)/(seeds-1)):0;

@@ -122,6 +122,7 @@ static double refine(Net net, double jit0, uint32_t seed)
 int main(void)
 {
     int seeds=envint("SEEDS",30), sd;
+    int raw = getenv("RAW")!=NULL;   /* per-seed paired lines for pairstat; table still printed */
     g_ntr=envint("NTR",24);
     double a1=0,a2=0,a3=0,a4=0, q1=0,q2=0,q3=0,q4=0;   /* means and sum-of-squares over seeds */
     for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+1u));
@@ -131,6 +132,9 @@ int main(void)
             { Net blk=find_block_and_translate(sd2); s2+=test_acc(&blk);
               s3+=refine(blk,0.0,sd2); s4+=refine(blk,0.15,sd2); } }
         s1/=RESTARTS; s2/=RESTARTS; s3/=RESTARTS; s4/=RESTARTS;   /* mean over restarts (no best-of) */
+        /* phases: 1 scratch, 2 block+translate, 3 refine no jitter, 4 refine + jitter.
+           The paper's two claims are (2) vs (1) and (4) vs (2), both paired by seed. */
+        if(raw) printf("RAW 0 %d %.6f %.6f %.6f %.6f\n", sd, s1, s2, s3, s4);
         a1+=s1; q1+=s1*s1; a2+=s2; q2+=s2*s2; a3+=s3; q3+=s3*s3; a4+=s4; q4+=s4*s4; }
     { double m1=a1/seeds,m2=a2/seeds,m3=a3/seeds,m4=a4/seeds;
       double d1=seeds>1?sqrt((q1-a1*a1/seeds)/(seeds-1)):0, d2=seeds>1?sqrt((q2-a2*a2/seeds)/(seeds-1)):0,

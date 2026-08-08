@@ -173,6 +173,7 @@ int main(void)
 {
     int seeds=envint("SEEDS",24), sd, di;
     int seps[2]={8,12};
+    int raw = getenv("RAW")!=NULL;   /* per-seed paired solve flags for pairstat (McNemar) */
     g_target=envdbl("TARGET",0.85);
     printf("TWO-OPERATION task: fine motif (+,-,+, needs dilation 1) AND far spike at distance s\n");
     printf("(cheap with dilation 3). No single reused block serves both roles. Equal compute.\n");
@@ -193,6 +194,9 @@ int main(void)
             if(u3.acc>=g_target){u3n++;u3L+=u3.L;}
             if(R.acc>=g_target){rn++;rL+=R.L;}
             g_evals=0; Arch F=search_free((uint32_t)(sd*7u+1u),POP,GENS,FREE_NR); if(F.acc>=g_target){fn++;fL+=F.L; lastF=F;}
+            /* paired binary per seed: uni-d1, uni-d3, REUSE-best, FREE. The paper's claim is FREE vs REUSE. */
+            if(raw) printf("RAW %d %d %d %d %d %d\n", seps[di], sd,
+                           u1.acc>=g_target, u3.acc>=g_target, R.acc>=g_target, F.acc>=g_target);
         }
         { double u1e=u1n?u1L/u1n:0,u3e=u3n?u3L/u3n:0,re=rn?rL/rn:0,fe=fn?fL/fn:0;
           const char*verdict;

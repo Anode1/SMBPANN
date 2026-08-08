@@ -184,6 +184,7 @@ int main(void)
 {
     int seeds=envint("SEEDS",24), sd, t;
     const char *tn[2]={"ONE-OP (repetitive)","TWO-OP (two different ops)"};
+    int raw = getenv("RAW")!=NULL;   /* per-seed paired solve flags for pairstat (McNemar) */
     g_target=envdbl("TARGET",0.85); g_sep=envint("SEP",8);
     printf("STAGED searcher: clone while it pays, recombine when it stalls. s=%d, %d seeds, target %.2f\n", g_sep, seeds, g_target);
     printf("N=%d K=%d dilations {1,2,3} up to L=%d. cost = candidate trainings.\n\n", N, K, LMAX);
@@ -196,6 +197,8 @@ int main(void)
             g_evals=0; Arch F=recombine((uint32_t)(sd*7u+1u),POP,GENS,GA_NR); fC+=g_evals; if(F.acc>=g_target) fSolve++;
             g_evals=0; Result S=staged((uint32_t)(sd*7u+1u),CLONE_NR,POP,GENS,GA_NR); sC+=g_evals;
             if(S.solved){ sSolve++; if(S.phase==0) sClone++; else sRecomb++; }
+            /* paired binary outcomes per seed: REUSE, FREE, STAGED (0/1) -> McNemar on any pair */
+            if(raw) printf("RAW %d %d %d %d %d\n", t, sd, R.solved!=0, F.acc>=g_target, S.solved!=0);
         }
         printf("  %-25s | REUSE    | %d/%d  | %6ld    | clone only\n", tn[t], rSolve, seeds, rC/seeds);
         printf("  %-25s | FREE     | %d/%d  | %6ld    | recombine only\n", "", fSolve, seeds, fC/seeds);

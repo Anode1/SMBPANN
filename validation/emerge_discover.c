@@ -209,6 +209,7 @@ static double scratch_acc(uint32_t seed)
 int main(void)
 {
     int seeds=envint("SEEDS",40), restarts=envint("RESTARTS",3), sd, r, C, kop;
+    int raw = getenv("RAW")!=NULL;   /* per-seed paired lines for pairstat; tables still printed */
     double target=envdbl("TARGET",0.85);
     g_ntr=envint("NTR",64); if(g_ntr>NTRMAX) g_ntr=NTRMAX;
     g_amp=envdbl("AMP",AMP_DEFAULT);
@@ -234,20 +235,26 @@ int main(void)
     { double sp_align=0; int sp_ok=0, ntot=0;
       double sc=0, cu=0, c2=0;
       for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+ 2u*61u +1u), 2);
+          double c2s=0, cus=0, scs=0; int spok_s=0;   /* per-seed, for the RAW paired lines */
           for(r=0;r<restarts;r++){ uint32_t w=(uint32_t)(sd*7u+1u)*131u+(uint32_t)r*97u+1u;
               double wc[CMAX][K], bc[CMAX];
-              c2 += train_multi(2,w,wc,bc);
+              double v2 = train_multi(2,w,wc,bc);
+              c2 += v2; c2s += v2;
               /* assign each channel to its best-aligned motif; specialized iff the two channels
                * cover BOTH motifs (one->A, one->B) */
               { double a0A=align_motif(wc[0],MA), a0B=align_motif(wc[0],MB);
                 double a1A=align_motif(wc[1],MA), a1B=align_motif(wc[1],MB);
                 int c0=(a0A>=a0B)?0:1, c1=(a1A>=a1B)?0:1;   /* 0=A, 1=B */
                 sp_align += (a0A>a0B?a0A:a0B) + (a1A>a1B?a1A:a1B);
-                if(c0!=c1) sp_ok++;
+                if(c0!=c1){ sp_ok++; spok_s++; }
                 ntot++; }
-              sc += scratch_acc(w);
-              cu += curriculum_acc(w);
-          } }
+              { double vs=scratch_acc(w), vc=curriculum_acc(w);
+                sc += vs; scs += vs;
+                cu += vc; cus += vc; }
+          }
+          /* discovered(C=2) vs supervised curriculum vs unshared scratch, fair mean over restarts */
+          if(raw) printf("RAW 2 %d %.6f %.6f %.6f %d\n", sd, c2s/restarts, cus/restarts, scs/restarts, spok_s);
+      }
       { int nrun=seeds*restarts;
         printf("\ntwo-op decomposition (C=2), %d runs:\n", nrun);
         printf("  discovered (2 shared channels, composite label only)  test = %.3f\n", c2/nrun);

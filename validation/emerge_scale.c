@@ -96,6 +96,7 @@ int main(void)
 {
     int seeds=envint("SEEDS",16), sd, t;
     int Ns[6]={16,32,48,64,96,128};
+    int raw = getenv("RAW")!=NULL;   /* per-seed paired lines for pairstat; table still printed */
     g_ntr=envint("NTR",32);
     printf("SCALE: does 'reuse beats re-search' GROW with problem size? (%d train examples, %d seeds x %d restarts)\n", g_ntr, seeds, RESTARTS);
     printf("translation-invariant motif task. DEVELOPMENTAL = one tiled block (K=%d weights, N-invariant).\n", K);
@@ -106,6 +107,7 @@ int main(void)
         double ss=0,ss2=0, si=0,si2=0;
         for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+(unsigned)g_n*17u+1u));
             double vs=mean_of(1,(uint32_t)(sd*7u+1u)), vi=mean_of(0,(uint32_t)(sd*7u+1u));
+            if(raw) printf("RAW %d %d %.6f %.6f\n", g_n, sd, vs, vi);
             ss+=vs; ss2+=vs*vs; si+=vi; si2+=vi*vi; }
         { double ms=ss/seeds, mi=si/seeds;
           double sds = seeds>1? sqrt((ss2-ss*ss/seeds)/(seeds-1)) : 0.0;

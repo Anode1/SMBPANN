@@ -118,6 +118,7 @@ int main(void)
 {
     int seeds=envint("SEEDS",10), sd, t;
     int sizes[4]={16,32,64,128};
+    int raw = getenv("RAW")!=NULL;   /* per-seed paired lines for pairstat; table still printed */
     g_target=envdbl("TARGET",0.85);
     printf("TRANSLATE (the 3rd operator): does replicating a working detector beat learning each position?\n");
     printf("N=%d K=%d, %d positions, %d seeds x %d restarts. translation-invariant motif task.\n", N, K, P, seeds, RESTARTS);
@@ -129,6 +130,7 @@ int main(void)
         double ss=0,ss2=0, si=0,si2=0;
         for(sd=1;sd<=seeds;sd++){ new_task((uint32_t)(sd*911u+(unsigned)g_ntr*17u+1u));
             double vs=mean_of(1,(uint32_t)(sd*7u+1u)), vi=mean_of(0,(uint32_t)(sd*7u+1u));
+            if(raw) printf("RAW %d %d %.6f %.6f\n", sizes[t], sd, vs, vi);
             ss+=vs; ss2+=vs*vs; si+=vi; si2+=vi*vi; }
         { double ms=ss/seeds, mi=si/seeds;
           double ds=seeds>1?sqrt((ss2-ss*ss/seeds)/(seeds-1)):0, di=seeds>1?sqrt((si2-si*si/seeds)/(seeds-1)):0;
