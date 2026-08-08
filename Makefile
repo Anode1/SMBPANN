@@ -189,3 +189,12 @@ objcheck: validation/objcheck.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o objcheck validation/objcheck.c $(SMB_MATH)
 pairstat: validation/pairstat.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o pairstat validation/pairstat.c $(SMB_MATH)
+
+# -- paper-2 (and later) probes ------------------------------------------------
+# Auto-globbed, like SOURCES.c above: dropping a new probe into validation/paper2/
+# just builds, with no Makefile edit. Copy these four lines for paper3, paper4.
+PAPER2_SRC := $(wildcard validation/paper2/*.c)
+PAPER2_BIN := $(notdir $(PAPER2_SRC:.c=))
+paper2: $(PAPER2_BIN)
+$(PAPER2_BIN): %: validation/paper2/%.c validation/paper2/common.h
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o $@ $< $(SMB_MATH)
