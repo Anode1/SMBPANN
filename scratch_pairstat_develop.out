@@ -1,0 +1,20 @@
+pairstat: paired tests, alpha=0.05, power=0.80, family size 3 (Holm)
+primary = Wilcoxon signed-rank; sign test exact; HL = median of Walsh averages; t secondary.
+zero differences DROPPED (Wilcoxon convention).
+
+n = all paired seeds (the estimator's n); ntest = non-zero pairs the rank test uses.
+mean and HL are over ALL pairs; zeros are real observations of the difference.
+
+grp  metric       n  ntest  zero       w/t/l      mean         HL [95% CI]   p(Wilcox)    p(Holm)    p(sign)       p(t)
+0    tiled_vs_scratch    40     40     0    40/0/0     +0.24857 +0.2481 [+0.2312,+0.2657]    1.82e-12   5.46e-12   1.82e-12   4.91e-28
+0    jitter_cost    40     40     0     0/0/40    -0.10495 -0.1034 [-0.1147,-0.0936]    1.82e-12   5.46e-12   1.82e-12   1.17e-23
+0    refine_vs_tiled    40     40     0     2/0/38    -0.01915 -0.0169 [-0.0238,-0.0119]   6.79e-08~  6.79e-08~   1.49e-09   1.91e-08
+
+  ~ = tie-corrected normal approximation (|d| ties made the exact null invalid);
+    no suffix = EXACT signed-rank null by dynamic programming.
+  w/t/l counts ties as exact zero differences, which the test then drops.
+
+grp  metric            MDE          SEM note
+0    tiled_vs_scratch      0.02458      0.00856 
+0    jitter_cost      0.01365      0.00475 
+0    refine_vs_tiled      0.00782      0.00272 

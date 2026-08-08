@@ -1,0 +1,26 @@
+pairstat: paired tests, alpha=0.05, power=0.80, family size 6 (Holm)
+primary = Wilcoxon signed-rank; sign test exact; HL = median of Walsh averages; t secondary.
+zero differences DROPPED (Wilcoxon convention).
+
+n = all paired seeds (the estimator's n); ntest = non-zero pairs the rank test uses.
+mean and HL are over ALL pairs; zeros are real observations of the difference.
+
+grp  metric       n  ntest  zero       w/t/l      mean         HL [95% CI]   p(Wilcox)    p(Holm)    p(sign)       p(t)
+16   shared_vs_indep   250    250     0   250/0/0     +0.25007 +0.2545 [+0.2439,+0.2641]     <1e-12~    <1e-12~   1.11e-75  1.34e-136
+32   shared_vs_indep   250    250     0   250/0/0     +0.33802 +0.3456 [+0.3362,+0.3546]     <1e-12~    <1e-12~   1.11e-75  4.48e-171
+48   shared_vs_indep   250    250     0   249/0/1     +0.37890 +0.3875 [+0.3808,+0.3942]     <1e-12~    <1e-12~   2.77e-73   1.5e-190
+64   shared_vs_indep   250    250     0   249/0/1     +0.39869 +0.4083 [+0.4012,+0.4149]     <1e-12~    <1e-12~   2.77e-73  1.99e-194
+96   shared_vs_indep   250    250     0   250/0/0     +0.41523 +0.4260 [+0.4183,+0.4328]     <1e-12~    <1e-12~   1.11e-75  9.68e-204
+128  shared_vs_indep   250    250     0   250/0/0     +0.42355 +0.4328 [+0.4256,+0.4389]     <1e-12~    <1e-12~   1.11e-75  7.27e-219
+
+  ~ = tie-corrected normal approximation (|d| ties made the exact null invalid);
+    no suffix = EXACT signed-rank null by dynamic programming.
+  w/t/l counts ties as exact zero differences, which the test then drops.
+
+grp  metric            MDE          SEM note
+16   shared_vs_indep      0.01341      0.00477 
+32   shared_vs_indep      0.01290      0.00459 
+48   shared_vs_indep      0.01200      0.00427 
+64   shared_vs_indep      0.01217      0.00433 
+96   shared_vs_indep      0.01160      0.00412 
+128  shared_vs_indep      0.01026      0.00365 

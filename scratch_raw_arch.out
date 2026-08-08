@@ -1,0 +1,88 @@
+REUSE vs FREE composition at EQUAL COMPUTE: does heterogeneity beat the reuse heuristic?
+N=24 K=3, dilations {1,2,3}, up to L=6, 24 seeds, target 0.85
+REUSE enumerates uniform (dilation,depth) with 8 restarts; FREE runs a GA over arbitrary
+dilation sequences -- budgets matched (~equal candidate trainings). Rank: solve-rate, then
+energy (block count) among solved. Winner needs to actually SOLVE, then be cheaper.
+
+  s  | REUSE solve  energy  evals | FREE solve  energy  evals | verdict
+RAW 4 1 1 1
+RAW 4 2 1 1
+RAW 4 3 1 1
+RAW 4 4 1 1
+RAW 4 5 1 1
+RAW 4 6 1 1
+RAW 4 7 1 1
+RAW 4 8 1 1
+RAW 4 9 1 1
+RAW 4 10 1 1
+RAW 4 11 1 1
+RAW 4 12 1 1
+RAW 4 13 1 1
+RAW 4 14 1 1
+RAW 4 15 1 1
+RAW 4 16 1 1
+RAW 4 17 1 1
+RAW 4 18 1 1
+RAW 4 19 1 1
+RAW 4 20 1 1
+RAW 4 21 1 1
+RAW 4 22 1 1
+RAW 4 23 1 1
+RAW 4 24 1 1
+  4  | 24/24  L=1.5   112 | 24/24  L=1.2   140 | tie-solve, FREE cheaper
+       example solved arch: reuse [2]   free [2]
+RAW 8 1 1 1
+RAW 8 2 1 1
+RAW 8 3 1 1
+RAW 8 4 1 1
+RAW 8 5 1 1
+RAW 8 6 1 0
+RAW 8 7 1 1
+RAW 8 8 1 1
+RAW 8 9 1 1
+RAW 8 10 1 1
+RAW 8 11 1 1
+RAW 8 12 1 1
+RAW 8 13 1 1
+RAW 8 14 1 1
+RAW 8 15 1 1
+RAW 8 16 1 1
+RAW 8 17 1 1
+RAW 8 18 1 1
+RAW 8 19 1 1
+RAW 8 20 1 1
+RAW 8 21 1 0
+RAW 8 22 1 1
+RAW 8 23 1 1
+RAW 8 24 1 1
+  8  | 24/24  L=3.0   112 | 22/24  L=3.1   135 | REUSE solves more
+       example solved arch: reuse [2 2]   free [2 3 1 2]
+RAW 12 1 1 1
+RAW 12 2 1 1
+RAW 12 3 0 0
+RAW 12 4 1 1
+RAW 12 5 1 1
+RAW 12 6 1 1
+RAW 12 7 1 1
+RAW 12 8 1 1
+RAW 12 9 0 1
+RAW 12 10 1 1
+RAW 12 11 0 1
+RAW 12 12 1 1
+RAW 12 13 0 1
+RAW 12 14 0 1
+RAW 12 15 1 1
+RAW 12 16 0 1
+RAW 12 17 0 1
+RAW 12 18 1 1
+RAW 12 19 0 1
+RAW 12 20 1 1
+RAW 12 21 1 1
+RAW 12 22 0 1
+RAW 12 23 1 1
+RAW 12 24 1 1
+  12 | 15/24  L=2.7   112 | 23/24  L=3.4   133 | FREE solves more
+       example solved arch: reuse [2 2 2]   free [1 2 3 3]
+
+reuse heuristic validated if, at equal compute, FREE does not solve more or cheaper than
+enumerating uniform reused blocks -- i.e. block diversity buys nothing but a bigger search.

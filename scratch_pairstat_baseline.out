@@ -1,0 +1,30 @@
+pairstat: paired tests, alpha=0.05, power=0.80, family size 8 (Holm)
+primary = Wilcoxon signed-rank; sign test exact; HL = median of Walsh averages; t secondary.
+zero differences DROPPED (Wilcoxon convention).
+
+n = all paired seeds (the estimator's n); ntest = non-zero pairs the rank test uses.
+mean and HL are over ALL pairs; zeros are real observations of the difference.
+
+grp  metric       n  ntest  zero       w/t/l      mean         HL [95% CI]   p(Wilcox)    p(Holm)    p(sign)       p(t)
+16   shared_vs_oracle    60     60     0    57/0/3     +0.13928 +0.1458 [+0.1263,+0.1624]   2.63e-11~     1e-10~   6.25e-14   3.48e-23
+16   shared_vs_winner    60     60     0    60/0/0     +0.23191 +0.2362 [+0.2141,+0.2568]   1.67e-11~     1e-10~   1.73e-18   3.94e-32
+48   shared_vs_oracle    60     60     0    59/0/1     +0.32951 +0.3448 [+0.3251,+0.3582]   1.76e-11~     1e-10~   1.06e-16   7.27e-39
+48   shared_vs_winner    60     60     0    60/0/0     +0.38217 +0.3902 [+0.3766,+0.4029]   1.67e-11~     1e-10~   1.73e-18   5.18e-47
+96   shared_vs_oracle    60     60     0    60/0/0     +0.38280 +0.3932 [+0.3721,+0.4093]   1.67e-11~     1e-10~   1.73e-18   2.77e-46
+96   shared_vs_winner    60     60     0    60/0/0     +0.41312 +0.4244 [+0.4029,+0.4371]   1.67e-11~     1e-10~   1.73e-18   5.17e-52
+128  shared_vs_oracle    60     60     0    60/0/0     +0.38100 +0.3909 [+0.3728,+0.4073]    1.73e-18   1.39e-17   1.73e-18   9.14e-43
+128  shared_vs_winner    60     60     0    60/0/0     +0.40747 +0.4182 [+0.4027,+0.4343]    1.73e-18   1.39e-17   1.73e-18   1.02e-46
+
+  ~ = tie-corrected normal approximation (|d| ties made the exact null invalid);
+    no suffix = EXACT signed-rank null by dynamic programming.
+  w/t/l counts ties as exact zero differences, which the test then drops.
+
+grp  metric            MDE          SEM note
+16   shared_vs_oracle      0.02473      0.00868 
+16   shared_vs_winner      0.02753      0.00966 
+48   shared_vs_oracle      0.02948      0.01035 
+48   shared_vs_winner      0.02455      0.00862 
+96   shared_vs_oracle      0.02532      0.00889 
+96   shared_vs_winner      0.02173      0.00763 
+128  shared_vs_oracle      0.02905      0.01020 
+128  shared_vs_winner      0.02648      0.00930 

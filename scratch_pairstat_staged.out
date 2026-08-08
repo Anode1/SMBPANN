@@ -1,0 +1,14 @@
+pairstat: paired BINARY outcomes, alpha=0.05, family size 4 (Holm)
+primary = McNemar exact (the sign test on discordant pairs). Wilcoxon is not used:
+every |d| is 1, so it would reduce to this test but arrive via an approximation.
+pi = b/(b+c), the share of DISCORDANT seeds favouring arm A, with an exact
+Clopper-Pearson interval. diff = (b-c)/n is the marginal difference in solve rate.
+
+grp  metric       n  b(A)  c(B)   conc      diff              pi [95% CI]   p(McNemar)    p(Holm)
+0    staged_vs_reuse    24     7     0     17   +0.2917      1.000 [0.590,1.000]       0.0156     0.0469
+0    staged_vs_free    24     4     0     20   +0.1667      1.000 [0.398,1.000]        0.125       0.25
+1    staged_vs_reuse    24    13     0     11   +0.5417      1.000 [0.753,1.000]     0.000244   0.000977
+1    staged_vs_free    24     0     0     24   +0.0000      0.000 [0.000,1.000]            1          1
+
+  b = seeds where arm A solved and B did not; c = the reverse; conc = both or neither.
+  Only the b+c discordant seeds carry information: that is McNemar's whole point.
