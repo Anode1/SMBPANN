@@ -59,3 +59,6 @@ data/fsdd/recordings/
 /emerge_offset_check
 
 /objcheck
+/pairstat
+/emerge_pitch
+/emerge_rewire

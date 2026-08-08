@@ -71,33 +71,35 @@ all release debug pedantic: $(BIN) $(EVOLVE) $(GENTASK)
 # bbtest / modnas: standalone validation probes (validation/*.c), separate from
 # the engine (own PRNG, own main). bbtest = building-block crossover on trap
 # functions; modnas = a parallel-branch net (gradient-checked). See the paper.
-bbtest:
+bbtest: validation/bbtest.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o bbtest validation/bbtest.c
-modnas:
+modnas: validation/modular_nas.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o modnas validation/modular_nas.c $(SMB_MATH)
-nasxover:
+nasxover: validation/nasxover.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o nasxover validation/nasxover.c $(SMB_MATH)
-nb101_extract:
+nb101_extract: validation/nb101_extract.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o nb101_extract validation/nb101_extract.c
-emerge_tie:
+emerge_tie: validation/emerge_tie.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_tie validation/emerge_tie.c $(SMB_MATH)
-emerge_local:
+emerge_local: validation/emerge_local.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_local validation/emerge_local.c $(SMB_MATH)
-emerge_compose:
+emerge_rewire: validation/emerge_rewire.c
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_rewire validation/emerge_rewire.c $(SMB_MATH)
+emerge_compose: validation/emerge_compose.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_compose validation/emerge_compose.c $(SMB_MATH)
-emerge_arch:
+emerge_arch: validation/emerge_arch.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_arch validation/emerge_arch.c $(SMB_MATH)
-emerge_twoop:
+emerge_twoop: validation/emerge_twoop.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_twoop validation/emerge_twoop.c $(SMB_MATH)
-emerge_staged:
+emerge_staged: validation/emerge_staged.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_staged validation/emerge_staged.c $(SMB_MATH)
-conv_emerge:
+conv_emerge: validation/conv_emerge.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o conv_emerge validation/conv_emerge.c $(SMB_MATH)
-nb101:
+nb101: validation/nb101.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o nb101 validation/nb101.c $(SMB_MATH)
-conv2d:
+conv2d: validation/conv2d.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o conv2d validation/conv2d.c $(SMB_MATH)
-modevo:
+modevo: validation/modevo.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o modevo validation/modevo.c $(SMB_MATH)
 
 $(BIN): $(SMBPANN_OBJS)
@@ -133,42 +135,42 @@ clean:
 	-rm -f $(BIN) $(EVOLVE) $(GENTASK) $(TESTBIN) $(TESTBIN)_asan $(TESTBIN)_ubsan bbtest modnas modevo conv2d nasxover nb101_extract nb101 conv_emerge emerge_tie $(OBJS) $(OBJS:.o=.d)
 
 -include $(OBJS:.o=.d)
-emerge_2d:
+emerge_2d: validation/emerge_2d.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d validation/emerge_2d.c $(SMB_MATH)
-emerge_2d_orient:
+emerge_2d_orient: validation/emerge_2d_orient.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_orient validation/emerge_2d_orient.c $(SMB_MATH)
-emerge_2d_chan:
+emerge_2d_chan: validation/emerge_2d_chan.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_chan validation/emerge_2d_chan.c $(SMB_MATH)
-emerge_2d_grow:
+emerge_2d_grow: validation/emerge_2d_grow.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_grow validation/emerge_2d_grow.c $(SMB_MATH)
-emerge_2d_deep:
+emerge_2d_deep: validation/emerge_2d_deep.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_deep validation/emerge_2d_deep.c $(SMB_MATH)
-emerge_2d_deep2:
+emerge_2d_deep2: validation/emerge_2d_deep2.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_deep2 validation/emerge_2d_deep2.c $(SMB_MATH)
-emerge_translate:
+emerge_translate: validation/emerge_translate.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_translate validation/emerge_translate.c $(SMB_MATH)
-emerge_2d_compete:
+emerge_2d_compete: validation/emerge_2d_compete.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_2d_compete validation/emerge_2d_compete.c $(SMB_MATH)
-emerge_develop:
+emerge_develop: validation/emerge_develop.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_develop validation/emerge_develop.c $(SMB_MATH)
-emerge_develop2:
+emerge_develop2: validation/emerge_develop2.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_develop2 validation/emerge_develop2.c $(SMB_MATH)
-emerge_scale:
+emerge_scale: validation/emerge_scale.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_scale validation/emerge_scale.c $(SMB_MATH)
-emerge_baseline:
+emerge_baseline: validation/emerge_baseline.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_baseline validation/emerge_baseline.c $(SMB_MATH)
-emerge_offset:
+emerge_offset: validation/emerge_offset.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_offset validation/emerge_offset.c $(SMB_MATH)
 emerge_prove: validation/emerge_prove.c
 	$(CC) $(CFLAGS) -o emerge_prove validation/emerge_prove.c -lm
 
-emerge_minimal:
+emerge_minimal: validation/emerge_minimal.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_minimal validation/emerge_minimal.c $(SMB_MATH)
 
-emerge_discover:
+emerge_discover: validation/emerge_discover.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_discover validation/emerge_discover.c $(SMB_MATH)
 
-emerge_pitch:
+emerge_pitch: validation/emerge_pitch.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o emerge_pitch validation/emerge_pitch.c $(SMB_MATH)
 
 emerge_tile: validation/emerge_tile.c
@@ -185,3 +187,5 @@ emerge_gen2: validation/emerge_gen2.c
 
 objcheck: validation/objcheck.c
 	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o objcheck validation/objcheck.c $(SMB_MATH)
+pairstat: validation/pairstat.c
+	$(CC) $(SMB_CFLAGS) $(CFLAGS) -o pairstat validation/pairstat.c $(SMB_MATH)
