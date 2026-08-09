@@ -245,39 +245,27 @@ static int protocol_checks(int seeds)
 }
 
 /* =========================== OUTER SEARCH =========================== */
-/* A GA over topologies. Knows nothing about backprop: it calls fitness() and nothing else.
- * GENS=0 leaves the seeded population untouched, which is the no-evolution control. */
-static void run_ga(uint32_t seed, int sd, double out[6])
+/* The GA itself lives in ga.h, included at the bottom of this file once the symbols it needs exist.
+ * What stays here is the part that is specific to THIS experiment: what a finished run reports, and
+ * what its RAW row carries. Neither draws a random number, so neither can move a result. */
+static void ga_summarize(const Indiv *pop, const double *fit, int best, double test, double *out)
 {
-    static Indiv pop[POP], nxt[POP]; double fit[POP]; int idx[POP]; int g,p,q,j,best=0; double bf=-1e300,te;
-
-    rseed(seed);
-    for(p=0;p<POP;p++) seed_individual(&pop[p]);
-    for(p=0;p<POP;p++) fit[p]=fitness(&pop[p], train_eval(&pop[p],(uint32_t)(seed+p*2654435761u+1u),0));
-
-    for(g=0; g<g_gens; g++){
-        for(p=0;p<POP;p++) idx[p]=p;
-        for(p=0;p<POP;p++) for(q=p+1;q<POP;q++)
-            if(fit[idx[q]]>fit[idx[p]]){ int t=idx[p]; idx[p]=idx[q]; idx[q]=t; }
-        for(p=0;p<ELITE;p++) nxt[p]=pop[idx[p]];
-        for(p=ELITE;p<POP;p++){ int a=idx[(int)(r32()%ELITE)]; nxt[p]=pop[a]; mutate(&nxt[p]); }
-        memcpy(pop,nxt,sizeof pop);
-        for(p=0;p<POP;p++) fit[p]=fitness(&pop[p], train_eval(&pop[p],(uint32_t)(seed+(uint32_t)(g*POP+p)+7u),0));
-    }
-
-    { double sh=0,mw=0,mx=0,cv=0,en=0;
-      for(p=0;p<POP;p++){ sh+=pop[p].shared; mw+=meanwidth(&pop[p]); mx+=maxwidth(&pop[p]);
-                          cv+=coverage(&pop[p]); en+=energy(&pop[p]);
-                          if(fit[p]>bf){ bf=fit[p]; best=p; } }
-      te = train_eval(&pop[best], seed+999u, 1);
-      out[0]=sh/POP; out[1]=mw/POP; out[2]=mx/POP; out[3]=cv/POP; out[4]=te; out[5]=en/POP;
-      /* Item 2: per-run row, so an arm effect is read as an increment over the pooled acc(coverage)
-       * curve rather than as a raw difference. */
-      if(g_raw) printf("RAW %d %d %d %.4f %.4f %.4f %.4f %.6f %.4f\n", g_arm, g_gens, sd,
-                       coverage(&pop[best]), meanwidth(&pop[best]), (double)maxwidth(&pop[best]),
-                       (double)pop[best].shared, energy(&pop[best]), te);
-      (void)j; }
+    double sh=0,mw=0,mx=0,cv=0,en=0; int p;
+    (void)fit; (void)best;
+    for(p=0;p<POP;p++){ sh+=pop[p].shared; mw+=meanwidth(&pop[p]); mx+=maxwidth(&pop[p]);
+                        cv+=coverage(&pop[p]); en+=energy(&pop[p]); }
+    out[0]=sh/POP; out[1]=mw/POP; out[2]=mx/POP; out[3]=cv/POP;
+    out[4]=test;                                   /* held-out accuracy, from ga.h */
+    out[5]=en/POP;
 }
+static void ga_raw_row(const Indiv *pop, int best, int sd, double test)
+{
+    printf("RAW %d %d %d %.4f %.4f %.4f %.4f %.6f %.4f\n", g_arm, g_gens, sd,
+           coverage(&pop[best]), meanwidth(&pop[best]), (double)maxwidth(&pop[best]),
+           (double)pop[best].shared, energy(&pop[best]), test);
+}
+
+#include "ga.h"       /* the outer search: binds to the symbols defined above, at compile time */
 
 /* =============================== MAIN =============================== */
 int main(void)
