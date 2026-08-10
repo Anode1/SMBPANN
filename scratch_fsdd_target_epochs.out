@@ -1,0 +1,27 @@
+--- TEPOCHS=50 ---
+  support                taps   contig   val acc  test acc   objective
+  conv-K (compact)          3     1.00     0.552     0.595      0.5510
+  conv-1 (too narrow)       1     1.00     0.552     0.556      0.5520
+  conv-5                    5     1.00     0.574     0.602      0.5712
+  conv-9                    9     1.00     0.581     0.611      0.5767
+  conv-21                  21     1.00     0.550     0.561      0.5394
+  scattered-K               3     0.14     0.556     0.556      0.5502
+  full support            125     1.00     0.477     0.518      0.4145
+--- TEPOCHS=300 ---
+  support                taps   contig   val acc  test acc   objective
+  conv-K (compact)          3     1.00     0.544     0.584      0.5422
+  conv-1 (too narrow)       1     1.00     0.545     0.568      0.5445
+  conv-5                    5     1.00     0.547     0.599      0.5450
+  conv-9                    9     1.00     0.565     0.591      0.5605
+  conv-21                  21     1.00     0.546     0.554      0.5357
+  scattered-K               3     0.14     0.551     0.554      0.5452
+  full support            125     1.00     0.494     0.509      0.4307
+--- TEPOCHS=1500 ---
+  support                taps   contig   val acc  test acc   objective
+  conv-K (compact)          3     1.00     0.534     0.580      0.5322
+  conv-1 (too narrow)       1     1.00     0.549     0.564      0.5482
+  conv-5                    5     1.00     0.561     0.576      0.5587
+  conv-9                    9     1.00     0.566     0.582      0.5617
+  conv-21                  21     1.00     0.532     0.550      0.5219
+  scattered-K               3     0.14     0.546     0.569      0.5402
+  full support            125     1.00     0.501     0.509      0.4382

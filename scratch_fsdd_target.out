@@ -1,0 +1,16 @@
+FSDD TARGET CHECK -- no search. digits 0 vs 1, N=64, 600 clips (300/300), 20 seeds,
+per-seed 400/100/100 split, 50 train epochs. objective = acc - 1.00*energy.
+
+  support                taps   contig   val acc  test acc   objective
+  conv-K (compact)          3     1.00     0.565     0.570      0.5630
+  conv-1 (too narrow)       1     1.00     0.552     0.562      0.5510
+  conv-5                    5     1.00     0.584     0.581      0.5815
+  conv-9                    9     1.00     0.584     0.587      0.5795
+  conv-21                  21     1.00     0.554     0.540      0.5434
+  scattered-K               3     0.14     0.551     0.543      0.5450
+  full support            125     1.00     0.488     0.495      0.4250
+
+best by objective: conv-5
+If the compact convolution wins, the apparatus is calibrated and the SYNTHETIC task was the
+weak link. If it loses on real data too, the objective or the net is miscalibrated -- that is
+a bug to find, not a result to report.
