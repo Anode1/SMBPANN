@@ -1,0 +1,16 @@
+emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it
+motif K=3 planted at 1 of 10 positions; train on 3 positions, test on the other 7.
+max-pool readout (position never reaches the output). energy = params/(21*10):
+  shared = taps, unshared = taps*10. objective = heldout_acc - 1.00*energy.
+12 seeds x 200 epochs. GA: pop 24, 50 gens, flips offsets AND the sharing gene.
+
+LAMSCAN  is the planted width K=3 the argmax of the contiguous family, per LAMBDA?
+LAMSCAN  lambda  0.25 -> argmax lo= 9 len= 3  obj 0.6784   TARGET IS ARGMAX
+LAMSCAN  lambda  0.50 -> argmax lo= 9 len= 3  obj 0.6748   TARGET IS ARGMAX
+LAMSCAN  lambda  1.00 -> argmax lo= 9 len= 3  obj 0.6677   TARGET IS ARGMAX
+LAMSCAN  lambda  2.00 -> argmax lo= 9 len= 3  obj 0.6534   TARGET IS ARGMAX
+LAMSCAN  lambda  3.00 -> argmax lo= 9 len= 3  obj 0.6391   TARGET IS ARGMAX
+LAMSCAN  lambda  4.00 -> argmax lo= 9 len= 3  obj 0.6248   TARGET IS ARGMAX
+LAMSCAN  lambda  6.00 -> argmax lo= 9 len= 3  obj 0.5962   TARGET IS ARGMAX
+LAMSCAN  lambda  8.00 -> argmax lo= 9 len= 3  obj 0.5677   TARGET IS ARGMAX
+LAMSCAN  lambda 12.00 -> argmax lo= 9 len= 3  obj 0.5105   TARGET IS ARGMAX

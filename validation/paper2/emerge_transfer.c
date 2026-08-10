@@ -51,29 +51,46 @@
 #define AMP    2.0
 
 static int    g_seeds=20, g_epochs=200, g_gens=50, g_pop=24, g_elite=4, g_trainpos=3;
-static double g_lr=0.05, g_lambda=1.0, g_pflip=0.10;
+static double g_lr=0.05, g_lambda=1.0, g_pflip=0.10, g_damp=0.7;
 
 /* a structure: which offsets are live, and whether weights are tied across positions */
 typedef struct { char off[NOFF]; int shared; } Geno;
 
 /* ============================== TASK ============================== */
 static double motif[K];
-static int    trainpos[H], ntp, testpos[H], nte_pos;
-static double Xtr[NTR][N], Xte[NTE][N];
-static int    ytr[NTR], yte[NTE];
+static int    trainpos[H], ntp, valpos[H], nvp, testpos[H], nte_pos;
+static double Xtr[NTR][N], Xva[NTE][N], Xte[NTE][N];
+static int    ytr[NTR], yva[NTE], yte[NTE];
 
-/* plant the motif (positive) or a scrambled version (negative) at a position drawn from `pos` */
+/* Plant the motif (positive) or a SHAPE-SCRAMBLED version (negative) at a position drawn from `pos`,
+ * plus an adjacent DISTRACTOR that both classes carry.
+ *
+ * Two properties this has to have, and the first version had neither:
+ *   SHAPE, NOT MAGNITUDE, CARRIES THE LABEL. The negative is a random NON-IDENTITY PERMUTATION of the
+ *   motif, drawn fresh per example. The multiset of magnitudes is then identical between classes, so
+ *   every single coordinate sees the same distribution either way and no single tap can discriminate.
+ *   (The first version used one fixed rearrangement, so per-coordinate magnitude leaked the label and
+ *   a single tap reached 0.746.)
+ *   WIDTH IS PUNISHED, NOT MERELY CHARGED. DAMP sets the distractor's strength and is load-bearing:
+ *   measured over the whole contiguous family, DAMP=0 puts width K+1 at rank 1 (0.7530) and the
+ *   planted width nowhere; DAMP=0.7 puts the planted width at rank 1 by 0.027. The distractor is
+ *   therefore what makes K optimal, and that is a measurement rather than an assumption. A distractor of random shape sits immediately beside the
+ *   motif in BOTH classes. A K-wide aligned filter sees only the motif; anything wider bleeds into the
+ *   distractor and loses signal. Without this, a wider window buys alignment robustness for 1/210 of
+ *   energy and the objective's optimum overshoots K -- which is exactly what the support scan found. */
 static void gen_at(double X[][N], int *y, int n, const int *pos, int npos)
 {
+    static const int PERM[6][3] = {{0,1,2},{0,2,1},{1,0,2},{1,2,0},{2,0,1},{2,1,0}};
     int s,i,k;
     for(s=0;s<n;s++){
         int p = pos[(int)(r32()%(uint32_t)npos)];
+        int d = (p+2*K<=N) ? p+K : p-K;          /* distractor slot, adjacent, always in range */
         for(i=0;i<N;i++) X[s][i]=0.3*runif();
         y[s] = (int)(r32()&1u);
         if(y[s]) for(k=0;k<K;k++) X[s][p+k] += AMP*motif[k];
-        else {                                   /* same magnitudes, wrong shape */
-            for(k=0;k<K;k++) X[s][p+k] += AMP*motif[(k+1)%K] * ((k&1)?-1.0:1.0);
-        }
+        else { const int *q = PERM[1+(int)(r32()%5u)];   /* fresh non-identity permutation */
+               for(k=0;k<K;k++) X[s][p+k] += AMP*motif[q[k]]; }
+        if(d>=0 && d+K<=N) for(k=0;k<K;k++) X[s][d+k] += g_damp*AMP*runif();  /* distractor, both classes */
     }
 }
 static void new_task(uint32_t seed)
@@ -83,28 +100,46 @@ static void new_task(uint32_t seed)
     for(k=0;k<K;k++) motif[k]=runif();
     for(i=0;i<H;i++) perm[i]=i;
     for(i=H-1;i>0;i--){ j=(int)(r32()%(uint32_t)(i+1)); tmp=perm[i]; perm[i]=perm[j]; perm[j]=tmp; }
-    ntp=g_trainpos; if(ntp<1) ntp=1; if(ntp>H-1) ntp=H-1;
+    /* THREE DISJOINT POSITION SETS. Training positions; SELECTION positions, unseen by the trainer and
+     * what the GA's fitness is computed on, so transfer is what the search is actually paid in; and
+     * REPORTING positions, unseen by both, so the number in the table is not what was selected on.
+     * The first version selected on TRAINING accuracy, which made "transfer pays for sharing" a
+     * description of the reporting rather than of the selection pressure. */
+    ntp=g_trainpos; if(ntp<1) ntp=1; if(ntp>H-3) ntp=H-3;
     for(i=0;i<ntp;i++) trainpos[i]=perm[i];
-    nte_pos=H-ntp;
-    for(i=0;i<nte_pos;i++) testpos[i]=perm[ntp+i];
+    nvp=(H-ntp)/2; if(nvp<1) nvp=1;
+    for(i=0;i<nvp;i++) valpos[i]=perm[ntp+i];
+    nte_pos=H-ntp-nvp;
+    for(i=0;i<nte_pos;i++) testpos[i]=perm[ntp+nvp+i];
     gen_at(Xtr,ytr,NTR,trainpos,ntp);
-    gen_at(Xte,yte,NTE,testpos,nte_pos);        /* positions NEVER trained on */
+    gen_at(Xva,yva,NTE,valpos,nvp);             /* transfer, for SELECTION */
+    gen_at(Xte,yte,NTE,testpos,nte_pos);        /* transfer, for REPORTING only */
 }
 
 /* ================= THE ONE SCORER: train on trained positions, report HELD-OUT positions =========
  * Shared: one weight per live offset. Unshared: a separate weight per (position, live offset), which
  * is H times as many parameters and cannot transfer to a position it never saw. Max-pool readout, so
  * position never reaches the output. */
+/* LIVE weights only. For row j, offset o is read only when o-OFF0+j lands in [0,N) -- see the loop in
+ * score(). The first version charged taps*H unconditionally, a 75% overcharge on full support, which
+ * made the sharing verdict partly a billing error. */
 static int nparams(const Geno *g)
-{ int i,d=0; for(i=0;i<NOFF;i++) d+=(g->off[i]!=0); return g->shared ? d : d*H; }
+{
+    int i,j,d=0;
+    if(g->shared){ for(i=0;i<NOFF;i++) d+=(g->off[i]!=0); return d; }
+    for(j=0;j<H;j++) for(i=0;i<NOFF;i++){ int t=i-OFF0+j; if(g->off[i] && t>=0 && t<N) d++; }
+    return d;
+}
 static double energy(const Geno *g){ return (double)nparams(g)/(double)(NOFF*H); }
 
-static double score(const Geno *g, uint32_t seed, int on_heldout)
+/* which=0 train, 1 selection-transfer, 2 reporting-transfer */
+static double score(const Geno *g, uint32_t seed, int which)
 {
     static double W[H][NOFF];                    /* unshared weights; row 0 doubles as the shared one */
     double rs, rb=0, h[H];
-    int i,j,e,s,c=0, ns = on_heldout?NTE:NTR;
-    double (*Xe)[N] = on_heldout?Xte:Xtr; int *ye = on_heldout?yte:ytr;
+    int i,j,e,s,c=0, ns = which?NTE:NTR;
+    double (*Xe)[N] = which==0?Xtr:(which==1?Xva:Xte);
+    int    *ye      = which==0?ytr:(which==1?yva:yte);
 
     wseed(seed);
     for(j=0;j<H;j++) for(i=0;i<NOFF;i++) W[j][i] = g->off[i] ? 0.3*wunif() : 0.0;
@@ -161,9 +196,13 @@ static void produce_ga(uint32_t seed, Geno *best_out)
 {
     static Geno pop[POPMAX], nxt[POPMAX];
     double fit[POPMAX]; int idx[POPMAX], gn,p,q,i,best=0; double bf=-1e300;
+    if(g_gens<0) g_gens=0;
     rseed(seed);
-    for(p=0;p<g_pop;p++) make_full(&pop[p], 1);      /* dense and shared; the search may undo either */
-    for(p=0;p<g_pop;p++) fit[p]=objective(&pop[p], score(&pop[p],(uint32_t)(seed+p*2654435761u+1u),0));
+    /* PROTOCOL item 4: the seed must not contain the answer. The first version seeded every individual
+     * identical (dense AND shared), so generation 0 had zero diversity and the sharing gene started on
+     * the answer. Random supports, random sharing. */
+    for(p=0;p<g_pop;p++){ for(i=0;i<NOFF;i++) pop[p].off[i]=(rprob()<0.5); pop[p].shared=(rprob()<0.5); }
+    for(p=0;p<g_pop;p++) fit[p]=objective(&pop[p], score(&pop[p],(uint32_t)(seed+p*2654435761u+1u),1));
     for(gn=0; gn<g_gens; gn++){
         for(p=0;p<g_pop;p++) idx[p]=p;
         for(p=0;p<g_pop;p++) for(q=p+1;q<g_pop;q++)
@@ -177,7 +216,7 @@ static void produce_ga(uint32_t seed, Geno *best_out)
         }
         memcpy(pop,nxt,sizeof pop);
         for(p=0;p<g_pop;p++)
-            fit[p]=objective(&pop[p], score(&pop[p],(uint32_t)(seed+(uint32_t)(gn*g_pop+p)+7u),0));
+            fit[p]=objective(&pop[p], score(&pop[p],(uint32_t)(seed+(uint32_t)(gn*g_pop+p)+7u),1));
     }
     for(p=0;p<g_pop;p++) if(fit[p]>bf){ bf=fit[p]; best=p; }
     *best_out = pop[best];
@@ -200,7 +239,7 @@ static void scan_contiguous(void)
         g.shared=1;
         for(sd=1; sd<=g_seeds; sd++){
             new_task((uint32_t)(sd*911u+1u));
-            ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),1));
+            ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),2));
         }
         ob/=g_seeds;
         for(i=0;i<8;i++) if(ob>best[i]){
@@ -211,6 +250,37 @@ static void scan_contiguous(void)
     printf("SCAN  %d supports enumerated. aligned run starts at lo=%d, planted width K=%d.\n", nb, OFF0, K);
     for(i=0;i<8;i++) printf("SCAN  #%d  lo=%2d len=%2d  objective %.4f%s\n", i+1, blo[i], blen[i], best[i],
                             (blo[i]==OFF0 && blen[i]==K) ? "   <-- the hand-built target" : "");
+}
+
+/* Protocol item 3 applied to the one constant that decides the answer. For each LAMBDA, is the planted
+ * width K the argmax over all contiguous shared supports? Report the window. If the shipped LAMBDA is
+ * outside it, the probe is measuring the tariff, not the task. */
+static void scan_lambda(void)
+{
+    static const double L[] = {0.25,0.5,1.0,2.0,3.0,4.0,6.0,8.0,12.0};
+    int nl=(int)(sizeof L/sizeof L[0]), li, lo, len, sd, i;
+    double keep=g_lambda;
+    printf("LAMSCAN  is the planted width K=%d the argmax of the contiguous family, per LAMBDA?\n", K);
+    for(li=0; li<nl; li++){
+        double bo=-1e300; int blo=0, blen=0;
+        g_lambda=L[li];
+        for(lo=0; lo<NOFF; lo++) for(len=1; lo+len<=NOFF; len++){
+            Geno g; double ob=0;
+            for(i=0;i<NOFF;i++) g.off[i]=0;
+            for(i=lo;i<lo+len;i++) g.off[i]=1;
+            g.shared=1;
+            for(sd=1; sd<=g_seeds; sd++){
+                new_task((uint32_t)(sd*911u+1u));
+                ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),2));
+            }
+            ob/=g_seeds;
+            if(ob>bo){ bo=ob; blo=lo; blen=len; }
+        }
+        printf("LAMSCAN  lambda %5.2f -> argmax lo=%2d len=%2d  obj %.4f   %s\n",
+               L[li], blo, blen, bo,
+               (blo==OFF0 && blen==K) ? "TARGET IS ARGMAX" : "");
+    }
+    g_lambda=keep;
 }
 
 static void row(const char *nm, const Geno *g, double tr, double te, double obj)
@@ -228,6 +298,7 @@ int main(void)
     g_seeds=envint("SEEDS",20); g_epochs=envint("EPOCHS",200); g_gens=envint("GENS",50);
     g_pop=envint("POP",24); g_lr=envdbl("LR",0.05); g_lambda=envdbl("LAMBDA",1.0);
     g_pflip=envdbl("PFLIP",0.10); g_trainpos=envint("TRAINPOS",3);
+    g_damp=envdbl("DAMP",0.7);
     if(g_pop>POPMAX) g_pop=POPMAX;
 
     printf("emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it\n");
@@ -239,6 +310,7 @@ int main(void)
            g_seeds, g_epochs, g_pop, g_gens);
 
     if(envint("SCAN",0)){ scan_contiguous(); return 0; }
+    if(envint("LAMSCAN",0)){ scan_lambda(); return 0; }
 
     for(sd=1; sd<=g_seeds; sd++){
         Geno g[6]; double tr,te; int k;
@@ -250,9 +322,13 @@ int main(void)
         produce_ga((uint32_t)(sd*7u+1u), &g[5]);
         for(k=0;k<6;k++){
             tr = score(&g[k],(uint32_t)(sd*7u+1u),0);
-            te = score(&g[k],(uint32_t)(sd*7u+1u),1);
+            te = score(&g[k],(uint32_t)(sd*7u+1u),2);
             a_tr[k]+=tr; a_te[k]+=te; a_ob[k]+=objective(&g[k],te);
             a_tap[k]+=taps_of(&g[k]); a_con[k]+=contig_of(&g[k]); a_sh[k]+=g[k].shared;
+            /* per-seed row: these outcomes are a two-lump mixture, so the mean is the wrong summary
+             * and paired per-seed differences are the right comparison (PROTOCOL analysis notes). */
+            if(envint("RAW",0)) printf("RAW %d %d %d %d %d %.4f %.4f %.4f\n",
+                k, sd, taps_of(&g[k]), g[k].shared, contig_of(&g[k]), tr, te, objective(&g[k],te));
         }
     }
 
