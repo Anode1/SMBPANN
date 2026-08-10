@@ -18,6 +18,10 @@
  *     the task, the genome, its mutation operators, the inner learner, and the fitness function.
  *     A probe that cannot show you its genome and its objective in its own file is not a probe.
  *
+ * Everything here is `static inline`: a probe that uses only part of the header (emerge_relax runs no
+ * search, so it needs the RNG and the env knobs but none of the protocol reporters) must still compile
+ * warning-clean. Behaviour is unchanged, and the oracle was rerun to prove it.
+ *
  * NO INDIRECTION ON PURPOSE. There are no function pointers and no inversion of control. The probe
  * owns main() and owns its search loop; this header is a box of leaves it calls. That is why a probe
  * still reads top to bottom, and why a bug here cannot silently change what a probe means -- only
@@ -40,21 +44,21 @@
  * never perturbs the evolutionary trajectory. Identical xorshift to every probe in this repo, so a
  * probe moved onto this header reproduces its own history. This header calls neither. -- */
 static uint32_t smb_rs = 1u;
-static uint32_t r32(void){ uint32_t x=smb_rs; x^=x<<13; x^=x>>17; x^=x<<5; smb_rs=x; return x; }
-static void     rseed(uint32_t s){ smb_rs = s?s:1u; }
-static double   runif(void){ return (double)r32()/4294967296.0*2.0-1.0; }
-static double   rprob(void){ return (double)r32()/4294967296.0; }
+static inline uint32_t r32(void){ uint32_t x=smb_rs; x^=x<<13; x^=x>>17; x^=x<<5; smb_rs=x; return x; }
+static inline void     rseed(uint32_t s){ smb_rs = s?s:1u; }
+static inline double   runif(void){ return (double)r32()/4294967296.0*2.0-1.0; }
+static inline double   rprob(void){ return (double)r32()/4294967296.0; }
 
 static uint32_t smb_wr = 1u;
-static uint32_t wr32(void){ uint32_t x=smb_wr; x^=x<<13; x^=x>>17; x^=x<<5; smb_wr=x; return x; }
-static void     wseed(uint32_t s){ smb_wr = s?s:1u; }
-static double   wunif(void){ return (double)wr32()/4294967296.0*2.0-1.0; }
+static inline uint32_t wr32(void){ uint32_t x=smb_wr; x^=x<<13; x^=x>>17; x^=x<<5; smb_wr=x; return x; }
+static inline void     wseed(uint32_t s){ smb_wr = s?s:1u; }
+static inline double   wunif(void){ return (double)wr32()/4294967296.0*2.0-1.0; }
 
 /* -- Knobs. PROTOCOL item 3: a constant that is not an env knob is a constant nobody will ever sweep,
  * and an unswept constant has already decided one result in this project. -- */
-static int    envint(const char*k,int d){ const char*e=getenv(k); return e&&*e?atoi(e):d; }
-static double envdbl(const char*k,double d){ const char*e=getenv(k); return e&&*e?atof(e):d; }
-static int    envis (const char*k,const char*v){ const char*e=getenv(k); return e && !strcmp(e,v); }
+static inline int    envint(const char*k,int d){ const char*e=getenv(k); return e&&*e?atoi(e):d; }
+static inline double envdbl(const char*k,double d){ const char*e=getenv(k); return e&&*e?atof(e):d; }
+static inline int    envis (const char*k,const char*v){ const char*e=getenv(k); return e && !strcmp(e,v); }
 
 /* -- Reporting. Printing only; no state, no randomness. A probe prints its own run header, because
  * the header is where its knobs and its objective are declared and those differ per experiment. -- */
@@ -68,10 +72,10 @@ static int    envis (const char*k,const char*v){ const char*e=getenv(k); return 
  *                    result read off it moves when the budget moves (measured on the depth probe:
  *                    +0.217 accuracy at depth when epochs and data were raised)
  * Same code, opposite answers on two probes, which is why this has to be measured per probe. */
-static double smb_curve_gain(const double *curve, int n)
+static inline double smb_curve_gain(const double *curve, int n)
 { return (n>=2) ? curve[n-1] - curve[n/2] : 0.0; }
 
-static void smb_convergence_report(double mean_gain)
+static inline void smb_convergence_report(double mean_gain)
 {
     printf("PROTOCOL  convergence   accuracy gained over the second half of the budget: %+.4f\n", mean_gain);
     printf("PROTOCOL                -> %s\n", fabs(mean_gain) < 0.01
@@ -81,7 +85,7 @@ static void smb_convergence_report(double mean_gain)
 
 /* PROTOCOL item 1, the printing half. The probe builds the genomes and computes the span, because
  * only the probe knows what its outcome axes are; this just says it the same way every time. */
-static int smb_sensitivity_report(const char *axis, double lo, double hi, double elo, double ehi)
+static inline int smb_sensitivity_report(const char *axis, double lo, double hi, double elo, double ehi)
 {
     printf("PROTOCOL  sensitivity %-10s fitness %.4f..%.4f (span %.4f)  energy %.6f..%.6f\n",
            axis, lo, hi, hi-lo, elo, ehi);

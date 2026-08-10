@@ -1,0 +1,22 @@
+emerge_relax -- descend vs select, ONE model and ONE scorer
+offset-tied kernel, 21 offsets, planted K=3. 20 seeds x 200 epochs, lr=0.050.
+common objective = accuracy - 0.50 * taps/21.  GA: pop 24, 60 gens, pflip 0.10.
+
+  producer                 taps   contig   test acc   objective
+  ideal (hand-built K)     3.00     1.00      0.832      0.7601
+  GA (select on energy)    2.35     0.25      0.879      0.8225
+  relax lambda=0.005      18.95     0.40      0.891      0.4398  | tap-matched rnd 0.891 / 0.4397
+  relax lambda=0.010      18.75     0.45      0.893      0.4469  | tap-matched rnd 0.884 / 0.4371
+  relax lambda=0.015      17.45     0.25      0.896      0.4802  | tap-matched rnd 0.888 / 0.4728
+  relax lambda=0.020      12.60     0.20      0.850      0.5502  | tap-matched rnd 0.854 / 0.5540
+  relax lambda=0.024       6.95     0.20      0.744      0.5780  | tap-matched rnd 0.740 / 0.5744
+  relax lambda=0.028       2.80     0.40      0.661      0.5941  | tap-matched rnd 0.642 / 0.5755
+  relax lambda=0.032       0.45     0.25      0.584      0.5735  | tap-matched rnd 0.568 / 0.5570
+  relax lambda=0.036       0.05     0.05      0.517      0.5158  | tap-matched rnd 0.513 / 0.5117
+  relax lambda=0.040       0.00     0.00      0.505      0.5046  | tap-matched rnd 0.505 / 0.5046
+
+PASS/FAIL, fixed before running:
+  FOUND THE TARGET if some lambda gives taps=3, contig=1, accuracy within noise of ideal.
+  BEAT THE SEARCH  if a relax objective exceeds the GA's.
+  If the tap-matched random column matches a relax row, that row's STRUCTURE is doing no
+  work and only its SIZE is -- the same null that refuted emerge_tile.c.
