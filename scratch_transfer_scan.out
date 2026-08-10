@@ -1,0 +1,12 @@
+0
+^ warnings
+SCAN  every contiguous shared support (lo,len), objective at LAMBDA=1.00, 20 seeds
+SCAN  231 supports enumerated. aligned run starts at lo=9, planted width K=3.
+SCAN  #1  lo= 9 len= 4  objective 0.9075
+SCAN  #2  lo= 9 len= 5  objective 0.9060
+SCAN  #3  lo= 9 len= 3  objective 0.8979   <-- the hand-built target
+SCAN  #4  lo= 9 len= 6  objective 0.8962
+SCAN  #5  lo=10 len= 4  objective 0.8944
+SCAN  #6  lo= 9 len= 7  objective 0.8896
+SCAN  #7  lo=10 len= 5  objective 0.8889
+SCAN  #8  lo=10 len= 3  objective 0.8824

@@ -1,0 +1,19 @@
+emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it
+motif K=3 planted at 1 of 10 positions; train on 3 positions, test on the other 7.
+max-pool readout (position never reaches the output). energy = params/(21*10):
+  shared = taps, unshared = taps*10. objective = heldout_acc - 1.00*energy.
+20 seeds x 200 epochs. GA: pop 24, 50 gens, flips offsets AND the sharing gene.
+
+  producer                    taps  shared contig train acc   heldout  objective
+  ideal conv (shared)          3.0    1.00   1.00     0.940     0.912     0.8979
+  ideal support, UNSHARED      3.0    0.00   1.00     0.956     0.494     0.3506
+  full support (shared)       21.0    1.00   1.00     0.985     0.843     0.7429
+  tap-matched random           3.0    1.00   0.00     0.808     0.713     0.6990
+  full support, UNSHARED      21.0    0.00   1.00     0.998     0.499    -0.5014
+  GA (searches both)           3.0    1.00   0.50     0.984     0.864     0.8498
+
+GATE (protocol item 9, before any operator work):
+  PASS if 'ideal conv (shared)' has the highest objective -- the convolution is finally the
+  optimum, and the search question becomes meaningful.
+  The UNSHARED rows are the mechanism check: they should fit train and collapse on heldout.
+  If they transfer too, the task does not demand sharing and this probe is not yet valid.
