@@ -73,10 +73,11 @@
 #define MAXEP 400              /* ceiling for EPOCHS, sizes the curve array */
 #define LR    0.1
 #define POP   24
-#define ELITE 4
 
 /* -- knobs (PROTOCOL item 3: no hidden constants) -- */
 static int    g_seeds  = 30, g_gens = 150, g_epochs = 50, g_check = 5, g_raw = 0, g_arm = 2;
+static int    g_elite  = 4;   /* ELITE: selection pressure. Low = fast convergence, and a
+                                 converged population gives recombination nothing to work on. */
 static int    g_aulc   = 0;                /* FITNESS=aulc  */
 static double g_lambda = 1.0, g_pslide = 0.15, g_pgrow = 0.10, g_pshare = 0.05;
 /* RNG (two streams), envint/envdbl and the reporting helpers come from common.h. Everything below
@@ -129,8 +130,10 @@ static void mutate(Indiv*g)
         if(rprob()<g_pgrow) g->w[j]+=1; else if(rprob()<0.5) g->w[j]-=1;
         if(g->w[j]<1) g->w[j]=1;
         if(g->w[j]>N) g->w[j]=N;
-        if(g_arm==1){ if(rprob()<g_pslide) g->start[j] += (rprob()<0.5)?-1:1; }
-        else if(g_arm==2){ if(rprob()<g_pslide) g->start[j] = (int)(r32()%(uint32_t)(N-g->w[j]+1)); }
+        { int mode = (g_arm>=3) ? 2 : g_arm;   /* recombination arms inherit arm 2's placement operator,
+                                                  so any arm 3..5 effect is recombination and nothing else */
+          if(mode==1){ if(rprob()<g_pslide) g->start[j] += (rprob()<0.5)?-1:1; }
+          else if(mode==2){ if(rprob()<g_pslide) g->start[j] = (int)(r32()%(uint32_t)(N-g->w[j]+1)); } }
     }
     if(rprob()<g_pshare) g->shared^=1;
     legal(g);
@@ -244,10 +247,67 @@ static int protocol_checks(int seeds)
     return ok;
 }
 
+/* ========================= RECOMBINATION ========================= */
+/* Topology crossover over STRUCTURES, not over an encoding string. A genome here is a set of units,
+ * each a whole little structure (where it looks, how wide), so recombination exchanges units.
+ *
+ * THE PERMUTATION PROBLEM, and why there are three arms rather than one. Units are interchangeable:
+ * any unit may look anywhere, so two parents holding the SAME solution with their units in different
+ * order are different genomes. Recombining them by index then mixes incompatible conventions and
+ * produces a child worse than either parent. This is the classic competing-conventions failure, and
+ * it is a live candidate for why four topology-crossover operators produced a null in paper 1.
+ * CANONICALISING first -- sorting units by where they look -- makes "unit j" mean the same thing in
+ * both parents and costs nothing. Arm 4 is the same operator WITHOUT that step, so the pair measures
+ * whether the earlier null was operator design rather than the space. That is the question paper 1
+ * says it most wants answered.
+ *
+ * No RNG is drawn here except by the arm that needs it, and never for arms 0..2. */
+static void canon(Indiv *g)                    /* sort units by start, then width: a canonical order */
+{
+    int i,j;
+    for(i=1;i<H;i++){
+        int st=g->start[i], w=g->w[i];
+        for(j=i-1; j>=0 && (g->start[j]>st || (g->start[j]==st && g->w[j]>w)); j--){
+            g->start[j+1]=g->start[j]; g->w[j+1]=g->w[j];
+        }
+        g->start[j+1]=st; g->w[j+1]=w;
+    }
+}
+static int ga_recombines(void){ return g_arm>=3; }
+
+static void ga_cross(Indiv *child, const Indiv *other)
+{
+    Indiv o = *other; int j;
+    if(g_arm!=4){ canon(child); canon(&o); }        /* arm 4 deliberately skips canonicalisation */
+    if(g_arm==5){                                   /* structural: copy a contiguous BLOCK of units */
+        int i0 = (int)(r32()%(uint32_t)H), len = 1 + (int)(r32()%(uint32_t)H), i;
+        for(i=0;i<len;i++){ int k=(i0+i)%H; child->start[k]=o.start[k]; child->w[k]=o.w[k]; }
+    } else {                                        /* uniform: each unit from either parent */
+        for(j=0;j<H;j++) if(rprob()<0.5){ child->start[j]=o.start[j]; child->w[j]=o.w[j]; }
+    }
+    if(rprob()<0.5) child->shared = o.shared;
+    legal(child);
+}
+
 /* =========================== OUTER SEARCH =========================== */
 /* The GA itself lives in ga.h, included at the bottom of this file once the symbols it needs exist.
  * What stays here is the part that is specific to THIS experiment: what a finished run reports, and
  * what its RAW row carries. Neither draws a random number, so neither can move a result. */
+/* Mean pairwise genome distance in the final population, normalised to [0,1]. This is the direct
+ * measurement of the hypothesis that recombination has nothing to recombine: if selection has
+ * collapsed the population onto one genome, crossover is copying a solution onto itself and a null
+ * result says nothing about linkage. Measure it rather than infer it from arm effects. */
+static double diversity(const Indiv *pop)
+{
+    int p,q,j; double s=0; long n=0;
+    for(p=0;p<POP;p++) for(q=p+1;q<POP;q++){
+        double d=0;
+        for(j=0;j<H;j++) d += fabs((double)(pop[p].start[j]-pop[q].start[j]))
+                            +  fabs((double)(pop[p].w[j]    -pop[q].w[j]));
+        s += d/(H*2.0*N); n++;
+    }
+    return n? s/n : 0.0;
+}
 static void ga_summarize(const Indiv *pop, const double *fit, int best, double test, double *out)
 {
     double sh=0,mw=0,mx=0,cv=0,en=0; int p;
@@ -257,6 +317,7 @@ static void ga_summarize(const Indiv *pop, const double *fit, int best, double t
     out[0]=sh/POP; out[1]=mw/POP; out[2]=mx/POP; out[3]=cv/POP;
     out[4]=test;                                   /* held-out accuracy, from ga.h */
     out[5]=en/POP;
+    out[6]=diversity(pop);
 }
 static void ga_raw_row(const Indiv *pop, int best, int sd, double test)
 {
@@ -270,38 +331,41 @@ static void ga_raw_row(const Indiv *pop, int best, int sd, double test)
 /* =============================== MAIN =============================== */
 int main(void)
 {
-    static const char *armname[3] = {"0 no-rewire","1 slide-1","2 rewire-rand"};
+    static const char *armname[6] = {"0 no-rewire","1 slide-1","2 rewire-rand",
+                                     "3 xover-canon","4 xover-raw","5 xover-block"};
     int sd,k;
 
     g_seeds=envint("SEEDS",30); g_gens=envint("GENS",150);
     g_epochs=envint("EPOCHS",50); g_check=envint("CHECK",5);
     g_lambda=envdbl("LAMBDA",1.0); g_pslide=envdbl("PSLIDE",0.15);
     g_pgrow=envdbl("PGROW",0.10);  g_pshare=envdbl("PSHARE",0.05);
-    g_raw=envint("RAW",0);
+    g_raw=envint("RAW",0); g_elite=envint("ELITE",4);
+    if(g_elite<1) g_elite=1;
+    if(g_elite>POP-1) g_elite=POP-1;
     g_aulc = envis("FITNESS","aulc");
     if(g_epochs>MAXEP) g_epochs=MAXEP;
     if(g_check<1) g_check=1;
 
     printf("emerge_rewire2 -- rewiring vs add/remove (paper 2, version 2)\n");
     printf("inner: backprop, %d epochs, curve every %d.   outer: GA, POP=%d ELITE=%d, %d gens x %d seeds\n",
-           g_epochs, g_check, POP, ELITE, g_gens, g_seeds);
+           g_epochs, g_check, POP, g_elite, g_gens, g_seeds);
     printf("fitness = %s - %.3f*energy    PSLIDE=%.3f PGROW=%.3f PSHARE=%.3f%s\n\n",
            g_aulc?"AULC":"final accuracy", g_lambda, g_pslide, g_pgrow, g_pshare,
            g_gens==0 ? "\n(GENS=0: NO-EVOLUTION CONTROL -- any arm difference here is not selection)" : "");
 
     if(!protocol_checks(g_seeds>=12?12:g_seeds)) return 2;
 
-    printf("\n  %-14s  shared-frac  mean-w  max-w  coverage  energy   test\n", "arm");
-    for(g_arm=0; g_arm<3; g_arm++){
-        double o[6]={0,0,0,0,0,0}, one[6];
+    printf("\n  %-14s  shared-frac  mean-w  max-w  coverage  energy   test  diversity\n", "arm");
+    for(g_arm=0; g_arm<6; g_arm++){
+        double o[7]={0,0,0,0,0,0,0}, one[7];
         for(sd=1; sd<=g_seeds; sd++){
             new_task((uint32_t)(sd*131+1));
             run_ga((uint32_t)(sd*7+1), sd, one);
-            for(k=0;k<6;k++) o[k]+=one[k];
+            for(k=0;k<7;k++) o[k]+=one[k];
         }
-        for(k=0;k<6;k++) o[k]/=g_seeds;
-        printf("  %-14s   %.3f       %.2f    %.2f   %.3f    %.4f   %.3f\n",
-               armname[g_arm], o[0], o[1], o[2], o[3], o[5], o[4]);
+        for(k=0;k<7;k++) o[k]/=g_seeds;
+        printf("  %-14s   %.3f       %.2f    %.2f   %.3f    %.4f   %.3f    %.4f\n",
+               armname[g_arm], o[0], o[1], o[2], o[3], o[5], o[4], o[6]);
     }
     printf("\nacceptance test: with default knobs this must reproduce emerge_rewire.c (version 1)\n");
     printf("and the archived scratch_rewire_*.out per-seed data exactly.\n");

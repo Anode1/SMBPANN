@@ -9,7 +9,8 @@
  *
  * THE CONTRACT. Before including this header a probe must have defined, with exactly these names:
  *
- *     POP, ELITE                 population size and elite count (macros)
+ *     POP                        population size (macro; sizes the arrays)
+     int g_elite                elite count, a runtime knob so selection pressure can be swept
  *     Indiv                      the genome type (a plain struct; copied by assignment)
  *     void   seed_individual(Indiv *g)                     one member of the initial population
  *     void   mutate(Indiv *g)                              in place; owns ALL of its RNG calls
@@ -55,10 +56,14 @@ static void run_ga(uint32_t seed, int sd, double *out)
         for(p=0;p<POP;p++) for(q=p+1;q<POP;q++)
             if(fit[idx[q]]>fit[idx[p]]){ int t=idx[p]; idx[p]=idx[q]; idx[q]=t; }
 
-        for(p=0;p<ELITE;p++) nxt[p]=pop[idx[p]];          /* elites survive unchanged */
-        for(p=ELITE;p<POP;p++){                           /* the rest: copy an elite, mutate it */
-            int a = idx[(int)(r32()%ELITE)];
+        for(p=0;p<g_elite;p++) nxt[p]=pop[idx[p]];        /* elites survive unchanged */
+        for(p=g_elite;p<POP;p++){                           /* the rest: copy an elite, maybe recombine, mutate */
+            int a = idx[(int)(r32()%(uint32_t)g_elite)];
             nxt[p] = pop[a];
+            if(ga_recombines()){                          /* two parents: costs one extra r32() */
+                int b = idx[(int)(r32()%(uint32_t)g_elite)];
+                ga_cross(&nxt[p], &pop[b]);
+            }
             mutate(&nxt[p]);
         }
         memcpy(pop, nxt, sizeof pop);
