@@ -118,8 +118,18 @@ static void legal(Indiv*g)
 { int j; for(j=0;j<H;j++){ if(g->w[j]<1) g->w[j]=1; if(g->w[j]>N) g->w[j]=N;
     if(g->start[j]<0) g->start[j]=0;
     if(g->start[j]+g->w[j]>N) g->start[j]=N-g->w[j]; } }
+/* SEED DIRECTION -- a constant no probe in this repo has ever varied, and the one that decides what
+ * the question even means.
+ *   dense   (default, and what every emerge_* probe does): w=N, start=0 -> coverage 1.000, max-w 12.
+ *           Both are at their MAXIMUM, so the search can only spend coverage as it compacts, and any
+ *           manipulation that slows the search inflates the coverage number. "Does the tiling emerge"
+ *           cannot be asked here: the tiling is there at generation zero.
+ *   minimal: w=1, start=0 -> coverage 0.083, max-w 1. Energy is already at its floor, so the energy
+ *           term has nothing left to win and only ACCURACY can drive growth. Coverage must be earned.
+ * Both seeds put every unit at start=0, so they differ in width alone and the contrast is clean. */
+static int g_minimal = 0;
 static void seed_individual(Indiv*g)
-{ int j; for(j=0;j<H;j++){ g->start[j]=0; g->w[j]=N; } g->shared=0; }   /* dense contiguous seed */
+{ int j; for(j=0;j<H;j++){ g->start[j]=0; g->w[j]= g_minimal?1:N; } g->shared=0; }
 
 /* THE ARM lives here and nowhere else. Width mutation is identical in all three; only placement
  * differs, so any arm difference is a placement effect by construction. */
@@ -244,6 +254,25 @@ static int protocol_checks(int seeds)
     }
     half_gap /= (converged_n>0?converged_n:1);
     smb_convergence_report(half_gap);
+
+    /* TARGET CHECK. The probe claims to be looking for a convolution: shared weights, width K, windows
+     * tiling the input. Is that genome even an OPTIMUM of the objective? Score it by hand, and score
+     * one deliberately worse than it (width K+1). If the search reliably beats the hand-built target,
+     * the target is not what the objective wants, and no operator, budget or seed will produce it.
+     * Same move as objcheck.c, applied to the goal rather than to the outcome axis. */
+    { double fi=0, fw=0; int sd2, n=0;
+      for(sd2=1; sd2<=seeds; sd2++){
+        Indiv g; int j;
+        new_task((uint32_t)(sd2*911u+1u));
+        g.shared=1; for(j=0;j<H;j++){ g.w[j]=K; g.start[j]=j; } legal(&g);
+        fi += fitness(&g, train_eval(&g,(uint32_t)(sd2*7u+1u),0));
+        g.shared=1; for(j=0;j<H;j++){ g.w[j]=K+1; g.start[j]=j; } legal(&g);
+        fw += fitness(&g, train_eval(&g,(uint32_t)(sd2*7u+1u),0));
+        n++; }
+      printf("PROTOCOL  target        ideal convolution (w=K=%d, tiled): fitness %.4f   w=K+1 variant: %.4f\n",
+             K, fi/n, fw/n);
+      printf("PROTOCOL                -> compare against the arms below; if the search beats the ideal,\n");
+      printf("PROTOCOL                   the objective does not have the convolution as its optimum.\n"); }
     return ok;
 }
 
@@ -339,7 +368,7 @@ int main(void)
     g_epochs=envint("EPOCHS",50); g_check=envint("CHECK",5);
     g_lambda=envdbl("LAMBDA",1.0); g_pslide=envdbl("PSLIDE",0.15);
     g_pgrow=envdbl("PGROW",0.10);  g_pshare=envdbl("PSHARE",0.05);
-    g_raw=envint("RAW",0); g_elite=envint("ELITE",4);
+    g_raw=envint("RAW",0); g_elite=envint("ELITE",4); g_minimal=envis("SEED","minimal");
     if(g_elite<1) g_elite=1;
     if(g_elite>POP-1) g_elite=POP-1;
     g_aulc = envis("FITNESS","aulc");
@@ -349,6 +378,8 @@ int main(void)
     printf("emerge_rewire2 -- rewiring vs add/remove (paper 2, version 2)\n");
     printf("inner: backprop, %d epochs, curve every %d.   outer: GA, POP=%d ELITE=%d, %d gens x %d seeds\n",
            g_epochs, g_check, POP, g_elite, g_gens, g_seeds);
+    printf("seed = %s (%s)\n", g_minimal?"minimal":"dense",
+           g_minimal?"w=1, coverage must be earned":"w=N, coverage 1.0 at generation zero");
     printf("fitness = %s - %.3f*energy    PSLIDE=%.3f PGROW=%.3f PSHARE=%.3f%s\n\n",
            g_aulc?"AULC":"final accuracy", g_lambda, g_pslide, g_pgrow, g_pshare,
            g_gens==0 ? "\n(GENS=0: NO-EVOLUTION CONTROL -- any arm difference here is not selection)" : "");
