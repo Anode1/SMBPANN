@@ -265,9 +265,13 @@ static int protocol_checks(int seeds)
         Indiv g; int j;
         new_task((uint32_t)(sd2*911u+1u));
         g.shared=1; for(j=0;j<H;j++){ g.w[j]=K; g.start[j]=j; } legal(&g);
-        fi += fitness(&g, train_eval(&g,(uint32_t)(sd2*7u+1u),0));
+        { double f=fitness(&g, train_eval(&g,(uint32_t)(sd2*7u+1u),0));
+          if(g_raw) printf("TGT %d ideal %.6f\n", sd2, f);
+          fi += f; }
         g.shared=1; for(j=0;j<H;j++){ g.w[j]=K+1; g.start[j]=j; } legal(&g);
-        fw += fitness(&g, train_eval(&g,(uint32_t)(sd2*7u+1u),0));
+        { double f=fitness(&g, train_eval(&g,(uint32_t)(sd2*7u+1u),0));
+          if(g_raw) printf("TGT %d wide  %.6f\n", sd2, f);
+          fw += f; }
         n++; }
       printf("PROTOCOL  target        ideal convolution (w=K=%d, tiled): fitness %.4f   w=K+1 variant: %.4f\n",
              K, fi/n, fw/n);
@@ -384,7 +388,9 @@ int main(void)
            g_aulc?"AULC":"final accuracy", g_lambda, g_pslide, g_pgrow, g_pshare,
            g_gens==0 ? "\n(GENS=0: NO-EVOLUTION CONTROL -- any arm difference here is not selection)" : "");
 
-    if(!protocol_checks(g_seeds>=12?12:g_seeds)) return 2;
+    /* the target check carries the headline claim, so it gets the full seed count rather than a
+     * cap of 12: at n=12 its standard error (~0.023) dominated the comparison it is used for. */
+    if(!protocol_checks(g_seeds)) return 2;
 
     printf("\n  %-14s  shared-frac  mean-w  max-w  coverage  energy   test  diversity\n", "arm");
     for(g_arm=0; g_arm<6; g_arm++){
