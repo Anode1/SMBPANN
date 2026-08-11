@@ -50,7 +50,8 @@
 #define POPMAX 64
 #define AMP    2.0
 
-static int    g_seeds=20, g_epochs=200, g_gens=50, g_pop=24, g_elite=4, g_trainpos=3;
+static int    g_seeds=20, g_epochs=200, g_gens=50, g_pop=24, g_elite=4, g_trainpos=3, g_op=0;
+static double g_pslide=0.15;
 static double g_lr=0.05, g_lambda=1.0, g_pflip=0.10, g_damp=0.7;
 
 /* a structure: which offsets are live, and whether weights are tied across positions */
@@ -185,13 +186,34 @@ static void make_ideal(Geno *g, int shared)
 { int i; for(i=0;i<NOFF;i++) g->off[i]=0;
   for(i=OFF0; i<OFF0+K && i<NOFF; i++) g->off[i]=1;
   g->shared=shared; }
-static void make_full(Geno *g, int shared)
-{ int i; for(i=0;i<NOFF;i++) g->off[i]=1; g->shared=shared; }
 static void make_random(Geno *g, int taps, int shared)
 { int i,n=0; for(i=0;i<NOFF;i++) g->off[i]=0;
   while(n<taps && n<NOFF){ int r=(int)(r32()%(uint32_t)NOFF); if(!g->off[r]){ g->off[r]=1; n++; } }
   g->shared=shared; }
 
+/* OPERATOR ARMS. The GA's failure on this target is specifically alignment and compactness: it gets
+ * sharing right every seed but lands on ~6 scattered taps instead of 3 adjacent ones. Flips can only
+ * add or remove; they cannot MOVE a tap at constant count. These are the operators built earlier in
+ * this direction, now pointed at a target that is genuinely the objective's optimum -- which is the
+ * condition that was missing every previous time they were measured.
+ *   0 flip-only     add/remove only (the baseline)
+ *   1 flip+slide    a live tap moves +-1                (neighbour-only; O(d^2) to travel d)
+ *   2 flip+rewire   a live tap moves anywhere free      (no spatial prior; O(1) to travel d)
+ *   3 flip+xover    uniform recombination over offsets, two parents
+ * Every arm keeps the same flip rate, so any difference is the added operator and nothing else. */
+static void mutate_geno(Geno *g)
+{
+    int i;
+    for(i=0;i<NOFF;i++) if(rprob()<g_pflip) g->off[i]^=1;
+    if(g_op==1 || g_op==2){
+        for(i=0;i<NOFF;i++) if(g->off[i] && rprob()<g_pslide){
+            int dst = (g_op==1) ? i + ((rprob()<0.5)?-1:1)
+                                : (int)(r32()%(uint32_t)NOFF);
+            if(dst>=0 && dst<NOFF && !g->off[dst]){ g->off[i]=0; g->off[dst]=1; }   /* count-preserving */
+        }
+    }
+    if(rprob()<0.05) g->shared^=1;
+}
 static void produce_ga(uint32_t seed, Geno *best_out)
 {
     static Geno pop[POPMAX], nxt[POPMAX];
@@ -211,8 +233,12 @@ static void produce_ga(uint32_t seed, Geno *best_out)
         for(p=g_elite;p<g_pop;p++){
             int a=idx[(int)(r32()%(uint32_t)g_elite)];
             nxt[p]=pop[a];
-            for(i=0;i<NOFF;i++) if(rprob()<g_pflip) nxt[p].off[i]^=1;
-            if(rprob()<0.05) nxt[p].shared^=1;       /* sharing is a GENE, not a setting */
+            if(g_op==3){                              /* two parents, uniform over offsets */
+                int b=idx[(int)(r32()%(uint32_t)g_elite)];
+                for(i=0;i<NOFF;i++) if(rprob()<0.5) nxt[p].off[i]=pop[b].off[i];
+                if(rprob()<0.5) nxt[p].shared=pop[b].shared;
+            }
+            mutate_geno(&nxt[p]);
         }
         memcpy(pop,nxt,sizeof pop);
         for(p=0;p<g_pop;p++)
@@ -292,13 +318,13 @@ int main(void)
     int sd, i;
     double a_tr[6]={0}, a_te[6]={0}, a_ob[6]={0}, a_tap[6]={0}, a_con[6]={0}, a_sh[6]={0};
     static const char *nm[6] = {
-        "ideal conv (shared)", "ideal support, UNSHARED", "full support (shared)",
-        "tap-matched random", "full support, UNSHARED", "GA (searches both)" };
+        "ideal conv (shared)", "GA flip-only", "GA flip+slide",
+        "GA flip+rewire", "GA flip+xover", "GA-tap-matched random" };
 
     g_seeds=envint("SEEDS",20); g_epochs=envint("EPOCHS",200); g_gens=envint("GENS",50);
     g_pop=envint("POP",24); g_lr=envdbl("LR",0.05); g_lambda=envdbl("LAMBDA",1.0);
     g_pflip=envdbl("PFLIP",0.10); g_trainpos=envint("TRAINPOS",3);
-    g_damp=envdbl("DAMP",0.7);
+    g_damp=envdbl("DAMP",0.7); g_pslide=envdbl("PSLIDE",0.15);
     if(g_pop>POPMAX) g_pop=POPMAX;
 
     printf("emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it\n");
@@ -313,13 +339,12 @@ int main(void)
     if(envint("LAMSCAN",0)){ scan_lambda(); return 0; }
 
     for(sd=1; sd<=g_seeds; sd++){
-        Geno g[6]; double tr,te; int k;
+        Geno g[6]; double tr,te; int k, op;
         new_task((uint32_t)(sd*911u+1u));
-        make_ideal(&g[0],1); make_ideal(&g[1],0);
-        make_full(&g[2],1);
-        make_random(&g[3], K, 1);
-        make_full(&g[4],0);
-        produce_ga((uint32_t)(sd*7u+1u), &g[5]);
+        make_ideal(&g[0],1);
+        for(op=0; op<4; op++){ g_op=op; produce_ga((uint32_t)(sd*7u+1u), &g[1+op]); }
+        g_op=0;
+        make_random(&g[5], taps_of(&g[1]), 1);      /* item 5: null matched to the GA's own tap count */
         for(k=0;k<6;k++){
             tr = score(&g[k],(uint32_t)(sd*7u+1u),0);
             te = score(&g[k],(uint32_t)(sd*7u+1u),2);
