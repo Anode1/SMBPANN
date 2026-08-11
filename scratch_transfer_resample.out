@@ -1,0 +1,14 @@
+--- RESAMPLE=0 ---
+  producer                    taps  shared contig train acc   heldout  objective
+  ideal conv (shared)          3.0    1.00   1.00     0.719     0.692     0.6774
+  GA flip-only                 6.0    1.00   0.15     0.744     0.628     0.5998
+  GA flip+slide                6.8    1.00   0.05     0.738     0.612     0.5794
+  GA flip+rewire               6.7    1.00   0.05     0.756     0.652     0.6200
+  GA flip+xover                6.3    1.00   0.05     0.749     0.618     0.5882
+--- RESAMPLE=1 ---
+  producer                    taps  shared contig train acc   heldout  objective
+  ideal conv (shared)          3.0    1.00   1.00     0.719     0.692     0.6774
+  GA flip-only                 7.0    1.00   0.05     0.786     0.639     0.6058
+  GA flip+slide                6.5    1.00   0.10     0.746     0.635     0.6043
+  GA flip+rewire               7.8    1.00   0.05     0.707     0.616     0.5788
+  GA flip+xover                7.2    1.00   0.10     0.758     0.618     0.5836

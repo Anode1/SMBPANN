@@ -50,7 +50,7 @@
 #define POPMAX 64
 #define AMP    2.0
 
-static int    g_init_ideal=0, g_resample=1;
+static int    g_init_ideal=0, g_resample=1, g_feval=1;
 static int    g_seeds=20, g_epochs=200, g_gens=50, g_pop=24, g_elite=4, g_trainpos=3, g_op=0;
 static double g_pslide=0.15;
 static double g_lr=0.05, g_lambda=1.0, g_pflip=0.10, g_damp=0.7;
@@ -176,6 +176,19 @@ static double score(const Geno *g, uint32_t seed, int which)
     return (double)c/ns;
 }
 static double objective(const Geno *g, double acc){ return acc - g_lambda*energy(g); }
+
+/* FITNESS AVERAGED OVER FEVAL WEIGHT DRAWS. The diagnostic measured a per-evaluation sd of 0.118
+ * against a true target-versus-found gap of 0.078: a single comparison picks the better structure only
+ * about two thirds of the time, and truncation selection over many generations turns that into drift.
+ * Resampling the selection examples does not touch this (measured: no change across all four operator
+ * arms), because the variance is in the weight draw and the training run, not in which examples are
+ * used. Averaging R draws cuts it by sqrt(R). */
+static double fitness_of(const Geno *g, uint32_t seed)
+{
+    int r; double a=0;
+    for(r=0;r<g_feval;r++) a += score(g,(uint32_t)(seed+r*2246822519u+11u),1);
+    return objective(g, a/g_feval);
+}
 static int taps_of(const Geno *g){ int i,d=0; for(i=0;i<NOFF;i++) d+=(g->off[i]!=0); return d; }
 static int contig_of(const Geno *g)
 { int i,lo=NOFF,hi=-1,d=0;
@@ -226,7 +239,7 @@ static void produce_ga(uint32_t seed, Geno *best_out)
      * the answer. Random supports, random sharing. */
     if(g_init_ideal) for(p=0;p<g_pop;p++) make_ideal(&pop[p],1);
     else for(p=0;p<g_pop;p++){ for(i=0;i<NOFF;i++) pop[p].off[i]=(rprob()<0.5); pop[p].shared=(rprob()<0.5); }
-    for(p=0;p<g_pop;p++) fit[p]=objective(&pop[p], score(&pop[p],(uint32_t)(seed+p*2654435761u+1u),1));
+    for(p=0;p<g_pop;p++) fit[p]=fitness_of(&pop[p],(uint32_t)(seed+p*2654435761u+1u));
     for(gn=0; gn<g_gens; gn++){
         for(p=0;p<g_pop;p++) idx[p]=p;
         for(p=0;p<g_pop;p++) for(q=p+1;q<g_pop;q++)
@@ -250,7 +263,7 @@ static void produce_ga(uint32_t seed, Geno *best_out)
          * RESAMPLE=0 restores the old behaviour for comparison. */
         if(g_resample) gen_at(Xva,yva,NTE,valpos,nvp);
         for(p=0;p<g_pop;p++)
-            fit[p]=objective(&pop[p], score(&pop[p],(uint32_t)(seed+(uint32_t)(gn*g_pop+p)+7u),1));
+            fit[p]=fitness_of(&pop[p],(uint32_t)(seed+(uint32_t)(gn*g_pop+p)+7u));
     }
     for(p=0;p<g_pop;p++) if(fit[p]>bf){ bf=fit[p]; best=p; }
     *best_out = pop[best];
@@ -389,7 +402,7 @@ int main(void)
     g_pop=envint("POP",24); g_lr=envdbl("LR",0.05); g_lambda=envdbl("LAMBDA",1.0);
     g_pflip=envdbl("PFLIP",0.10); g_trainpos=envint("TRAINPOS",3);
     g_damp=envdbl("DAMP",0.7); g_pslide=envdbl("PSLIDE",0.15);
-    g_resample=envint("RESAMPLE",1);
+    g_resample=envint("RESAMPLE",1); g_feval=envint("FEVAL",1);
     if(g_pop>POPMAX) g_pop=POPMAX;
 
     printf("emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it\n");
