@@ -1,0 +1,16 @@
+emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it
+N=12. motif K=3 planted at 1 of 10 positions; train on 3, select on 3, report on 4.
+max-pool readout (position never reaches the output). energy = params/(21*10):
+  shared = taps, unshared = taps*10. objective = heldout_acc - 1.00*energy.
+20 seeds x 200 epochs. GA: pop 24, 50 gens, flips offsets AND the sharing gene.
+
+SCAN  every contiguous shared support (lo,len), objective at LAMBDA=1.00, 20 seeds, split 1
+SCAN  231 supports enumerated. aligned run starts at lo=9, planted width K=3.
+SCAN  #1  lo= 9 len= 3  objective 0.6725   <-- the hand-built target
+SCAN  #2  lo= 8 len= 4  objective 0.6695
+SCAN  #3  lo= 8 len= 3  objective 0.6633
+SCAN  #4  lo= 7 len= 5  objective 0.6587
+SCAN  #5  lo= 7 len= 4  objective 0.6463
+SCAN  #6  lo= 8 len= 5  objective 0.6346
+SCAN  #7  lo= 7 len= 6  objective 0.6344
+SCAN  #8  lo= 9 len= 4  objective 0.6319

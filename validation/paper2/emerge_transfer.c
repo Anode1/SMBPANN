@@ -40,7 +40,9 @@
  */
 #include "common.h"
 
-#define N      12               /* inputs                                    */
+#ifndef N                       /* override with -DN=16: the position-overfitting fix needs H large  */
+#define N      12               /* enough to give the SELECTION split a real position sample; default */
+#endif                          /* stays 12 so the archived numbers keep reproducing                  */
 #define K      3                /* motif width -- the target                 */
 #define H      (N - K + 1)      /* positions the motif may sit at (10)       */
 #define NOFF   (N + H - 1)      /* 21 offsets; shared weights indexed by i-j+OFF0 */
@@ -50,10 +52,11 @@
 #define POPMAX 64
 #define AMP    2.0
 
-static int    g_init_ideal=0, g_resample=1, g_feval=1;
+static int    g_init_ideal=0, g_resample=1, g_feval=1, g_nvp=0;
 static int    g_seeds=20, g_epochs=200, g_gens=50, g_pop=24, g_elite=4, g_trainpos=3, g_op=0;
 static double g_pslide=0.15;
 static double g_lr=0.05, g_lambda=1.0, g_pflip=0.10, g_damp=0.7;
+static int    g_dboth=0, g_rotpos=0;
 
 /* a structure: which offsets are live, and whether weights are tied across positions */
 typedef struct { char off[NOFF]; int shared; } Geno;
@@ -92,7 +95,18 @@ static void gen_at(double X[][N], int *y, int n, const int *pos, int npos)
         if(y[s]) for(k=0;k<K;k++) X[s][p+k] += AMP*motif[k];
         else { const int *q = PERM[1+(int)(r32()%5u)];   /* fresh non-identity permutation */
                for(k=0;k<K;k++) X[s][p+k] += AMP*motif[q[k]]; }
-        if(d>=0 && d+K<=N) for(k=0;k<K;k++) X[s][d+k] += g_damp*AMP*runif();  /* distractor, both classes */
+        /* DBOTH=1: flank the motif on BOTH sides wherever they fit. The one-sided form does not scale
+         * in N: the left flank exists only at the last 3 positions (those where the right one does not
+         * fit), so the fraction of positions punishing a LEFT-widened filter is 3/H -- 30% at N=12 but
+         * 21% at N=16, and at N=16 the family argmax duly slid one tap left of the planted width (the
+         * gate failure of 2026-08-11; no DAMP restores it, because most positions never apply the
+         * punishment). Two-sided flanks charge widening in either direction at every position where
+         * the widened tap is in range, which is the property that survives changing N. */
+        if(g_dboth){
+            if(p+2*K<=N) for(k=0;k<K;k++) X[s][p+K+k] += g_damp*AMP*runif();
+            if(p-K>=0)   for(k=0;k<K;k++) X[s][p-K+k] += g_damp*AMP*runif();
+        }
+        else if(d>=0 && d+K<=N) for(k=0;k<K;k++) X[s][d+k] += g_damp*AMP*runif();  /* distractor, both classes */
     }
 }
 static void new_task(uint32_t seed)
@@ -109,7 +123,15 @@ static void new_task(uint32_t seed)
      * description of the reporting rather than of the selection pressure. */
     ntp=g_trainpos; if(ntp<1) ntp=1; if(ntp>H-3) ntp=H-3;
     for(i=0;i<ntp;i++) trainpos[i]=perm[i];
-    nvp=(H-ntp)/2; if(nvp<1) nvp=1;
+    /* NVP sets the selection split's position count. The diagnosis this serves: with only 3 fixed
+     * selection positions the GA overfits WHICH positions it must transfer to (the target leads by
+     * 0.078 on the disjoint reporting positions but only 0.007 on the selection ones, and the two
+     * sets are exchangeable, so the difference is selection-induced). RESAMPLE refreshes examples,
+     * never positions; more positions is the lever that makes the selection mean a faithful proxy
+     * for generic transfer. Default keeps the old formula, so archived numbers reproduce. */
+    nvp = g_nvp>0 ? g_nvp : (H-ntp)/2;
+    if(nvp<1) nvp=1;
+    if(nvp>H-ntp-2) nvp=H-ntp-2;                     /* keep >=2 reporting positions */
     for(i=0;i<nvp;i++) valpos[i]=perm[ntp+i];
     nte_pos=H-ntp-nvp;
     for(i=0;i<nte_pos;i++) testpos[i]=perm[ntp+nvp+i];
@@ -260,8 +282,26 @@ static void produce_ga(uint32_t seed, Geno *best_out)
          * sd 0.12 let the search fit the examples rather than the structure: measured, the target's
          * lead is 0.078 on an unseen split but only 0.007 on the reused one, and a population seeded
          * AT the target walks away from it. Fresh draws each generation remove the thing to overfit.
-         * RESAMPLE=0 restores the old behaviour for comparison. */
-        if(g_resample) gen_at(Xva,yva,NTE,valpos,nvp);
+         * RESAMPLE=0 restores the old behaviour for comparison.
+         *
+         * ROTPOS rotates the selection POSITIONS as well. Resampling examples was measured to change
+         * nothing, and the exchangeability of the position splits says why: the target leads by 0.078
+         * on positions the GA never selected on but only 0.007 on the 3 it did, so what the search has
+         * memorised is WHICH positions it must transfer to, not which examples appear there. With the
+         * selection positions redrawn each generation from the whole non-train pool there is no fixed
+         * subset to fit, and the selection mean becomes an unbiased estimator of the transfer the
+         * report measures. (The fixed report positions can now appear in a generation's selection
+         * draw; they remain unseen by the TRAINER, which is what the report holds out.) */
+        if(g_rotpos){
+            int pool[H], np=0, ii, jj, tt;
+            for(ii=0;ii<H;ii++){ int tr=0;
+                for(jj=0;jj<ntp;jj++) if(trainpos[jj]==ii) tr=1;
+                if(!tr) pool[np++]=ii; }
+            for(ii=np-1;ii>0;ii--){ jj=(int)(r32()%(uint32_t)(ii+1));
+                tt=pool[ii]; pool[ii]=pool[jj]; pool[jj]=tt; }
+            for(ii=0;ii<nvp && ii<np;ii++) valpos[ii]=pool[ii];
+        }
+        if(g_resample || g_rotpos) gen_at(Xva,yva,NTE,valpos,nvp);
         for(p=0;p<g_pop;p++)
             fit[p]=fitness_of(&pop[p],(uint32_t)(seed+(uint32_t)(gn*g_pop+p)+7u));
     }
@@ -276,9 +316,12 @@ static void produce_ga(uint32_t seed, Geno *best_out)
 static void scan_contiguous(void)
 {
     int lo, len, sd, i, nb=0; double best[8]; int blo[8], blen[8];
+    /* SPLIT=1 scans the SELECTION split -- the quantity the GA is actually paid in. The original gate
+     * certified rank 1 on the REPORTING split only, which the search never sees. */
+    int which = envint("SPLIT",2);
     for(i=0;i<8;i++){ best[i]=-1e300; blo[i]=0; blen[i]=0; }
-    printf("SCAN  every contiguous shared support (lo,len), objective at LAMBDA=%.2f, %d seeds\n",
-           g_lambda, g_seeds);
+    printf("SCAN  every contiguous shared support (lo,len), objective at LAMBDA=%.2f, %d seeds, split %d\n",
+           g_lambda, g_seeds, which);
     for(lo=0; lo<NOFF; lo++) for(len=1; lo+len<=NOFF; len++){
         Geno g; double ob=0;
         for(i=0;i<NOFF;i++) g.off[i]=0;
@@ -286,7 +329,7 @@ static void scan_contiguous(void)
         g.shared=1;
         for(sd=1; sd<=g_seeds; sd++){
             new_task((uint32_t)(sd*911u+1u));
-            ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),2));
+            ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),which));
         }
         ob/=g_seeds;
         for(i=0;i<8;i++) if(ob>best[i]){
@@ -297,6 +340,66 @@ static void scan_contiguous(void)
     printf("SCAN  %d supports enumerated. aligned run starts at lo=%d, planted width K=%d.\n", nb, OFF0, K);
     for(i=0;i<8;i++) printf("SCAN  #%d  lo=%2d len=%2d  objective %.4f%s\n", i+1, blo[i], blen[i], best[i],
                             (blo[i]==OFF0 && blen[i]==K) ? "   <-- the hand-built target" : "");
+}
+
+/* SUBSCAN -- the hole in the gate above. scan_contiguous() enumerates only CONTIGUOUS supports (231 at
+ * N=12), so it certifies the planted width as the best CONTIGUOUS support and says nothing about the
+ * 2^NOFF - 231 non-contiguous ones. The search lands on ~6 SCATTERED taps, i.e. squarely in the part of
+ * the space the gate never looked at, so "the search falls short of the optimum" was never established
+ * -- only "the search does not return the best contiguous support".
+ *
+ * Enumerate EVERY subset of a W-wide window centred on the aligned run: 2^W supports, all shared, the
+ * planted 3-contiguous among them. If the planted support is not the argmax here, the target is not the
+ * optimum even locally, and the whole shortfall reading of FINDINGS sections 4-5 dissolves. */
+static void subscan(void)
+{
+    int W = envint("SUBW",7), lo0, m, sd, i, best[8], nb=0; double bo[8];
+    int planted_mask=0, planted_rank=-1; double planted_ob=0;
+    if(W>16) W=16;
+    lo0 = OFF0 - (W-K)/2; if(lo0<0) lo0=0; if(lo0+W>NOFF) lo0=NOFF-W;
+    for(i=0;i<8;i++){ bo[i]=-1e300; best[i]=0; }
+    for(i=0;i<K;i++) planted_mask |= 1<<(OFF0-lo0+i);
+    printf("SUBSCAN  every subset of the %d-wide window at lo=%d (%d supports), shared, LAMBDA=%.2f, %d seeds\n",
+           W, lo0, 1<<W, g_lambda, g_seeds);
+    printf("SUBSCAN  the planted target is the contiguous run of %d at offset %d (mask 0x%x)\n",
+           K, OFF0, planted_mask);
+    for(m=1; m<(1<<W); m++){
+        Geno g; double ob=0;
+        for(i=0;i<NOFF;i++) g.off[i]=0;
+        for(i=0;i<W;i++) if(m&(1<<i)) g.off[lo0+i]=1;
+        g.shared=1;
+        for(sd=1; sd<=g_seeds; sd++){
+            new_task((uint32_t)(sd*911u+1u));
+            ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),envint("SPLIT",2)));
+        }
+        ob/=g_seeds;
+        if(m==planted_mask) planted_ob=ob;
+        for(i=0;i<8;i++) if(ob>bo[i]){
+            int q; for(q=7;q>i;q--){ bo[q]=bo[q-1]; best[q]=best[q-1]; }
+            bo[i]=ob; best[i]=m; break; }
+        nb++;
+    }
+    for(m=1,planted_rank=1; m<(1<<W); m++){          /* exact rank of the planted support */
+        Geno g; double ob=0;
+        if(m==planted_mask) continue;
+        for(i=0;i<NOFF;i++) g.off[i]=0;
+        for(i=0;i<W;i++) if(m&(1<<i)) g.off[lo0+i]=1;
+        g.shared=1;
+        for(sd=1; sd<=g_seeds; sd++){
+            new_task((uint32_t)(sd*911u+1u));
+            ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),envint("SPLIT",2)));
+        }
+        if(ob/g_seeds > planted_ob) planted_rank++;
+    }
+    for(i=0;i<8;i++){
+        int t=0,j; for(j=0;j<W;j++) t+=((best[i]>>j)&1);
+        printf("SUBSCAN  #%d  mask 0x%04x  taps %2d  objective %.4f%s\n",
+               i+1, best[i], t, bo[i], best[i]==planted_mask?"   <-- the planted target":"");
+    }
+    printf("SUBSCAN  %d supports enumerated. PLANTED TARGET objective %.4f, RANK %d of %d.\n",
+           nb, planted_ob, planted_rank, nb);
+    printf("SUBSCAN  (rank 1 = the gate holds over non-contiguous supports too; anything else means\n");
+    printf("SUBSCAN   the contiguous-only SCAN never certified the target as the optimum.)\n");
 }
 
 /* Protocol item 3 applied to the one constant that decides the answer. For each LAMBDA, is the planted
@@ -351,6 +454,7 @@ static void diagnose(void)
 {
     int sd, r, R=envint("DRAWS",15), keepgens=g_gens;
     double mi=0, mg=0, si=0, sg=0, win=0, n=0;
+    double mi2=0, mg2=0;                     /* the same structures on the REPORTING split */
     double stay_tap=0, stay_con=0, stay_ob=0;
 
     printf("DIAG  what the SEARCH's own fitness (selection split) sees, %d weight draws x %d seeds\n",
@@ -364,14 +468,24 @@ static void diagnose(void)
             double fi = objective(&gi, score(&gi,(uint32_t)(sd*104729u+r*7919u+1u),1));
             double fg = objective(&gg, score(&gg,(uint32_t)(sd*104729u+r*7919u+1u),1));
             mi+=fi; mg+=fg; si+=fi*fi; sg+=fg*fg; win += (fi>fg); n++;
+            mi2 += objective(&gi, score(&gi,(uint32_t)(sd*104729u+r*7919u+1u),2));
+            mg2 += objective(&gg, score(&gg,(uint32_t)(sd*104729u+r*7919u+1u),2));
         }
     }
-    mi/=n; mg/=n; si=sqrt(si/n-mi*mi); sg=sqrt(sg/n-mg*mg);
+    mi/=n; mg/=n; si=sqrt(si/n-mi*mi); sg=sqrt(sg/n-mg*mg); mi2/=n; mg2/=n;
     printf("DIAG  target       selection-fitness %.4f  sd %.4f\n", mi, si);
     printf("DIAG  what GA finds selection-fitness %.4f  sd %.4f\n", mg, sg);
     printf("DIAG  target wins a single draw %.1f%% of the time (50%% = selection cannot tell them apart)\n",
            100.0*win/n);
     printf("DIAG  separation = (mean gap)/(pooled sd) = %.2f\n", (mi-mg)/sqrt(0.5*(si*si+sg*sg)));
+    /* THE EXCHANGEABILITY CHECK. Selection and reporting positions are exchangeable random sets, so
+     * for an unselected structure the expected gap is the same on both. Any excess of the reporting
+     * gap over the selection gap for the GA's own structure is therefore selection-induced: the GA
+     * has overfitted WHICH positions it transfers to. This is the quantity NVP is meant to shrink. */
+    printf("DIAG  gap target-minus-GA on SELECTION split %.4f, on REPORTING split %.4f\n",
+           mi-mg, mi2-mg2);
+    printf("DIAG  position-overfitting excess (report gap - selection gap) = %.4f\n",
+           (mi2-mg2)-(mi-mg));
 
     printf("\nDIAG  seeding the population AT the target and running %d generations:\n", keepgens);
     for(sd=1; sd<=g_seeds; sd++){
@@ -402,18 +516,22 @@ int main(void)
     g_pop=envint("POP",24); g_lr=envdbl("LR",0.05); g_lambda=envdbl("LAMBDA",1.0);
     g_pflip=envdbl("PFLIP",0.10); g_trainpos=envint("TRAINPOS",3);
     g_damp=envdbl("DAMP",0.7); g_pslide=envdbl("PSLIDE",0.15);
-    g_resample=envint("RESAMPLE",1); g_feval=envint("FEVAL",1);
+    g_resample=envint("RESAMPLE",1); g_feval=envint("FEVAL",1); g_nvp=envint("NVP",0);
+    g_dboth=envint("DBOTH",0); g_rotpos=envint("ROTPOS",0);
     if(g_pop>POPMAX) g_pop=POPMAX;
 
     printf("emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it\n");
-    printf("motif K=%d planted at 1 of %d positions; train on %d positions, test on the other %d.\n",
-           K, H, g_trainpos, H-g_trainpos);
+    printf("N=%d. motif K=%d planted at 1 of %d positions; train on %d, select on %d, report on %d.\n",
+           N, K, H, g_trainpos,
+           g_nvp>0?g_nvp:(H-g_trainpos)/2,
+           H-g_trainpos-(g_nvp>0?g_nvp:(H-g_trainpos)/2));
     printf("max-pool readout (position never reaches the output). energy = params/(%d*%d):\n", NOFF, H);
     printf("  shared = taps, unshared = taps*%d. objective = heldout_acc - %.2f*energy.\n", H, g_lambda);
     printf("%d seeds x %d epochs. GA: pop %d, %d gens, flips offsets AND the sharing gene.\n\n",
            g_seeds, g_epochs, g_pop, g_gens);
 
     if(envint("SCAN",0)){ scan_contiguous(); return 0; }
+    if(envint("SUBSCAN",0)){ subscan(); return 0; }
     if(envint("LAMSCAN",0)){ scan_lambda(); return 0; }
     if(envint("DIAG",0)){ diagnose(); return 0; }
 

@@ -1,0 +1,18 @@
+emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it
+N=12. motif K=3 planted at 1 of 10 positions; train on 3, select on 3, report on 4.
+max-pool readout (position never reaches the output). energy = params/(21*10):
+  shared = taps, unshared = taps*10. objective = heldout_acc - 1.00*energy.
+20 seeds x 200 epochs. GA: pop 24, 50 gens, flips offsets AND the sharing gene.
+
+DIAG  what the SEARCH's own fitness (selection split) sees, 15 weight draws x 20 seeds
+DIAG  target       selection-fitness 0.6333  sd 0.1166
+DIAG  what GA finds selection-fitness 0.6161  sd 0.1288
+DIAG  target wins a single draw 52.0% of the time (50% = selection cannot tell them apart)
+DIAG  separation = (mean gap)/(pooled sd) = 0.14
+DIAG  gap target-minus-GA on SELECTION split 0.0172, on REPORTING split 0.0484
+DIAG  position-overfitting excess (report gap - selection gap) = 0.0312
+
+DIAG  seeding the population AT the target and running 50 generations:
+DIAG  after evolution from the target: taps 7.50  contig 0.05  objective 0.5959
+DIAG  (target is taps 3.00 contig 1.00 objective ~0.6774; if it drifts away, the target is
+DIAG   not a fitness optimum and the fork's premise is wrong.)
