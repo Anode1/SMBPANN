@@ -50,6 +50,7 @@
 #define POPMAX 64
 #define AMP    2.0
 
+static int    g_init_ideal=0, g_resample=1;
 static int    g_seeds=20, g_epochs=200, g_gens=50, g_pop=24, g_elite=4, g_trainpos=3, g_op=0;
 static double g_pslide=0.15;
 static double g_lr=0.05, g_lambda=1.0, g_pflip=0.10, g_damp=0.7;
@@ -223,7 +224,8 @@ static void produce_ga(uint32_t seed, Geno *best_out)
     /* PROTOCOL item 4: the seed must not contain the answer. The first version seeded every individual
      * identical (dense AND shared), so generation 0 had zero diversity and the sharing gene started on
      * the answer. Random supports, random sharing. */
-    for(p=0;p<g_pop;p++){ for(i=0;i<NOFF;i++) pop[p].off[i]=(rprob()<0.5); pop[p].shared=(rprob()<0.5); }
+    if(g_init_ideal) for(p=0;p<g_pop;p++) make_ideal(&pop[p],1);
+    else for(p=0;p<g_pop;p++){ for(i=0;i<NOFF;i++) pop[p].off[i]=(rprob()<0.5); pop[p].shared=(rprob()<0.5); }
     for(p=0;p<g_pop;p++) fit[p]=objective(&pop[p], score(&pop[p],(uint32_t)(seed+p*2654435761u+1u),1));
     for(gn=0; gn<g_gens; gn++){
         for(p=0;p<g_pop;p++) idx[p]=p;
@@ -241,6 +243,12 @@ static void produce_ga(uint32_t seed, Geno *best_out)
             mutate_geno(&nxt[p]);
         }
         memcpy(pop,nxt,sizeof pop);
+        /* RESAMPLE the selection set. With a fixed one, ~1200 evaluations of a 600-example set at
+         * sd 0.12 let the search fit the examples rather than the structure: measured, the target's
+         * lead is 0.078 on an unseen split but only 0.007 on the reused one, and a population seeded
+         * AT the target walks away from it. Fresh draws each generation remove the thing to overfit.
+         * RESAMPLE=0 restores the old behaviour for comparison. */
+        if(g_resample) gen_at(Xva,yva,NTE,valpos,nvp);
         for(p=0;p<g_pop;p++)
             fit[p]=objective(&pop[p], score(&pop[p],(uint32_t)(seed+(uint32_t)(gn*g_pop+p)+7u),1));
     }
@@ -309,6 +317,62 @@ static void scan_lambda(void)
     g_lambda=keep;
 }
 
+/* ================= DIAGNOSTIC: local optimum, or noisy selection? =================
+ * The search converges on ~6 scattered taps and never reaches the planted 3 contiguous ones, and no
+ * operator or budget recovers the difference. Two explanations, and they are distinguishable:
+ *
+ *   LOCAL OPTIMUM   the search's own fitness ranks the target above what it finds, but the target is
+ *                   unreachable: leaving 6 scattered taps needs a coordinated move (drop three AND
+ *                   align the rest) that single-tap operators cannot make.
+ *   NOISY SELECTION the fitness signal at this accuracy cannot resolve the two structures at all, so
+ *                   selection is choosing between them roughly at random.
+ *   (a third outcome the fork did not anticipate: the SELECTION split ranks them the other way, in
+ *   which case the search is doing its job and the disagreement is between splits.)
+ *
+ * Two measurements. First, evaluate both structures on the SELECTION split many times with different
+ * weight inits, and report the mean, the spread, and how often the target actually wins a single draw
+ * -- that is exactly what selection sees. Second, seed the whole population AT the target and run:
+ * if it survives, the target is a fitness optimum the search cannot reach; if it drifts away, it is
+ * not a fitness optimum at all. */
+static void diagnose(void)
+{
+    int sd, r, R=envint("DRAWS",15), keepgens=g_gens;
+    double mi=0, mg=0, si=0, sg=0, win=0, n=0;
+    double stay_tap=0, stay_con=0, stay_ob=0;
+
+    printf("DIAG  what the SEARCH's own fitness (selection split) sees, %d weight draws x %d seeds\n",
+           R, g_seeds);
+    for(sd=1; sd<=g_seeds; sd++){
+        Geno gi, gg;
+        new_task((uint32_t)(sd*911u+1u));
+        make_ideal(&gi,1);
+        produce_ga((uint32_t)(sd*7u+1u), &gg);          /* what the search actually lands on */
+        for(r=0;r<R;r++){
+            double fi = objective(&gi, score(&gi,(uint32_t)(sd*104729u+r*7919u+1u),1));
+            double fg = objective(&gg, score(&gg,(uint32_t)(sd*104729u+r*7919u+1u),1));
+            mi+=fi; mg+=fg; si+=fi*fi; sg+=fg*fg; win += (fi>fg); n++;
+        }
+    }
+    mi/=n; mg/=n; si=sqrt(si/n-mi*mi); sg=sqrt(sg/n-mg*mg);
+    printf("DIAG  target       selection-fitness %.4f  sd %.4f\n", mi, si);
+    printf("DIAG  what GA finds selection-fitness %.4f  sd %.4f\n", mg, sg);
+    printf("DIAG  target wins a single draw %.1f%% of the time (50%% = selection cannot tell them apart)\n",
+           100.0*win/n);
+    printf("DIAG  separation = (mean gap)/(pooled sd) = %.2f\n", (mi-mg)/sqrt(0.5*(si*si+sg*sg)));
+
+    printf("\nDIAG  seeding the population AT the target and running %d generations:\n", keepgens);
+    for(sd=1; sd<=g_seeds; sd++){
+        Geno g; new_task((uint32_t)(sd*911u+1u));
+        g_init_ideal=1; produce_ga((uint32_t)(sd*7u+1u), &g); g_init_ideal=0;
+        stay_tap += taps_of(&g); stay_con += contig_of(&g);
+        stay_ob  += objective(&g, score(&g,(uint32_t)(sd*7u+1u),2));
+    }
+    printf("DIAG  after evolution from the target: taps %.2f  contig %.2f  objective %.4f\n",
+           stay_tap/g_seeds, stay_con/g_seeds, stay_ob/g_seeds);
+    printf("DIAG  (target is taps 3.00 contig 1.00 objective ~0.6774; if it drifts away, the target is\n");
+    printf("DIAG   not a fitness optimum and the fork's premise is wrong.)\n");
+}
+
 static void row(const char *nm, const Geno *g, double tr, double te, double obj)
 { printf("  %-26s %5d %7s %6.2f %9.3f %9.3f %10.4f\n", nm, taps_of(g),
          g->shared?"yes":"no", (double)contig_of(g), tr, te, obj); }
@@ -325,6 +389,7 @@ int main(void)
     g_pop=envint("POP",24); g_lr=envdbl("LR",0.05); g_lambda=envdbl("LAMBDA",1.0);
     g_pflip=envdbl("PFLIP",0.10); g_trainpos=envint("TRAINPOS",3);
     g_damp=envdbl("DAMP",0.7); g_pslide=envdbl("PSLIDE",0.15);
+    g_resample=envint("RESAMPLE",1);
     if(g_pop>POPMAX) g_pop=POPMAX;
 
     printf("emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it\n");
@@ -337,6 +402,7 @@ int main(void)
 
     if(envint("SCAN",0)){ scan_contiguous(); return 0; }
     if(envint("LAMSCAN",0)){ scan_lambda(); return 0; }
+    if(envint("DIAG",0)){ diagnose(); return 0; }
 
     for(sd=1; sd<=g_seeds; sd++){
         Geno g[6]; double tr,te; int k, op;

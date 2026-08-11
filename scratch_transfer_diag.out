@@ -1,0 +1,10 @@
+built
+DIAG  what the SEARCH's own fitness (selection split) sees, 15 weight draws x 20 seeds
+DIAG  target       selection-fitness 0.6351  sd 0.1180
+DIAG  what GA finds selection-fitness 0.6280  sd 0.1365
+DIAG  target wins a single draw 43.7% of the time (50% = selection cannot tell them apart)
+DIAG  separation = (mean gap)/(pooled sd) = 0.06
+DIAG  seeding the population AT the target and running 50 generations:
+DIAG  after evolution from the target: taps 6.40  contig 0.05  objective 0.6325
+DIAG  (target is taps 3.00 contig 1.00 objective ~0.6774; if it drifts away, the target is
+DIAG   not a fitness optimum and the fork's premise is wrong.)
