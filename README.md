@@ -138,7 +138,7 @@ simplest tool that does the job well.
  CPU count, exchanging plain text with the parent. There is no shared memory, so
  there are no data races and no synchronization code to get wrong, and a
  candidate that crashes takes down only its own worker, not the run. For
- independent-candidate search this is the simplest robust concurrency there is.
+ independent-candidate search there is nothing simpler that is also correct.
 - **Streaming data, bounded memory.** Backpropagation is inherently piecewise: the
  engine trains on one example at a time. A worker streams its dataset in pieces
  with a bounded footprint, so dataset size never dictates memory, and a read-only
@@ -153,14 +153,14 @@ simplest tool that does the job well.
  contain that here: process isolation (a fault stays in one worker), and the test
  suite run under AddressSanitizer and UBSan on every change, over the stack-first
  discipline that keeps most of the bug classes from arising in the first place.
- This is robustness suited to a research tool, not a formal proof.
+ That is containment suited to a research tool, not a proof of memory safety.
 
 ### Why C, and not Ada or Rust?
 
 Both Ada (with SPARK) and Rust are memory-safe and were seriously considered; an
 Ada 2012 implementation of this engine was written and is preserved in the git
 history. C won on fit for *this* problem. The search is embarrassingly parallel,
-so process isolation gives robust, synchronization-free concurrency without a
+so process isolation gives synchronization-free concurrency without a
 language-level thread-safety guarantee; the data streams, so there is no large
 shared structure to manage; and the memory pattern (allocate once, an arena per
 generation) is simple enough that manual management plus sanitizers is adequate.
