@@ -1,0 +1,10 @@
+=== job 1: the per-seed ceiling, 60 seeds x 1000 draws, LAMBDA 6 and 1
+--- LAMBDA=6 ceiling:
+    planted support is the per-seed argmax on 8 of 60 seeds (13%)
+--- LAMBDA=1 ceiling:
+    planted support is the per-seed argmax on 5 of 60 seeds (8%)
+=== job 2: 240 seeds at LAMBDA=6, both cells
+--- exact structural match, 240 seeds, LAMBDA=6:
+    nofix  16/240 (7%)
+    fixed  42/240 (18%)
+=== done

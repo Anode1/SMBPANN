@@ -1,0 +1,11 @@
+=== job 3a: resolved gates across the lambda window, 60 seeds x 12 draws
+    lambda 2     127 supports enumerated, 12 draws x 60 seeds each. PLANTED objective 0.5939, RANK 2 of 127.   per-mask standard error ~0.0048; margin over the best rival -0.0037 (-0.8 SE). 
+    lambda 3     127 supports enumerated, 12 draws x 60 seeds each. PLANTED objective 0.5796, RANK 1 of 127.   per-mask standard error ~0.0048; margin over the best rival +0.0011 (0.2 SE). 
+    lambda 4     127 supports enumerated, 12 draws x 60 seeds each. PLANTED objective 0.5653, RANK 1 of 127.   per-mask standard error ~0.0048; margin over the best rival +0.0058 (1.2 SE). 
+    lambda 8     127 supports enumerated, 12 draws x 60 seeds each. PLANTED objective 0.5082, RANK 1 of 127.   per-mask standard error ~0.0048; margin over the best rival +0.0111 (2.3 SE). 
+    lambda 10    127 supports enumerated, 12 draws x 60 seeds each. PLANTED objective 0.4796, RANK 1 of 127.   per-mask standard error ~0.0048; margin over the best rival +0.0019 (0.4 SE). 
+=== job 3b: exact-match rate at the neighbouring tariffs, 60 seeds each, fixes on
+    lambda 3   exact  8/60 (13%)  mean taps 3.63
+    lambda 4   exact 11/60 (18%)  mean taps 3.12
+    lambda 8   exact 13/60 (22%)  mean taps 1.83
+=== job 3 done

@@ -1,0 +1,19 @@
+emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it
+N=12. motif K=3 planted at 1 of 10 positions; train on 3, select on 3, report on 4.
+max-pool readout (position never reaches the output). energy = params/(21*10):
+  shared = taps, unshared = taps*10. objective = heldout_acc - 6.00*energy.
+8 seeds x 200 epochs. GA: pop 24, 50 gens, flips offsets AND the sharing gene.
+
+PERSEED  per-seed argmax over every subset of the 7-wide window at lo=7, LAMBDA=6.00
+PERSEED RAW 49 0 0.5179 0.5441
+PERSEED RAW 50 0 0.6453 0.6731
+PERSEED RAW 51 0 0.6471 0.6831
+PERSEED RAW 52 0 0.4456 0.4943
+PERSEED RAW 53 0 0.4781 0.5297
+PERSEED RAW 54 1 0.4924 0.4924
+PERSEED RAW 55 1 0.6953 0.6953
+PERSEED RAW 56 0 0.4512 0.5094
+PERSEED  the planted support is the per-seed argmax on 2 of 8 seeds (25%).
+PERSEED  mean signed margin to the best rival -0.0254 (negative = the planted support loses)
+PERSEED  this is the CEILING on any exact-match rate: a search returning its own draw's
+PERSEED  argmax cannot exceed it, so compare the measured rate against this, not 100%.
