@@ -62,3 +62,16 @@ data/fsdd/recordings/
 /pairstat
 /emerge_pitch
 /emerge_rewire
+
+# -- NAS benchmark archives and derived tables: large, and re-fetchable.
+# See validation/PROVENANCE_nas.md for the exact URLs and the commands that regenerate them.
+/nasbench_only108.tfrecord
+/nasbench_full.tfrecord
+/nb201_objectives.npy
+/nb201_hyperparameters.parquet
+/nb201_fidelities_values.npy
+validation/nasbench101_trials.txt
+/nb101_trials
+/nb101_signal
+/nb101_search
+/et_n*

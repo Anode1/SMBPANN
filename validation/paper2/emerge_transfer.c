@@ -56,7 +56,7 @@ static int    g_init_ideal=0, g_resample=1, g_feval=1, g_nvp=0;
 static int    g_seeds=20, g_epochs=200, g_gens=50, g_pop=24, g_elite=4, g_trainpos=3, g_op=0;
 static double g_pslide=0.15;
 static double g_lr=0.05, g_lambda=1.0, g_pflip=0.10, g_damp=0.7;
-static int    g_dboth=0, g_rotpos=0;
+static int    g_dboth=0, g_rotpos=0, g_dump=0;
 /* SEED0 offsets the task-seed range so one long job can be split across processes and the RAW rows
  * concatenated afterwards: SEED0=0 SEEDS=10 and SEED0=10 SEEDS=10 together cover seeds 1..20 exactly
  * as SEEDS=20 does, because every seed's task and weights derive from sd alone. Default 0. */
@@ -64,6 +64,7 @@ static int    g_seed0=0;
 
 /* a structure: which offsets are live, and whether weights are tied across positions */
 typedef struct { char off[NOFF]; int shared; } Geno;
+static Geno   g_seed0_geno;   /* generation-0 best, kept so DUMP can show the initial condition */
 
 /* ============================== TASK ============================== */
 static double motif[K];
@@ -215,11 +216,45 @@ static double fitness_of(const Geno *g, uint32_t seed)
     for(r=0;r<g_feval;r++) a += score(g,(uint32_t)(seed+r*2246822519u+11u),1);
     return objective(g, a/g_feval);
 }
+/* DUMP renders a support as one character per offset so the structures can be drawn rather than
+ * summarised. A table of tap counts cannot show whether the taps are ALIGNED with the planted window,
+ * which is the whole question; a picture can. '#' live, '.' dead. */
+static void support_str(const Geno *g, char *out)
+{
+    int i;
+    for(i=0;i<NOFF;i++) out[i] = g->off[i] ? '#' : '.';
+    out[NOFF] = '\0';
+}
 static int taps_of(const Geno *g){ int i,d=0; for(i=0;i<NOFF;i++) d+=(g->off[i]!=0); return d; }
 static int contig_of(const Geno *g)
 { int i,lo=NOFF,hi=-1,d=0;
   for(i=0;i<NOFF;i++) if(g->off[i]){ d++; if(i<lo) lo=i; if(i>hi) hi=i; }
   return d>0 && d==hi-lo+1; }
+
+/* MATCHED-BUDGET RANDOM SEARCH. On NAS-Bench-101 random selection beats this GA at every budget we
+ * tried, which is unsurprising there: that benchmark holds 423,624 architectures and our largest budget
+ * draws 76,800 of them, so random search samples a fifth of the space. It says nothing about search in
+ * general. Here the space is 2^NOFF supports times the sharing gene, which grows exponentially in N
+ * (about 4e6 at N=12, 1e11 at N=20, 1e13 at N=24), so the same budget covers a vanishing fraction and
+ * the comparison becomes informative. Budget is POP*GENS fitness evaluations, identical to the GA's,
+ * drawn from the same distribution the GA initialises from and scored by the same fitness. */
+static void produce_random_search(uint32_t seed, Geno *best_out)
+{
+    long budget = (long)g_pop * (g_gens > 0 ? g_gens : 1), i;
+    Geno g, best; double bf = -1e300;
+    int k;
+    rseed(seed);
+    for(k=0;k<NOFF;k++) best.off[k]=0;
+    best.shared=1;
+    for(i = 0; i < budget; i++){
+        double f;
+        for(k=0;k<NOFF;k++) g.off[k]=(rprob()<0.5);
+        g.shared=(rprob()<0.5);
+        f = fitness_of(&g, (uint32_t)(seed + (uint32_t)i*2654435761u + 3u));
+        if(f > bf){ bf = f; best = g; }
+    }
+    *best_out = best;
+}
 
 /* ============================ PRODUCERS ============================ */
 static void make_ideal(Geno *g, int shared)
@@ -266,6 +301,9 @@ static void produce_ga(uint32_t seed, Geno *best_out)
     if(g_init_ideal) for(p=0;p<g_pop;p++) make_ideal(&pop[p],1);
     else for(p=0;p<g_pop;p++){ for(i=0;i<NOFF;i++) pop[p].off[i]=(rprob()<0.5); pop[p].shared=(rprob()<0.5); }
     for(p=0;p<g_pop;p++) fit[p]=fitness_of(&pop[p],(uint32_t)(seed+p*2654435761u+1u));
+    { int b0=0; double bf0=-1e300;                 /* the initial condition, for DUMP */
+      for(p=0;p<g_pop;p++) if(fit[p]>bf0){ bf0=fit[p]; b0=p; }
+      g_seed0_geno = pop[b0]; }
     for(gn=0; gn<g_gens; gn++){
         for(p=0;p<g_pop;p++) idx[p]=p;
         for(p=0;p<g_pop;p++) for(q=p+1;q<g_pop;q++)
@@ -311,6 +349,11 @@ static void produce_ga(uint32_t seed, Geno *best_out)
     }
     for(p=0;p<g_pop;p++) if(fit[p]>bf){ bf=fit[p]; best=p; }
     *best_out = pop[best];
+    if(g_dump){
+        char b[NOFF+1];
+        support_str(&g_seed0_geno, b); printf("DUMP init  %s\n", b);
+        support_str(&pop[best],   b); printf("DUMP final %s shared=%d\n", b, pop[best].shared);
+    }
 }
 
 
@@ -563,17 +606,18 @@ static void row(const char *nm, const Geno *g, double tr, double te, double obj)
 int main(void)
 {
     int sd, i;
-    double a_tr[6]={0}, a_te[6]={0}, a_ob[6]={0}, a_tap[6]={0}, a_con[6]={0}, a_sh[6]={0};
-    static const char *nm[6] = {
+    double a_tr[7]={0}, a_te[7]={0}, a_ob[7]={0}, a_tap[7]={0}, a_con[7]={0}, a_sh[7]={0};
+    static const char *nm[7] = {
         "ideal conv (shared)", "GA flip-only", "GA flip+slide",
-        "GA flip+rewire", "GA flip+xover", "GA-tap-matched random" };
+        "GA flip+rewire", "GA flip+xover", "GA-tap-matched random",
+        "RANDOM SEARCH (matched)" };
 
     g_seeds=envint("SEEDS",20); g_epochs=envint("EPOCHS",200); g_gens=envint("GENS",50);
     g_pop=envint("POP",24); g_lr=envdbl("LR",0.05); g_lambda=envdbl("LAMBDA",1.0);
     g_pflip=envdbl("PFLIP",0.10); g_trainpos=envint("TRAINPOS",3);
     g_damp=envdbl("DAMP",0.7); g_pslide=envdbl("PSLIDE",0.15);
     g_resample=envint("RESAMPLE",1); g_feval=envint("FEVAL",1); g_nvp=envint("NVP",0);
-    g_dboth=envint("DBOTH",0); g_rotpos=envint("ROTPOS",0); g_seed0=envint("SEED0",0);
+    g_dboth=envint("DBOTH",0); g_rotpos=envint("ROTPOS",0); g_dump=envint("DUMP",0); g_seed0=envint("SEED0",0);
     if(g_pop>POPMAX) g_pop=POPMAX;
 
     printf("emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it\n");
@@ -593,13 +637,14 @@ int main(void)
     if(envint("DIAG",0)){ diagnose(); return 0; }
 
     for(sd=g_seed0+1; sd<=g_seed0+g_seeds; sd++){
-        Geno g[6]; double tr,te; int k, op;
+        Geno g[7]; double tr,te; int k, op;
         new_task((uint32_t)(sd*911u+1u));
         make_ideal(&g[0],1);
         for(op=0; op<4; op++){ g_op=op; produce_ga((uint32_t)(sd*7u+1u), &g[1+op]); }
         g_op=0;
         make_random(&g[5], taps_of(&g[1]), 1);      /* item 5: null matched to the GA's own tap count */
-        for(k=0;k<6;k++){
+        produce_random_search((uint32_t)(sd*7u+1u), &g[6]);   /* item 6: matched-BUDGET random search */
+        for(k=0;k<7;k++){
             tr = score(&g[k],(uint32_t)(sd*7u+1u),0);
             te = score(&g[k],(uint32_t)(sd*7u+1u),2);
             a_tr[k]+=tr; a_te[k]+=te; a_ob[k]+=objective(&g[k],te);
@@ -613,7 +658,7 @@ int main(void)
 
     printf("  %-26s %5s %7s %6s %9s %9s %10s\n",
            "producer","taps","shared","contig","train acc","heldout","objective");
-    for(i=0;i<6;i++){
+    for(i=0;i<7;i++){
         printf("  %-26s %5.1f %7.2f %6.2f %9.3f %9.3f %10.4f\n", nm[i],
                a_tap[i]/g_seeds, a_sh[i]/g_seeds, a_con[i]/g_seeds,
                a_tr[i]/g_seeds, a_te[i]/g_seeds, a_ob[i]/g_seeds);
