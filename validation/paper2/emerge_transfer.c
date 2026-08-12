@@ -57,6 +57,10 @@ static int    g_seeds=20, g_epochs=200, g_gens=50, g_pop=24, g_elite=4, g_trainp
 static double g_pslide=0.15;
 static double g_lr=0.05, g_lambda=1.0, g_pflip=0.10, g_damp=0.7;
 static int    g_dboth=0, g_rotpos=0;
+/* SEED0 offsets the task-seed range so one long job can be split across processes and the RAW rows
+ * concatenated afterwards: SEED0=0 SEEDS=10 and SEED0=10 SEEDS=10 together cover seeds 1..20 exactly
+ * as SEEDS=20 does, because every seed's task and weights derive from sd alone. Default 0. */
+static int    g_seed0=0;
 
 /* a structure: which offsets are live, and whether weights are tied across positions */
 typedef struct { char off[NOFF]; int shared; } Geno;
@@ -327,7 +331,7 @@ static void scan_contiguous(void)
         for(i=0;i<NOFF;i++) g.off[i]=0;
         for(i=lo;i<lo+len;i++) g.off[i]=1;
         g.shared=1;
-        for(sd=1; sd<=g_seeds; sd++){
+        for(sd=g_seed0+1; sd<=g_seed0+g_seeds; sd++){
             new_task((uint32_t)(sd*911u+1u));
             ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),which));
         }
@@ -351,11 +355,13 @@ static void scan_contiguous(void)
  * Enumerate EVERY subset of a W-wide window centred on the aligned run: 2^W supports, all shared, the
  * planted 3-contiguous among them. If the planted support is not the argmax here, the target is not the
  * optimum even locally, and the whole shortfall reading of FINDINGS sections 4-5 dissolves. */
+#define SUBMAX 13                        /* 8192 masks; the runs use 7. Bounds the objective table. */
+static double g_subob[1<<SUBMAX];
 static void subscan(void)
 {
-    int W = envint("SUBW",7), lo0, m, sd, i, best[8], nb=0; double bo[8];
-    int planted_mask=0, planted_rank=-1; double planted_ob=0;
-    if(W>16) W=16;
+    int W = envint("SUBW",7), lo0, m, sd, i, best[8], nb=0, R=envint("DRAWS",1); double bo[8];
+    int planted_mask=0, planted_rank=1; double planted_ob=0, se;
+    if(W>SUBMAX) W=SUBMAX;
     lo0 = OFF0 - (W-K)/2; if(lo0<0) lo0=0; if(lo0+W>NOFF) lo0=NOFF-W;
     for(i=0;i<8;i++){ bo[i]=-1e300; best[i]=0; }
     for(i=0;i<K;i++) planted_mask |= 1<<(OFF0-lo0+i);
@@ -363,43 +369,93 @@ static void subscan(void)
            W, lo0, 1<<W, g_lambda, g_seeds);
     printf("SUBSCAN  the planted target is the contiguous run of %d at offset %d (mask 0x%x)\n",
            K, OFF0, planted_mask);
+    /* DRAWS averages several weight draws per (mask, seed). Needed, not optional: at 60 seeds the
+     * planted support leads its nearest rival by 0.0108 while one draw per seed gives each mask a
+     * standard error of 0.13/sqrt(60) = 0.0168, so the ranking this mode prints is inside its own
+     * noise unless DRAWS pushes the error below the margin. DRAWS=12 gives 0.13/sqrt(720) = 0.0048. */
     for(m=1; m<(1<<W); m++){
-        Geno g; double ob=0;
+        Geno g; double ob=0; int r;
         for(i=0;i<NOFF;i++) g.off[i]=0;
         for(i=0;i<W;i++) if(m&(1<<i)) g.off[lo0+i]=1;
         g.shared=1;
-        for(sd=1; sd<=g_seeds; sd++){
+        for(sd=g_seed0+1; sd<=g_seed0+g_seeds; sd++){
             new_task((uint32_t)(sd*911u+1u));
-            ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),envint("SPLIT",2)));
+            for(r=0;r<R;r++)
+                ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u+r*7919u),envint("SPLIT",2)));
         }
-        ob/=g_seeds;
+        ob/=(double)g_seeds*R;
+        g_subob[m]=ob;
         if(m==planted_mask) planted_ob=ob;
         for(i=0;i<8;i++) if(ob>bo[i]){
             int q; for(q=7;q>i;q--){ bo[q]=bo[q-1]; best[q]=best[q-1]; }
             bo[i]=ob; best[i]=m; break; }
         nb++;
     }
-    for(m=1,planted_rank=1; m<(1<<W); m++){          /* exact rank of the planted support */
-        Geno g; double ob=0;
-        if(m==planted_mask) continue;
-        for(i=0;i<NOFF;i++) g.off[i]=0;
-        for(i=0;i<W;i++) if(m&(1<<i)) g.off[lo0+i]=1;
-        g.shared=1;
-        for(sd=1; sd<=g_seeds; sd++){
-            new_task((uint32_t)(sd*911u+1u));
-            ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),envint("SPLIT",2)));
-        }
-        if(ob/g_seeds > planted_ob) planted_rank++;
-    }
+    for(m=1; m<(1<<W); m++)                          /* exact rank, from the table just built */
+        if(m!=planted_mask && g_subob[m]>planted_ob) planted_rank++;
     for(i=0;i<8;i++){
         int t=0,j; for(j=0;j<W;j++) t+=((best[i]>>j)&1);
         printf("SUBSCAN  #%d  mask 0x%04x  taps %2d  objective %.4f%s\n",
                i+1, best[i], t, bo[i], best[i]==planted_mask?"   <-- the planted target":"");
     }
-    printf("SUBSCAN  %d supports enumerated. PLANTED TARGET objective %.4f, RANK %d of %d.\n",
-           nb, planted_ob, planted_rank, nb);
-    printf("SUBSCAN  (rank 1 = the gate holds over non-contiguous supports too; anything else means\n");
-    printf("SUBSCAN   the contiguous-only SCAN never certified the target as the optimum.)\n");
+    printf("SUBSCAN  %d supports enumerated, %d draws x %d seeds each. PLANTED objective %.4f, RANK %d of %d.\n",
+           nb, R, g_seeds, planted_ob, planted_rank, nb);
+    /* State the resolution beside the ranking. A margin smaller than this standard error is an
+     * ordering the scan cannot support, however clean the rank number looks. */
+    se = 0.13/sqrt((double)g_seeds*R);
+    printf("SUBSCAN  per-mask standard error ~%.4f; margin over the best rival %+.4f (%.1f SE).\n",
+           se, planted_ob-bo[best[0]==planted_mask?1:0],
+           (planted_ob-bo[best[0]==planted_mask?1:0])/se);
+    printf("SUBSCAN  (rank 1 = the gate holds over non-contiguous supports too, but only believe the\n");
+    printf("SUBSCAN   ordering if the margin clears about 2 SE; otherwise raise DRAWS or SEEDS.)\n");
+}
+
+/* PERSEED -- the ceiling on any exact-match rate, which the averaged SUBSCAN cannot show.
+ * SUBSCAN ranks the planted support by its objective AVERAGED over seeds, so "rank 1" means it wins on
+ * average, not that it wins on every task draw. A search that returns the argmax of its OWN draw is
+ * behaving correctly even when that argmax is not the planted support, so the fraction of seeds on
+ * which the planted support IS the argmax is the highest exact-match rate any search could achieve.
+ * Same enumeration as SUBSCAN, aggregated per seed instead of across seeds: 127 x SEEDS scores. */
+static void subscan_perseed(void)
+{
+    int W = envint("SUBW",7), lo0, m, sd, i, planted_mask=0, wins=0, which=envint("SPLIT",2);
+    int R = envint("DRAWS",1);
+    double margin_sum=0;
+    if(W>16) W=16;
+    lo0 = OFF0 - (W-K)/2; if(lo0<0) lo0=0; if(lo0+W>NOFF) lo0=NOFF-W;
+    for(i=0;i<K;i++) planted_mask |= 1<<(OFF0-lo0+i);
+    printf("PERSEED  per-seed argmax over every subset of the %d-wide window at lo=%d, LAMBDA=%.2f\n",
+           W, lo0, g_lambda);
+    /* DRAWS is not optional here either, and for a sharper reason than in SUBSCAN: this mode takes an
+     * ARGMAX over 2^W candidates, and the maximum of many noisy estimates is whichever candidate got
+     * lucky. At one draw per mask the reported argmax is essentially a lottery -- measured, it named the
+     * planted support on 8% of seeds with a mean margin of -0.085, which is about the size of the bias
+     * itself. The winner's curse falls as sqrt(DRAWS), so the answer is only trustworthy once the
+     * per-mask error is well under the spacing between the leading candidates. */
+    for(sd=g_seed0+1; sd<=g_seed0+g_seeds; sd++){
+        double bo=-1e300, po=0, second=-1e300; int bm=0;
+        new_task((uint32_t)(sd*911u+1u));
+        for(m=1; m<(1<<W); m++){
+            Geno g; double ob=0; int r;
+            for(i=0;i<NOFF;i++) g.off[i]=0;
+            for(i=0;i<W;i++) if(m&(1<<i)) g.off[lo0+i]=1;
+            g.shared=1;
+            for(r=0;r<R;r++)
+                ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u+r*7919u),which));
+            ob /= R;
+            if(m==planted_mask) po=ob;
+            if(ob>bo){ second=bo; bo=ob; bm=m; } else if(ob>second) second=ob;
+        }
+        wins += (bm==planted_mask);
+        margin_sum += (bm==planted_mask) ? (bo-second) : (po-bo);
+        if(envint("RAW",0)) printf("PERSEED RAW %d %d %.4f %.4f\n", sd, bm==planted_mask, po, bo);
+    }
+    printf("PERSEED  the planted support is the per-seed argmax on %d of %d seeds (%.0f%%).\n",
+           wins, g_seeds, 100.0*wins/g_seeds);
+    printf("PERSEED  mean signed margin to the best rival %+.4f (negative = the planted support loses)\n",
+           margin_sum/g_seeds);
+    printf("PERSEED  this is the CEILING on any exact-match rate: a search returning its own draw's\n");
+    printf("PERSEED  argmax cannot exceed it, so compare the measured rate against this, not 100%%.\n");
 }
 
 /* Protocol item 3 applied to the one constant that decides the answer. For each LAMBDA, is the planted
@@ -419,7 +475,7 @@ static void scan_lambda(void)
             for(i=0;i<NOFF;i++) g.off[i]=0;
             for(i=lo;i<lo+len;i++) g.off[i]=1;
             g.shared=1;
-            for(sd=1; sd<=g_seeds; sd++){
+            for(sd=g_seed0+1; sd<=g_seed0+g_seeds; sd++){
                 new_task((uint32_t)(sd*911u+1u));
                 ob += objective(&g, score(&g,(uint32_t)(sd*7u+1u),2));
             }
@@ -459,7 +515,7 @@ static void diagnose(void)
 
     printf("DIAG  what the SEARCH's own fitness (selection split) sees, %d weight draws x %d seeds\n",
            R, g_seeds);
-    for(sd=1; sd<=g_seeds; sd++){
+    for(sd=g_seed0+1; sd<=g_seed0+g_seeds; sd++){
         Geno gi, gg;
         new_task((uint32_t)(sd*911u+1u));
         make_ideal(&gi,1);
@@ -488,7 +544,7 @@ static void diagnose(void)
            (mi2-mg2)-(mi-mg));
 
     printf("\nDIAG  seeding the population AT the target and running %d generations:\n", keepgens);
-    for(sd=1; sd<=g_seeds; sd++){
+    for(sd=g_seed0+1; sd<=g_seed0+g_seeds; sd++){
         Geno g; new_task((uint32_t)(sd*911u+1u));
         g_init_ideal=1; produce_ga((uint32_t)(sd*7u+1u), &g); g_init_ideal=0;
         stay_tap += taps_of(&g); stay_con += contig_of(&g);
@@ -517,7 +573,7 @@ int main(void)
     g_pflip=envdbl("PFLIP",0.10); g_trainpos=envint("TRAINPOS",3);
     g_damp=envdbl("DAMP",0.7); g_pslide=envdbl("PSLIDE",0.15);
     g_resample=envint("RESAMPLE",1); g_feval=envint("FEVAL",1); g_nvp=envint("NVP",0);
-    g_dboth=envint("DBOTH",0); g_rotpos=envint("ROTPOS",0);
+    g_dboth=envint("DBOTH",0); g_rotpos=envint("ROTPOS",0); g_seed0=envint("SEED0",0);
     if(g_pop>POPMAX) g_pop=POPMAX;
 
     printf("emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it\n");
@@ -532,10 +588,11 @@ int main(void)
 
     if(envint("SCAN",0)){ scan_contiguous(); return 0; }
     if(envint("SUBSCAN",0)){ subscan(); return 0; }
+    if(envint("PERSEED",0)){ subscan_perseed(); return 0; }
     if(envint("LAMSCAN",0)){ scan_lambda(); return 0; }
     if(envint("DIAG",0)){ diagnose(); return 0; }
 
-    for(sd=1; sd<=g_seeds; sd++){
+    for(sd=g_seed0+1; sd<=g_seed0+g_seeds; sd++){
         Geno g[6]; double tr,te; int k, op;
         new_task((uint32_t)(sd*911u+1u));
         make_ideal(&g[0],1);

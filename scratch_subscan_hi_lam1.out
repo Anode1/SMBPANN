@@ -1,0 +1,20 @@
+emerge_transfer -- sharing is a GENE, and TRANSFER is what pays for it
+N=12. motif K=3 planted at 1 of 10 positions; train on 3, select on 3, report on 4.
+max-pool readout (position never reaches the output). energy = params/(21*10):
+  shared = taps, unshared = taps*10. objective = heldout_acc - 1.00*energy.
+60 seeds x 200 epochs. GA: pop 24, 50 gens, flips offsets AND the sharing gene.
+
+SUBSCAN  every subset of the 7-wide window at lo=7 (128 supports), shared, LAMBDA=1.00, 60 seeds
+SUBSCAN  the planted target is the contiguous run of 3 at offset 9 (mask 0x1c)
+SUBSCAN  #1  mask 0x001e  taps  4  objective 0.6166
+SUBSCAN  #2  mask 0x003e  taps  5  objective 0.6147
+SUBSCAN  #3  mask 0x003c  taps  4  objective 0.6127
+SUBSCAN  #4  mask 0x001c  taps  3  objective 0.6082   <-- the planted target
+SUBSCAN  #5  mask 0x001f  taps  5  objective 0.6070
+SUBSCAN  #6  mask 0x005e  taps  5  objective 0.6035
+SUBSCAN  #7  mask 0x007c  taps  5  objective 0.6024
+SUBSCAN  #8  mask 0x003f  taps  6  objective 0.6022
+SUBSCAN  127 supports enumerated, 12 draws x 60 seeds each. PLANTED objective 0.6082, RANK 4 of 127.
+SUBSCAN  per-mask standard error ~0.0048; margin over the best rival -0.0085 (-1.7 SE).
+SUBSCAN  (rank 1 = the gate holds over non-contiguous supports too, but only believe the
+SUBSCAN   ordering if the margin clears about 2 SE; otherwise raise DRAWS or SEEDS.)
