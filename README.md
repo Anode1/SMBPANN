@@ -36,13 +36,13 @@ now discovered instead of specified, a concrete step toward the bottom one. (On
 XOR the search reliably finds, on its own, that a ReLU hidden layer with high
 momentum solves it near-exactly.)
 
-Layers are also **structural**: each hidden layer can evolve between a dense one
-and a weight-shared, locally-connected **convolution-like** kind. The **1997 thesis**
+Layers are also structural: each hidden layer can evolve between a dense one
+and a weight-shared, locally-connected convolution-like kind. The 1997 thesis
 argued that the architecture's inductive bias carries much of the work, and that such
-heuristics often have to be built into the topology by hand. The further **bet**, that
-a *search* which finds and recombines good structure, in the best case **rediscovering
-LeCun's topology** (local receptive fields, shared weights) on its own, should beat
-plain random, came in **2002**, after I had built genetic algorithms in industry. The
+heuristics often have to be built into the topology by hand. The further bet, that
+a *search* which finds and recombines good structure, in the best case rediscovering
+LeCun's topology (local receptive fields, shared weights) on its own, should beat
+plain random, came in 2002, after I had built genetic algorithms in industry. The
 thesis illustrated that structure with
 my own 1997 redrawing of LeCun's receptive-field diagram, a single unit fed by a
 small window of the previous layer:
@@ -53,7 +53,7 @@ small window of the previous layer:
 unit fed by a small window of the previous layer. Shared across positions, this is a
 convolution.*
 
-**On NAS-Bench-101, that bet did not hold.** On the real NAS-Bench-101 cell space a
+On NAS-Bench-101, that bet did not hold. On the real NAS-Bench-101 cell space a
 crossover that recombines the architecture's structure is no better than a
 structure-blind one, and worse at large budget, and no search meaningfully beats random
 *there* (see the paper below). Under an *energy budget*, though, the picture differs:
@@ -100,7 +100,7 @@ The idea lines up with what the field now calls:
 Following the Elsken survey, NAS methods differ mainly in *search strategy*:
 reinforcement learning (Zoph and Le, 2017), gradient-based or differentiable
 (DARTS, 2019), Bayesian optimization, random search, and evolutionary search.
-**SMBPANN uses evolutionary search**, evolving the architecture while training
+SMBPANN uses evolutionary search, evolving the architecture while training
 weights by gradient descent. Its closest relatives are Real et al. (*Large-Scale
 Evolution*, 2017; *AmoebaNet*, 2019), which do exactly that. This contrasts with
 classical **neuroevolution** such as NEAT (Stanley and Miikkulainen, 2002), which
@@ -112,7 +112,7 @@ applied a genetic algorithm to **label placement** (positioning labels without
 overlap in a limited space, a classic combinatorial optimization problem), the
 same family of search now turned on network topology.
 
-**A falsifiable question drives the project:** does an evolutionary
+A falsifiable question drives the project: does an evolutionary
 architecture search justify its compute over cheap baselines, random search in
 particular? Bergstra and Bengio (2012) showed plain random search is a strong
 baseline for hyper-parameter optimization; Li and Talwalkar (2019) showed random
@@ -134,7 +134,7 @@ simplest tool that does the job well.
 
 - **Concurrency by process, not by thread.** The evolutionary search is
  embarrassingly parallel, because candidates are independent. Each candidate is
- evaluated in its own **process**, launched from a shell coordinator sized to the
+ evaluated in its own process, launched from a shell coordinator sized to the
  CPU count, exchanging plain text with the parent. There is no shared memory, so
  there are no data races and no synchronization code to get wrong, and a
  candidate that crashes takes down only its own worker, not the run. For
@@ -155,7 +155,7 @@ simplest tool that does the job well.
  discipline that keeps most of the bug classes from arising in the first place.
  That is containment suited to a research tool, not a proof of memory safety.
 
-### Why C, and not Ada or Rust?
+### Why not Ada or Rust?
 
 Both Ada (with SPARK) and Rust are memory-safe and were seriously considered; an
 Ada 2012 implementation of this engine was written and is preserved in the git
@@ -211,10 +211,10 @@ The unit-test suite (40 checks: rng, act, net, the XOR backprop regression,
 clean under AddressSanitizer and UBSan.
 
 ```sh
-make # build./smbpann and./evolve
-./smbpann # train the built-in XOR demo
-./evolve -i 2 -o 1 -P 8 -G 8 # evolve XOR topologies, GA vs random search
-make ut # run the unit-test suite
+make                          # build ./smbpann and ./evolve
+./smbpann                     # train the built-in XOR demo
+./evolve -i 2 -o 1 -P 8 -G 8  # evolve XOR topologies, GA vs random search
+make ut                       # run the unit-test suite
 ```
 
 ```text
@@ -233,7 +233,7 @@ perturbs log-normally at each birth, and selection keeps whatever value produced
 good offspring). Ten seeds per cell. Each cell reports two numbers: **wins** is how
 many of the ten seeds the GA finished with a lower final test-MSE than its
 matched-compute random control, and **gap** is the mean of (random's test-MSE minus
-the GA's) over the ten seeds, so a **positive gap means the GA did better** (lower
+the GA's) over the ten seeds, so a positive gap means the GA did better (lower
 error). Five wins of ten is a coin-flip; the gaps are small.
 
 | starting rate (`-M`) | fixed: wins / 10 | fixed: mean gap | self-adaptive: wins / 10 | self-adaptive: mean gap |
@@ -242,11 +242,11 @@ error). Five wins of ten is a coin-flip; the gaps are small.
 | 3 | 5 | +0.0004 | 6 | +0.0017 |
 | 6 | 5 | +0.0009 | 7 | +0.0023 |
 
-Two reads. First, with a **fixed** rate the GA is about a coin-flip against
+Two reads. First, with a *fixed* rate the GA is about a coin-flip against
 random (5 of 10) whatever the rate, with only a small positive mean gap: in a
 search space this small it does not clearly beat an exhaustive random sampler,
 reproducing the Bergstra and Bengio / Li and Talwalkar result. Second,
-**self-adaptation helps, consistently and modestly**: it wins more often (6 to 8 of
+self-adaptation helps, consistently and modestly: it wins more often (6 to 8 of
 10) and by a wider margin at every starting rate, and it removes the need to pick
 the rate at all. You can watch the rate anneal within a run, higher early to
 explore, lower later to refine (for example 1.00, then 2.28, then 1.35 on XOR).
@@ -259,7 +259,7 @@ Does a *bigger* search space favor the directed search, as the small-space resul
 hinted? At a fixed budget, the opposite. Enlarging the space to five layers by
 twenty-eight wide (from three by sixteen), holding the roughly 100 evaluations
 fixed, and re-drawing a fresh learnable task for each of 15 seeds, the GA does
-**worse** than random: it wins 5 of 15 self-adaptive and 4 of 15 fixed, with
+*worse* than random: it wins 5 of 15 self-adaptive and 4 of 15 fixed, with
 random better on average (gap about -0.003). The cause is budget, not the search:
 the same roughly 100 evaluations now cover a far larger space, so the GA's local,
 gradient-like convergence settles near its random start while an exhaustive random
@@ -312,58 +312,71 @@ TARGET=0.12 RUNS=30 GENS=60 scripts/errortest.sh
 ## Paper
 
 The write-up is the emergence study, published as *The Imposed and Emergent Pieces of Convolution
-Under an Energy Budget* and archived at <https://doi.org/10.5281/zenodo.21423177> (concept DOI, always resolving to the latest version).
-It is on what does, and does not, emerge, framed by the
-prune/clone/translate/recombine operators, with the negatives kept and every number reproducible from
-one `make`. It opens from the negative result that motivates it: on the real NAS-Bench-101 cell space
-*searching* for structure does not beat random search (a trap-function positive control shows crossover
-helps only where separable building blocks exist), so instead of searching for the architecture, the
-paper grows it, and §2.4 reconciles the two, directed search beats random only when the objective can be
-climbed. That crossover study's code lives in `validation/` (`nb101*`, `nasxover`); its standalone
-write-up has been folded into this paper. 
+Under an Energy Budget* and archived at <https://doi.org/10.5281/zenodo.21423177> (a concept DOI,
+always resolving to the latest version). It is about what does and does not emerge, framed by the
+prune/clone/translate/recombine operators. The negatives are kept, and every number reproduces from
+one `make`.
+
+It opens from the negative result that motivates it. On the real NAS-Bench-101 cell space,
+*searching* for structure does not beat random search; a trap-function positive control shows that
+crossover helps only where separable building blocks exist. So the paper grows the architecture
+instead of searching for it. §2.4 reconciles the two: directed search beats random only when the
+objective can be climbed.
+
+That crossover study's code lives in `validation/` (`nb101*`, `nasxover`), and its standalone
+write-up has been folded into this paper.
 
 ## The emergence study
 
-A second, larger note comes at the same 1997 ambition from the other side. Instead of *searching* whole
-topologies, it **grows** one from an **exhaustive (fully-connected) seed under an energy budget**, an
-evolutionary search that pays for every connection, and asks *which pieces of convolution
-emerge, and which do not*.
+A second, larger note comes at the same 1997 ambition from the other side. Instead of *searching*
+whole topologies, it grows one from an exhaustive, fully-connected seed under an energy budget: an
+evolutionary search that pays for every connection. The question it asks is which pieces of a
+convolution emerge, and which do not.
 
 ![The main idea: an exhaustive, tangled network becomes an ordered convolution through a few structural operators.](images/fig_main_idea.svg)
 
-The frame is: **impose the priors that are real symmetries of the domain**, *locality* (information is
-local) and *translatability* (a signal is the same shifted over), and let a few biological operators
-(**prune, clone, translate, recombine**) assemble and refine the rest. Of the four, only *prune* runs
-inside the energy GA; *clone* and *translate* are studied as fixed shared-versus-unshared architectures,
-and *recombine* as a search over block sequences, each an isolated probe rather than one running
-developmental GA. They are studied one at a time and then **chained in a core developmental run** (find a
-block, then clone and translate it). That chain's +0.25 over search-from-scratch is the
-*same weight-sharing data-efficiency* effect (one tiled block learns from every position while independent
-per-position detectors starve), shown inside a pipeline, not a separate "reuse beats re-search" mechanism.
-And when the search must **discover** the decomposition itself, given only the composite label and an
-energy budget, **composition does not cleanly emerge without supervision** (the channels under-specialize
-and the energy-selected count overshoots), the paper's sharpest boundary. Real data and scale, not
-another operator, are the next step.
+The frame is to impose the priors that are real symmetries of the domain, *locality* (information is
+local) and *translatability* (a signal is the same shifted over), and to let a few biological
+operators — **prune**, **clone**, **translate**, **recombine** — assemble and refine the rest.
+
+Only *prune* runs inside the energy GA. *Clone* and *translate* are studied as fixed
+shared-versus-unshared architectures, and *recombine* as a search over block sequences. Each is an
+isolated probe rather than one running developmental GA. They are studied one at a time, then
+chained in a core developmental run: find a block, then clone and translate it. That chain's +0.25
+over search-from-scratch is the same weight-sharing data-efficiency effect, shown inside a pipeline
+rather than as a separate "reuse beats re-search" mechanism. One tiled block learns from every
+position while independent per-position detectors starve.
+
+The sharpest boundary is what happens when the search must *discover* the decomposition itself,
+given only the composite label and an energy budget. Composition does not cleanly emerge without
+supervision: the channels under-specialize and the energy-selected count overshoots. Real data and
+scale, not another operator, are the next step.
 
 ![The four operators as A → B: prune, clone, translate, recombine, each with the exact action written under the arrow.](images/fig_operators.svg)
 
-The map that comes out:
-sparse, task-relevant connectivity emerges cleanly, and weight-sharing is *adopted* when
-translation-invariance rewards it, and a **compact aligned local filter emerges only under grouped
-mutation** on the shared feature, not under per-connection pruning, with a crisp mechanism for *why*
-(once weights are shared, connection-count no longer gradients parameter-count, so a single-edge mutation
-cannot tighten the kernel; the whole shared offset is the right unit). On top of the imposed priors, the free
-dimensions, depth, then emerge to fit the task.
+The map that comes out has three parts. Sparse, task-relevant connectivity emerges cleanly.
+Weight-sharing is *adopted* when translation-invariance rewards it. And a compact aligned local
+filter emerges only under grouped mutation on the shared feature, never under per-connection
+pruning — with a crisp mechanism for *why*: once weights are shared, connection-count no longer
+gradients parameter-count, so a single-edge mutation cannot tighten the kernel. The whole shared
+offset is the right unit. On top of the imposed priors, the free dimensions — depth — then emerge
+to fit the task.
 
-What is genuinely new is that evolutionary energy-emergence map from an exhaustive seed and its
-boundaries, distinct from gradient pruning (Optimal Brain Damage, Lottery Ticket), from DARTS'
-gradient-relaxed supernet, and from NEAT's grow-from-minimal. A second finding, and the resolution of
-this repo's earlier crossover null: under the energy budget a directed search finds a **tidier** filter
-than random sampling and is **modestly more accurate** too (a large structural win plus a small but significant task edge, surviving a denoising control),
-which reconciles the two, directed search beats random exactly when the objective can be *climbed* and
-ties it when the landscape is flat (as on NAS-Bench-101). The rest reproduces known inductive-bias
-results (weight-sharing is data-efficient, LeCun 1989; receptive field ≈ depth) with a *fair baseline*
-and full reproducibility. Every claim is a small, seeded, one-`make` probe, the negatives kept. See the paper at <https://doi.org/10.5281/zenodo.21423177>, and `validation/emerge_*.c` for the probes behind every number.
+What is genuinely new is that evolutionary energy-emergence map from an exhaustive seed, and its
+boundaries. It is distinct from gradient pruning (Optimal Brain Damage, Lottery Ticket), from
+DARTS' gradient-relaxed supernet, and from NEAT's grow-from-minimal.
+
+A second finding resolves this repo's earlier crossover null. Under the energy budget a directed
+search finds a tidier filter than random sampling, and is modestly more accurate too: a large
+structural win plus a small but significant task edge, surviving a denoising control. Directed
+search beats random exactly when the objective can be *climbed*, and ties it when the landscape is
+flat, as on NAS-Bench-101.
+
+The rest reproduces known inductive-bias results — weight-sharing is data-efficient (LeCun 1989),
+receptive field ≈ depth — against a *fair baseline* and with full reproducibility. Every claim is a
+small, seeded, one-`make` probe, and the negatives are kept. See the paper at
+<https://doi.org/10.5281/zenodo.21423177>, and `validation/emerge_*.c` for the probes behind every
+number.
 
 ## Roadmap
 

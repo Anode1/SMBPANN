@@ -9,7 +9,7 @@ synthetic pitch task. Parked here, ready.
 - Fetched: master branch tarball, 2026-07-20
 - License: Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA 4.0)
 
-## Re-fetch (the WAVs are gitignored, not committed)
+## Re-fetch (the WAVs are gitignored)
     curl -sSL https://github.com/Jakobovski/free-spoken-digit-dataset/archive/refs/heads/master.tar.gz \
       | tar xz && mv free-spoken-digit-dataset-master/recordings ./recordings
 
