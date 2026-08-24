@@ -337,7 +337,7 @@ convolution emerge, and which do not.
 
 The frame is to impose the priors that are real symmetries of the domain, *locality* (information is
 local) and *translatability* (a signal is the same shifted over), and to let a few biological
-operators — **prune**, **clone**, **translate**, **recombine** — assemble and refine the rest.
+operators (**prune**, **clone**, **translate**, **recombine**) assemble and refine the rest.
 
 Only *prune* runs inside the energy GA. *Clone* and *translate* are studied as fixed
 shared-versus-unshared architectures, and *recombine* as a search over block sequences. Each is an
@@ -357,12 +357,12 @@ scale, not another operator, are the next step.
 The map that comes out has three parts. Sparse, task-relevant connectivity emerges cleanly.
 Weight-sharing is *adopted* when translation-invariance rewards it. And a compact aligned local
 filter emerges only under grouped mutation on the shared feature, never under per-connection
-pruning — with a crisp mechanism for *why*: once weights are shared, connection-count no longer
+pruning, with a crisp mechanism for *why*: once weights are shared, connection-count no longer
 gradients parameter-count, so a single-edge mutation cannot tighten the kernel. The whole shared
-offset is the right unit. On top of the imposed priors, the free dimensions — depth — then emerge
+offset is the right unit. On top of the imposed priors, the free dimensions (depth) then emerge
 to fit the task.
 
-What is genuinely new is that evolutionary energy-emergence map from an exhaustive seed, and its
+What is new is that evolutionary energy-emergence map from an exhaustive seed, and its
 boundaries. It is distinct from gradient pruning (Optimal Brain Damage, Lottery Ticket), from
 DARTS' gradient-relaxed supernet, and from NEAT's grow-from-minimal.
 
@@ -372,8 +372,8 @@ structural win plus a small but significant task edge, surviving a denoising con
 search beats random exactly when the objective can be *climbed*, and ties it when the landscape is
 flat, as on NAS-Bench-101.
 
-The rest reproduces known inductive-bias results — weight-sharing is data-efficient (LeCun 1989),
-receptive field ≈ depth — against a *fair baseline* and with full reproducibility. Every claim is a
+The rest reproduces known inductive-bias results (weight-sharing is data-efficient, LeCun 1989;
+receptive field ≈ depth) against a *fair baseline* and with full reproducibility. Every claim is a
 small, seeded, one-`make` probe, and the negatives are kept. See the paper at
 <https://doi.org/10.5281/zenodo.21423177>, and `validation/emerge_*.c` for the probes behind every
 number.
